@@ -3,3 +3,6 @@
 ################################################################################
 
 /dependencies
+/.vs
+/build/ExampleProject.vs2019/x64
+/build/ExampleProject.vs2019/.vs/ExampleProject.vs2019/v16
