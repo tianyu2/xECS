@@ -1,14 +1,21 @@
 # xECS
 Simple Entity Component System
 
+* C++20
+* Header Only
+* Single Thread
+
 ## To build
-Simple go to the build directory and click the GetDependencies.bat batch file
-Wait untill it says that xECS is done
+1. Go to the build directory 
+2. Click the GetDependencies.bat batch file
+3. Wait untill it says that xECS is done
+4. Go to the example project and load it, you should be able to run it at this point
 
-Then go to the example project and loaded you should be able to run it at that point
-
+## To use in your projects
+1. Create a setting folder (There you can all the settings file for xcore, property, etc You can copy the ones from the example project)
+2. Include the **xecs.h**
 
 ## Dependencies
-- xCore
+- xCore (for tracy, a few types )
 - CLUT (for the openGL example)
 
