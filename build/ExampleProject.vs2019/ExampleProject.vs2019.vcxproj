@@ -88,6 +88,9 @@
     <ClInclude Include="..\..\src\Settings\PropertyConfig.h" />
     <ClInclude Include="..\..\src\Settings\xcore_user_settings.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
