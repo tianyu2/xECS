@@ -233,7 +233,6 @@ struct render_ships : xecs::system::instance
         xecs::query::none_of<bullet>
     >;
 
-    __inline
     void operator()( position& Position, timer& Timer ) const noexcept
     {
         constexpr auto Size = 3;
