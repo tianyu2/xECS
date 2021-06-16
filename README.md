@@ -16,6 +16,6 @@ Simple Entity Component System
 2. Include the **src/xecs.h**
 
 ## Dependencies
-- xCore (for tracy, a few types )
-- CLUT (for the openGL example)
+- [xCore](https://gitlab.com/LIONant/xcore) (for the profiler tracy, and few types )
+- [CLUT](https://github.com/markkilgard/glut) (for the openGL example)
 
