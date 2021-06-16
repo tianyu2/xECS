@@ -39,6 +39,6 @@ namespace xecs::pool
 
         std::span<const component::info* const >                            m_Infos         {};
         int                                                                 m_Size          {};
-        std::array<std::byte*, xecs::settings::max_components_per_entity_v>  m_pComponent    {};
+        std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent    {};
     };
 }

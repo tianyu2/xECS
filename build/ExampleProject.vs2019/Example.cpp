@@ -91,7 +91,7 @@ struct bullet_logic : xecs::system::instance
 {
     constexpr static auto   name_v = "bullet_logic";
 
-    void operator()( xecs::component::entity& Entity, position& Position, timer& Timer, bullet& Bullet ) const noexcept
+    void operator()( entity& Entity, position& Position, timer& Timer, bullet& Bullet ) const noexcept
     {
         // If I am dead because some other bullet killed me then there is nothing for me to do...
         if (Entity.isZombie()) return;
@@ -113,7 +113,7 @@ struct bullet_logic : xecs::system::instance
 
         m_GameMgr.ForeachWithBreak
         (   m_GameMgr.Search(Query)
-        ,   [&]( xecs::component::entity& E, position& Pos ) noexcept -> bool
+        ,   [&]( entity& E, position& Pos ) noexcept -> bool
         {
             assert( Entity.isZombie() == false );
 
@@ -154,7 +154,7 @@ struct space_ship_logic : xecs::system::instance
         xecs::query::none_of<bullet>
     >;
 
-    void operator()( xecs::component::entity& Entity, position& Position, timer& Time ) const noexcept
+    void operator()( entity& Entity, position& Position, timer& Time ) const noexcept
     {
         if( Time.m_Value > 0 )
         {

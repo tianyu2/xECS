@@ -18,7 +18,7 @@ namespace xecs::archetype
         ( xcore::function::is_callable_v<T_CALLBACK>
             && std::is_same_v<typename xcore::function::traits<T_CALLBACK>::return_type, void>
         ) __inline
-        xecs::component::entity  CreateEntity            ( T_CALLBACK&& Function = xecs::tools::empty_lambda{}
+        xecs::component::entity  CreateEntity           ( T_CALLBACK&& Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
         
         inline
@@ -46,7 +46,7 @@ namespace xecs::archetype
         xecs::tools::bits                    m_ComponentBits     {};
         xecs::pool::instance                 m_Pool              {};
         std::vector<xecs::component::entity> m_ToDelete          {};
-        int                                 m_ProcessReference  { 0 };
-        info_array                          m_InfoData          {};
+        int                                  m_ProcessReference  { 0 };
+        info_array                           m_InfoData          {};
     };
 }

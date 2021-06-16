@@ -95,8 +95,8 @@ namespace xecs::game_mgr
                                                                     ) noexcept;
 
 
-        xecs::system::mgr                                    m_SystemMgr         {};
-        xecs::component::mgr                                 m_ComponentMgr      {};
+        xecs::system::mgr                                   m_SystemMgr         {};
+        xecs::component::mgr                                m_ComponentMgr      {};
         std::vector<std::unique_ptr<archetype::instance>>   m_lArchetype        {};
         std::vector<tools::bits>                            m_lArchetypeBits    {};
         std::unique_ptr<entity_info[]>                      m_lEntities         = std::make_unique<entity_info[]>(xecs::settings::max_entities_v);

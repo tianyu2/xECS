@@ -13,6 +13,8 @@ namespace xecs::system
 
     struct instance : overrides
     {
+        using entity = xecs::component::entity;
+
                     instance            ( const instance&
                                         ) noexcept = delete;
 
@@ -31,7 +33,7 @@ namespace xecs::system
         {
             using call_run = void( xecs::system::instance&);
 
-            std::unique_ptr<xecs::system::instance>  m_System;
+            std::unique_ptr<xecs::system::instance> m_System;
             call_run*                               m_CallRun;
             const char*                             m_pName;
         };
