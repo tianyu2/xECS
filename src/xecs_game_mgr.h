@@ -20,16 +20,21 @@ namespace xecs::game_mgr
 
         template
         < typename...T_SYSTEMS
-        >
+        > requires
+        ( std::derived_from< T_SYSTEMS, xecs::system::instance> && ...
+        )
         void                                RegisterSystems         ( void
                                                                     ) noexcept;
         template
         < typename...T_COMPONENTS
-        >
+        > requires
+        ( ((sizeof(T_COMPONENTS) <= xecs::settings::virtual_page_size_v)
+           && ... )
+        )
         void                                RegisterComponents      ( void
                                                                     ) noexcept;
         inline
-        xecs::component::entity              AllocNewEntity          ( int                       PoolIndex
+        xecs::component::entity             AllocNewEntity          ( int                        PoolIndex
                                                                     , xecs::archetype::instance& Archetype 
                                                                     ) noexcept;
         inline

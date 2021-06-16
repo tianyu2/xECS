@@ -15,10 +15,12 @@ namespace xecs::pool
     }
 
     //-------------------------------------------------------------------------------------
-
-    int instance::getPageFromIndex(const component::info& Info, int iEntity ) noexcept
+    // This function return which page is the last byte of a given entry
+    //-------------------------------------------------------------------------------------
+    constexpr inline 
+    int getPageFromIndex( const component::info& Info, int iEntity ) noexcept
     {
-        return (iEntity* Info.m_Size)/ xecs::settings::virtual_page_size_v;
+        return ((iEntity * Info.m_Size)-1) / xecs::settings::virtual_page_size_v;
     }
 
     //-------------------------------------------------------------------------------------
@@ -28,7 +30,8 @@ namespace xecs::pool
         m_Infos        = Span;
         for( int i=0; i< m_Infos.size(); ++i )
         {
-            auto nPages     = getPageFromIndex( *m_Infos[i], xecs::settings::max_entities_v -1 ) + 1;
+            assert(m_Infos[i]->m_Size <= xecs::settings::virtual_page_size_v);
+            auto nPages     = getPageFromIndex( *m_Infos[i], xecs::settings::max_entities_v ) + 1;
             m_pComponent[i] = reinterpret_cast<std::byte*>(VirtualAlloc(nullptr, nPages * xecs::settings::virtual_page_size_v, MEM_RESERVE, PAGE_NOACCESS));
             assert(m_pComponent[i]);
         }
@@ -48,15 +51,15 @@ namespace xecs::pool
 
     int instance::Append( void ) noexcept
     {
-        assert( m_Size < (ecs::settings::max_entities_v-1) );
+        assert( m_Size < (xecs::settings::max_entities_v-1) );
 
         for( int i = 0; i < m_Infos.size(); ++i )
         {
             const auto&   MyInfo  = *m_Infos[i];
-            const auto    NexPage = getPageFromIndex(MyInfo, m_Size);
+            const auto    NexPage = getPageFromIndex(MyInfo, m_Size+1);
 
             // Create pages when needed 
-            if(auto Cur = getPageFromIndex(MyInfo, m_Size - 1); Cur != NexPage)
+            if( getPageFromIndex(MyInfo, m_Size) != NexPage)
             {
                 auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * NexPage;
                 auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, xecs::settings::virtual_page_size_v, MEM_COMMIT, PAGE_READWRITE));
@@ -87,8 +90,8 @@ namespace xecs::pool
                 if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn( &pData[m_Size * MyInfo.m_Size] );
 
                 // Free page if we cross over
-                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size);
-                if( getPageFromIndex(MyInfo, m_Size - 1) != LastEntryPage )
+                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size+1);
+                if( getPageFromIndex(MyInfo, m_Size) != LastEntryPage )
                 {
                     auto pRaw = &pData[xecs::settings::virtual_page_size_v * LastEntryPage ];
                     auto b    = VirtualFree(pRaw, xecs::settings::virtual_page_size_v, MEM_DECOMMIT);
@@ -114,8 +117,8 @@ namespace xecs::pool
                 }
 
                 // Free page if we cross over
-                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size);
-                if( getPageFromIndex(MyInfo, m_Size - 1) != LastEntryPage )
+                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size+1);
+                if( getPageFromIndex(MyInfo, m_Size) != LastEntryPage )
                 {
                     auto pRaw = &pData[xecs::settings::virtual_page_size_v * LastEntryPage ];
                     auto b    = VirtualFree(pRaw, xecs::settings::virtual_page_size_v, MEM_DECOMMIT);

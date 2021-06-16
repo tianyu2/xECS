@@ -10,10 +10,6 @@ namespace xecs::pool
                        ~instance                            ( void 
                                                             ) noexcept;
         inline
-        int             getPageFromIndex                    ( const component::info& Info
-                                                            , int                    iEntity 
-                                                            ) noexcept;
-        inline
         void            Initialize                          ( std::span<const component::info* const > Span 
                                                             ) noexcept;
         inline

@@ -40,7 +40,7 @@ namespace xecs::system
     //-------------------------------------------------------------------------------------------
     template
     < typename T_SYSTEM
-    >
+    > requires( std::derived_from< T_SYSTEM, xecs::system::instance> )
     T_SYSTEM& mgr::RegisterSystem( xecs::game_mgr::instance& GameMgr ) noexcept
     {
         m_Systems.push_back
