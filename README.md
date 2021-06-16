@@ -12,8 +12,8 @@ Simple Entity Component System
 4. Go to the example project and load it, you should be able to run it at this point
 
 ## To use in your projects
-1. Create a setting folder (There you can all the settings file for xcore, property, etc You can copy the ones from the example project)
-2. Include the **xecs.h**
+1. Create a setting folder (There you can put all the settings files for xcore, property, etc You can copy the ones from the example project if you like.)
+2. Include the **src/xecs.h**
 
 ## Dependencies
 - xCore (for tracy, a few types )
