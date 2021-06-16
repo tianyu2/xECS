@@ -1,20 +1,20 @@
 @echo OFF
 setlocal enabledelayedexpansion
 cd %cd%
-set EXAMPLE_PROJECT_PATH=%cd%
+set XECS_PATH=%cd%
 
 rem --------------------------------------------------------------------------------------------------------
 rem Set the color of the terminal to blue with yellow text
 rem --------------------------------------------------------------------------------------------------------
 COLOR 8E
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
-powershell write-host -fore Cyan Welcome I am your EXAMPLE PROJECT dependency updater bot, let me get to work...
+powershell write-host -fore Cyan Welcome I am your XECS dependency updater bot, let me get to work...
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
 echo.
 
 :DOWNLOAD_DEPENDENCIES
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
-powershell write-host -fore White EXAMPLE PROJECT - DOWNLOADING DEPENDENCIES
+powershell write-host -fore White XECS - DOWNLOADING DEPENDENCIES
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
 
 echo.
@@ -29,9 +29,9 @@ if %ERRORLEVEL% GEQ 1 goto :PAUSE
 
 :FIND_VSTUDIO
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
-powershell write-host -fore White EXAMPLE_PROJECT - FINDING VISUAL STUDIO / MSBuild
+powershell write-host -fore White XECS - FINDING VISUAL STUDIO / MSBuild
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
-cd /d %EXAMPLE_PROJECT_PATH%
+cd /d %XECS_PATH%
 for /f "usebackq tokens=*" %%i in (`.\..\dependencies\xcore\bin\vswhere -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe`) do (
     SET MSBUILD=%%i
     GOTO :BREAK_OUT
@@ -51,13 +51,13 @@ GOTO :ERROR
 
 :COMPILATION
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
-powershell write-host -fore White EXAMPLE PROJECT - COMPILING DEPENDENCIES
+powershell write-host -fore White XECS - COMPILING DEPENDENCIES
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
 
 cd ../dependencies/xcore/builds
 call UpdateDependencies.bat "return"
 if %ERRORLEVEL% GEQ 1 goto :PAUSE
-cd /d %EXAMPLE_PROJECT_PATH%
+cd /d %XECS_PATH%
 
 powershell write-host -fore Cyan glut: Updating...
 "%VSPATH%\Common7\IDE\devenv.exe" "%CD%\..\dependencies\glut\glut_2012.vcxproj" /upgrade
@@ -75,13 +75,13 @@ if %ERRORLEVEL% GEQ 1 goto :ERROR
 
 :DONE
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
-powershell write-host -fore White EXAMPLE PROJECT - DONE!!
+powershell write-host -fore White XECS - DONE!!
 powershell write-host -fore White ------------------------------------------------------------------------------------------------------
 goto :PAUSE
 
 :ERROR
 powershell write-host -fore Red ------------------------------------------------------------------------------------------------------
-powershell write-host -fore Red EXAMPLE PROJECT - ERROR!!
+powershell write-host -fore Red XECS - ERROR!!
 powershell write-host -fore Red ------------------------------------------------------------------------------------------------------
 
 :PAUSE
