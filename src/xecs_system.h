@@ -8,7 +8,7 @@ namespace xecs::system
         using                   query       = std::tuple<>;
         constexpr static auto   name_v      = "unnamed system";
 
-        void            Execute( void ) noexcept {}
+        void                    OnUpdate    ( void ) noexcept {}
     };
 
     struct instance : overrides

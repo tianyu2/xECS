@@ -16,9 +16,9 @@ namespace xecs::system
             void Run( void ) noexcept
             {
                 XCORE_PERF_ZONE_SCOPED_N(T_USER_SYSTEM::name_v)
-                if constexpr (&T_USER_SYSTEM::Execute != &instance::Execute)
+                if constexpr (&T_USER_SYSTEM::OnUpdate != &instance::OnUpdate)
                 {
-                    T_USER_SYSTEM::Execute();
+                    T_USER_SYSTEM::OnUpdate();
                 }
                 else
                 {

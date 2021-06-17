@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
     <Filter Include="Dependencies">
       <UniqueIdentifier>{29bdc1f7-2aa6-402a-8551-97f4b1b3648b}</UniqueIdentifier>
     </Filter>
@@ -34,9 +30,7 @@
     <ClCompile Include="..\..\dependencies\xcore\src\xcore_profiler_1.cpp">
       <Filter>Dependencies\xCore\Details</Filter>
     </ClCompile>
-    <ClCompile Include="Example.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClCompile Include="Example.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore.h">

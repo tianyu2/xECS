@@ -84,13 +84,14 @@ namespace xecs::game_mgr
         (   xcore::function::is_callable_v<T_FUNCTION> 
         &&  std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
         ) __inline
-        void                                ForeachWithBreak        ( const std::vector<xecs::archetype::instance*>& List
+        void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
                                                                     , T_FUNCTION&&                                  Function 
                                                                     ) const noexcept;
         template
         < typename T_FUNCTION
         > requires
-        ( xcore::function::is_callable_v<T_FUNCTION> 
+        ( xcore::function::is_callable_v<T_FUNCTION>
+        && std::is_same_v< void, typename xcore::function::traits<T_FUNCTION>::return_type >
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
                                                                     , T_FUNCTION&&                                  Function 

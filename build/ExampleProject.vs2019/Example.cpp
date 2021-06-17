@@ -111,7 +111,7 @@ struct bullet_logic : xecs::system::instance
         xecs::query::instance Query;
         Query.m_Must.AddFromComponents<position>();
 
-        m_GameMgr.ForeachWithBreak
+        m_GameMgr.Foreach
         (   m_GameMgr.Search(Query)
         ,   [&]( entity& E, position& Pos ) noexcept -> bool
         {
@@ -164,7 +164,7 @@ struct space_ship_logic : xecs::system::instance
 
         xecs::query::instance    Query;
         Query.m_NoneOf.AddFromComponents<bullet>();
-        m_GameMgr.ForeachWithBreak( m_GameMgr.Search(Query), [&](position& Pos ) noexcept
+        m_GameMgr.Foreach( m_GameMgr.Search(Query), [&](position& Pos ) noexcept
         {
             // Don't shoot myself
             if( &Pos == &Position ) return false;
@@ -253,7 +253,8 @@ struct page_flip : xecs::system::instance
 {
     constexpr static auto   name_v = "page_flip";
 
-    void Execute( void ) noexcept
+    __inline
+    void OnUpdate( void ) noexcept
     {
         glutSwapBuffers();
         glClear(GL_COLOR_BUFFER_BIT);

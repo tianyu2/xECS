@@ -184,7 +184,7 @@ namespace xecs::game_mgr
     (   xcore::function::is_callable_v<T_FUNCTION> 
     &&  std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
     )
-    void instance::ForeachWithBreak( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
+    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
     {
         using func_traits = xcore::function::traits<T_FUNCTION>;
         
@@ -240,7 +240,8 @@ namespace xecs::game_mgr
     template
     < typename T_FUNCTION
     > requires
-    ( xcore::function::is_callable_v<T_FUNCTION> 
+    ( xcore::function::is_callable_v<T_FUNCTION>
+    && std::is_same_v< void, typename xcore::function::traits<T_FUNCTION>::return_type >
     )
     void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
     {
