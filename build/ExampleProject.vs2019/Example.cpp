@@ -23,16 +23,14 @@ static struct game
 // COMPONENTS
 //---------------------------------------------------------------------------------------
 
-struct position
+struct position 
 {
-    float m_X;
-    float m_Y;
+    xcore::vector2 m_Value;
 };
 
 struct velocity
 {
-    float m_X;
-    float m_Y;
+    xcore::vector2 m_Value;
 };
 
 struct timer
@@ -57,30 +55,29 @@ struct update_movement : xecs::system::instance
 
     void operator()(position& Position, velocity& Velocity) const noexcept
     {
-        Position.m_X += Velocity.m_X;
-        Position.m_Y += Velocity.m_Y;
+        Position.m_Value += Velocity.m_Value;
 
         // Bounce on edges
-        if (Position.m_X < 0)
+        if (Position.m_Value.m_X < 0)
         {
-            Position.m_X = 0;
-            Velocity.m_X = -Velocity.m_X;
+            Position.m_Value.m_X = 0;
+            Velocity.m_Value.m_X = -Velocity.m_Value.m_X;
         }
-        else if (Position.m_X >= s_Game.m_W)
+        else if (Position.m_Value.m_X >= s_Game.m_W)
         {
-            Position.m_X = s_Game.m_W - 1;
-            Velocity.m_X = -Velocity.m_X;
+            Position.m_Value.m_X = s_Game.m_W - 1;
+            Velocity.m_Value.m_X = -Velocity.m_Value.m_X;
         }
 
-        if (Position.m_Y < 0)
+        if (Position.m_Value.m_Y < 0)
         {
-            Position.m_Y = 0;
-            Velocity.m_Y = -Velocity.m_Y;
+            Position.m_Value.m_Y = 0;
+            Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
-        else if (Position.m_Y >= s_Game.m_H)
+        else if (Position.m_Value.m_Y >= s_Game.m_H)
         {
-            Position.m_Y = s_Game.m_H - 1;
-            Velocity.m_Y = -Velocity.m_Y;
+            Position.m_Value.m_Y = s_Game.m_H - 1;
+            Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
     }
 };
@@ -127,11 +124,8 @@ struct bullet_logic : xecs::system::instance
             // If so lets just continue
             if( Bullet.m_ShipOwner.m_Value == E.m_Value ) return false;
 
-            float x = Pos.m_X - Position.m_X;
-            float y = Pos.m_Y - Position.m_Y;
-            float lsqr = x * x + y * y;
-            constexpr auto distance = 3;
-            if (lsqr < distance * distance)
+            constexpr auto distance_v = 3;
+            if ((Pos.m_Value - Position.m_Value).getLengthSquared() < distance_v * distance_v)
             {
                 m_GameMgr.DeleteEntity(Entity);
                 m_GameMgr.DeleteEntity(E);
@@ -169,24 +163,19 @@ struct space_ship_logic : xecs::system::instance
             // Don't shoot myself
             if( &Pos == &Position ) return false;
 
-            auto x      = Pos.m_X - Position.m_X;
-            auto y      = Pos.m_Y - Position.m_Y;
-            auto dsqr   = x * x + y * y;
+            auto        Direction        = Pos.m_Value - Position.m_Value;
+            const auto  DistanceSquare   = Direction.getLengthSquared();
 
             constexpr auto min_distance_v = 30;
-            if( dsqr < min_distance_v*min_distance_v )
+            if( DistanceSquare < min_distance_v*min_distance_v )
             {
                 Time.m_Value = 8;
                 auto& Archetype = m_GameMgr.getOrCreateArchetype<position, velocity, timer, bullet>();
-                Archetype.CreateEntity([&]( position& P, velocity& V, bullet& Bullet, timer& Timer )
+                Archetype.CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
                 {
-                    auto l  = std::sqrt(dsqr);
-                    auto Dx = x/l;
-                    auto Dy = y/l;
-                    P.m_X = Position.m_X + Dx;
-                    P.m_Y = Position.m_Y + Dy;
-                    V.m_X = Dx*2;
-                    V.m_Y = Dy*2;
+                    Direction  /= std::sqrt(DistanceSquare);
+                    Pos.m_Value = Position.m_Value + Vel.m_Value;
+                    Vel.m_Value = Direction * 2.0f;
 
                     Bullet.m_ShipOwner = Entity;
                     Timer.m_Value      = 10;
@@ -215,9 +204,9 @@ struct render_bullets : xecs::system::instance
         constexpr auto SizeY = SizeX*3;
         glBegin(GL_TRIANGLES);
         glColor3f(1.0, 0.5, 0.0);
-        glVertex2i(Position.m_X + Velocity.m_X * SizeY, Position.m_Y + Velocity.m_Y * SizeY);
-        glVertex2i(Position.m_X + Velocity.m_Y * SizeX, Position.m_Y - Velocity.m_X * SizeX);
-        glVertex2i(Position.m_X - Velocity.m_Y * SizeX, Position.m_Y + Velocity.m_X * SizeX);
+        glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_X * SizeY, Position.m_Value.m_Y + Velocity.m_Value.m_Y * SizeY);
+        glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y - Velocity.m_Value.m_X * SizeX);
+        glVertex2i(Position.m_Value.m_X - Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y + Velocity.m_Value.m_X * SizeX);
         glEnd();
     }
 };
@@ -239,11 +228,11 @@ struct render_ships : xecs::system::instance
         glBegin(GL_QUADS);
         if(Timer.m_Value > 0 ) glColor3f(1.0, 1.0, 1.0);
         else                   glColor3f(0.5, 1.0, 0.5);
-        glVertex2i(Position.m_X - Size, Position.m_Y - Size);
-        glVertex2i(Position.m_X - Size, Position.m_Y + Size);
-        glVertex2i(Position.m_X + Size, Position.m_Y + Size);
-        glVertex2i(Position.m_X + Size, Position.m_Y - Size);
-        glEnd();
+        glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y - Size);
+        glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y + Size);
+        glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y + Size);
+        glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y - Size);
+        glEnd();                                         
     }
 };
 
@@ -297,17 +286,12 @@ void InitializeGame( void ) noexcept
     {
         SpaceShip.CreateEntity([&]( position& Position, velocity& Velocity, timer& Timer )
         {
-            Position.m_X = std::rand() % s_Game.m_W;
-            Position.m_Y = std::rand() % s_Game.m_H;
+            Position.m_Value.m_X = std::rand() % s_Game.m_W;
+            Position.m_Value.m_Y = std::rand() % s_Game.m_H;
 
-            Velocity.m_X = (std::rand() / (float)RAND_MAX) - 0.5f;
-            Velocity.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
-
-            constexpr auto  Speed   = 1.0f;
-            auto            L       = std::sqrt(Velocity.m_X * Velocity.m_X + Velocity.m_Y * Velocity.m_Y);
-
-            Velocity.m_X *= Speed / L;
-            Velocity.m_Y *= Speed / L;
+            Velocity.m_Value.m_X = (std::rand() / (float)RAND_MAX) - 0.5f;
+            Velocity.m_Value.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
+            Velocity.m_Value.Normalize();
 
             Timer.m_Value = (std::rand() / (float)RAND_MAX) * 8;
         });
