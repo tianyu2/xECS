@@ -94,11 +94,8 @@ struct bullet_logic : xecs::system::instance
         if (Entity.isZombie()) return;
 
         // Update my timer
-        if (Timer.m_Value > 0)
-        {
-            Timer.m_Value -= 0.01f;
-        }
-        else
+        Timer.m_Value -= 0.01f;
+        if (Timer.m_Value <= 0)
         {
             m_GameMgr.DeleteEntity(Entity);
             return;
@@ -166,6 +163,7 @@ struct space_ship_logic : xecs::system::instance
             auto        Direction        = Pos.m_Value - Position.m_Value;
             const auto  DistanceSquare   = Direction.getLengthSquared();
 
+            // Shoot a bullet if close enough
             constexpr auto min_distance_v = 30;
             if( DistanceSquare < min_distance_v*min_distance_v )
             {
@@ -281,10 +279,10 @@ void InitializeGame( void ) noexcept
     //
     // Generate a few random ships
     //
-    auto& SpaceShip = s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >();
+    auto& SpaceShipArchetype = s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >();
     for(int i=0; i<1000; i++ )
     {
-        SpaceShip.CreateEntity([&]( position& Position, velocity& Velocity, timer& Timer )
+        SpaceShipArchetype.CreateEntity([&]( position& Position, velocity& Velocity, timer& Timer )
         {
             Position.m_Value.m_X = std::rand() % s_Game.m_W;
             Position.m_Value.m_Y = std::rand() % s_Game.m_H;
