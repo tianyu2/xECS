@@ -155,7 +155,9 @@ struct space_ship_logic : xecs::system::instance
 
         xecs::query::instance    Query;
         Query.m_NoneOf.AddFromComponents<bullet>();
-        m_GameMgr.Foreach( m_GameMgr.Search(Query), [&](position& Pos ) noexcept -> bool
+        m_GameMgr.Foreach
+        ( m_GameMgr.Search(Query)
+        , [&](position& Pos ) noexcept -> bool
         {
             // Don't shoot myself
             if( &Pos == &Position ) return false;
@@ -325,7 +327,7 @@ int main(int argc, char** argv)
     glutInitWindowSize(s_Game.m_W, s_Game.m_H);
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE);
-    glutCreateWindow("ECS Example");
+    glutCreateWindow(xcore::get().m_pAppName);
     glutDisplayFunc([]
     {
         s_Game.m_GameMgr->Run();
