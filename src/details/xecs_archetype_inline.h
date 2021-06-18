@@ -98,23 +98,51 @@ namespace xecs::archetype
     ) noexcept
     {
         using func_traits = xcore::function::traits<T_CALLBACK>;
-        [&]< typename... T_COMPONENTS >(std::tuple<T_COMPONENTS...>*) constexpr noexcept
-        {
-            assert(m_ComponentBits.getBit(component::info_v<T_COMPONENTS>.m_UID) && ...);
 
-            // Allocate the entity
-            for( int EntityIndexInPool = m_Pool.Append(Count)
-                   , end               = EntityIndexInPool+Count; EntityIndexInPool<end; ++EntityIndexInPool )
+        // Allocate the entity
+        if constexpr ( std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK > )
+        {
+            for (int EntityIndexInPool = m_Pool.Append(Count)
+                , end = EntityIndexInPool + Count; EntityIndexInPool < end; ++EntityIndexInPool)
             {
                 m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool)
-                = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
-
-                // Call the user initializer if any
-                if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
-                    Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
+                    = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
+            }
+        }
+        else
+        {
+            int EntityIndexInPool = m_Pool.Append(Count);
+            std::array< std::byte*, func_traits::arg_count_v > CachePointers;
+            {
+                using sorted_tuple = xecs::component::details::sort_tuple_t<func_traits::args_tuple>;
+                int Sequence = 0;
+                [&] <typename... T >(std::tuple<T...>*) constexpr noexcept
+                {
+                    assert(m_ComponentBits.getBit(component::info_v<T>.m_UID) && ...);
+                    static_assert( ((std::is_reference_v<T> ) && ... ) );
+                    ((CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
+                    {
+                        return &m_Pool.m_pComponent[m_Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence)][sizeof(T_C) * EntityIndexInPool];
+                    }(xcore::types::make_null_tuple_v<T>)), ...);
+                }(xcore::types::null_tuple_v<sorted_tuple>);
             }
 
-        }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+            xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
+            for( ; Count; --Count )
+            {
+                // Fill the entity data
+                *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
+                pEntity++;
+
+                // Call the user initializer
+                [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+                {
+                    Function( reinterpret_cast<T>( *CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] )
+                            ... );
+                    ((CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ... );
+                }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+            }
+        }
     }
 
     //--------------------------------------------------------------------------------------------

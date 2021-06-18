@@ -170,16 +170,16 @@ struct space_ship_logic : xecs::system::instance
             if( DistanceSquare < min_distance_v*min_distance_v )
             {
                 Time.m_Value = 8;
-                auto& Archetype = m_GameMgr.getOrCreateArchetype<position, velocity, timer, bullet>();
-                Archetype.CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
-                {
-                    Direction  /= std::sqrt(DistanceSquare);
-                    Vel.m_Value = Direction * 2.0f;
-                    Pos.m_Value = Position.m_Value + Vel.m_Value;
+                m_GameMgr.getOrCreateArchetype<position, velocity, timer, bullet>()
+                    .CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
+                    {
+                        Direction  /= std::sqrt(DistanceSquare);
+                        Vel.m_Value = Direction * 2.0f;
+                        Pos.m_Value = Position.m_Value + Vel.m_Value;
 
-                    Bullet.m_ShipOwner = Entity;
-                    Timer.m_Value      = 10;
-                });
+                        Bullet.m_ShipOwner = Entity;
+                        Timer.m_Value      = 10;
+                    });
                 return true;
             }
             return false;
