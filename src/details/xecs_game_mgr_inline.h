@@ -202,19 +202,21 @@ namespace xecs::game_mgr
         for( const auto& pE : List )
         {
             const auto& Pool = pE->m_Pool;
-            auto CachePointers = [&]<typename...T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
+            std::array< std::byte*, func_traits::arg_count_v > CachePointers;
             {
-                return std::array
+                using sorted_tuple = xecs::component::details::sort_tuple_t<func_traits::args_tuple>;
+                int Sequence = 0;
+                [&]<typename... T >(std::tuple<T...>*) constexpr noexcept
                 {
-                    [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
+                    ( (CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>( std::tuple<T_C>*) constexpr noexcept
                     {
-                        const auto I = Pool.findIndexComponentFromGUID(xecs::component::info_v<T_C>.m_Guid);
+                        const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence);
                         if constexpr (std::is_pointer_v<T_C>) return (I < 0) ? nullptr : Pool.m_pComponent[I];
                         else                                  return Pool.m_pComponent[I];
-                    }( xcore::types::make_null_tuple_v<T_COMPONENTS> )
-                    ...
-                };
-            }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    }( xcore::types::make_null_tuple_v<T> ) ), ... );
+
+                }( xcore::types::null_tuple_v<sorted_tuple> );
+            }
 
             bool bBreak = false;
             pE->AccessGuard([&]
@@ -261,19 +263,21 @@ namespace xecs::game_mgr
         for( const auto& pE : List )
         {
             const auto& Pool = pE->m_Pool;
-            auto CachePointers = [&]<typename...T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
+            std::array< std::byte*, func_traits::arg_count_v > CachePointers;
             {
-                return std::array
+                using sorted_tuple = xecs::component::details::sort_tuple_t<func_traits::args_tuple>;
+                int Sequence = 0;
+                [&] <typename... T >(std::tuple<T...>*) constexpr noexcept
                 {
-                    [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
+                    ((CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
                     {
-                        const auto I = Pool.findIndexComponentFromGUID(xecs::component::info_v<T_C>.m_Guid);
+                        const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence);
                         if constexpr (std::is_pointer_v<T_C>) return (I < 0) ? nullptr : Pool.m_pComponent[I];
                         else                                  return Pool.m_pComponent[I];
-                    }( xcore::types::make_null_tuple_v<T_COMPONENTS> )
-                    ...
-                };
-            }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    }(xcore::types::make_null_tuple_v<T>)), ...);
+
+                }(xcore::types::null_tuple_v<sorted_tuple>);
+            }
 
             pE->AccessGuard([&]
             {

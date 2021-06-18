@@ -9,7 +9,7 @@ namespace xecs::component
             {
                 .m_UID          = info::invalid_id_v
             ,   .m_Size         = static_cast<std::uint32_t>(sizeof(T))
-            ,   .m_Guid         = std::is_same_v<xecs::component::entity,T> ? nullptr : info::guid{ __FUNCSIG__ }
+            ,   .m_Guid         = std::is_same_v<xecs::component::entity,T> ? info::guid{ nullptr } : info::guid{ __FUNCSIG__ }
             ,   .m_pConstructFn = std::is_trivially_constructible_v<T>      ? nullptr
                                                                             : []( std::byte* p ) noexcept
                                                                             {
@@ -34,7 +34,7 @@ namespace xecs::component
         template< typename T_A, typename T_B >
         struct smaller_component
         {
-            constexpr static bool value = info_v<T_A>.m_Guid < info_v<T_B>.m_Guid;
+            constexpr static bool value = xecs::component::info_v<T_A>.m_Guid < xecs::component::info_v<T_B>.m_Guid;
         };
 
         template< typename T_TUPLE >

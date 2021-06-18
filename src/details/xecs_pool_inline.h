@@ -143,12 +143,14 @@ namespace xecs::pool
     , int&                          Sequence 
     ) const noexcept
     {
-        for( auto end = static_cast<int>(m_Infos.size()); Sequence < end; ++Sequence )
+        const auto Backup = Sequence;
+        for( const auto end = static_cast<const int>(m_Infos.size()); Sequence < end; ++Sequence)
         {
             const auto InfoGuid = m_Infos[Sequence]->m_Guid;
             if (InfoGuid == SearchGuid) return Sequence++;
-            [[unlikely]] if (InfoGuid.m_Value > SearchGuid.m_Value) return -1;
+            [[unlikely]] if ( InfoGuid.m_Value > SearchGuid.m_Value) break;
         }
+        Sequence = Backup;
         return -1;
     }
 
