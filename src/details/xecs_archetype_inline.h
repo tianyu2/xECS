@@ -27,15 +27,30 @@ namespace xecs::archetype
 
     void instance::Initialize
     ( std::span<const xecs::component::info* const>  Infos
-    , const tools::bits&                            Bits 
+    , const tools::bits&                             Bits 
     ) noexcept
     {
         // Deep copy the infos just in case the user gave us data driven infos
+        bool AreTheySorted = true;
         for( int i=0; i<Infos.size(); ++i )
         {
             m_InfoData[i] = Infos[i];
+            if( i && m_InfoData[i-1] > m_InfoData[i] ) AreTheySorted = false;
         }
 
+        // Short Infos base on their GUID (smaller first) entry 0 should be the entity
+        if( false == AreTheySorted )
+        {
+            std::sort
+            ( m_InfoData.begin()
+            , m_InfoData.begin() + Infos.size()
+            , []( const xecs::component::info* pA, const xecs::component::info* pB ) constexpr
+            {
+                return pA->m_Guid < pB->m_Guid;
+            });
+        }
+
+        // We can initialize our default pool
         m_Pool.Initialize( { m_InfoData.data(), Infos.size() } );
         m_ComponentBits = Bits;
     }

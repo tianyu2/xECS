@@ -156,7 +156,7 @@ namespace xecs::game_mgr
         // Make sure the entity is part of the list at this point
         assert( Query.getBit(xecs::component::info_v<xecs::component::entity>.m_UID) );
         
-        for (auto& E : m_lArchetypeBits)
+        for( auto& E : m_lArchetypeBits )
         {
             if ( E.Compare(Query) )
             {
@@ -183,8 +183,8 @@ namespace xecs::game_mgr
     archetype::instance& instance::getOrCreateArchetype( void ) noexcept
     {
         static_assert( ((std::is_same_v<T_COMPONENTS, xecs::component::entity> == false ) && ...) );
-        static constexpr auto ComponentList = std::array{ &component::info_v<xecs::component::entity>, &component::info_v<T_COMPONENTS>... };
-        return getOrCreateArchetype( ComponentList );
+        return getOrCreateArchetype
+        ( xecs::component::details::sorted_info_array_v< xecs::component::details::combined_t<xecs::component::entity, T_COMPONENTS... >> );
     }
 
     //---------------------------------------------------------------------------
@@ -208,7 +208,7 @@ namespace xecs::game_mgr
                 {
                     [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
                     {
-                        const auto I = Pool.findIndexComponentFromUIDComponent(xecs::component::info_v<T_C>.m_UID);
+                        const auto I = Pool.findIndexComponentFromGUID(xecs::component::info_v<T_C>.m_Guid);
                         if constexpr (std::is_pointer_v<T_C>) return (I < 0) ? nullptr : Pool.m_pComponent[I];
                         else                                  return Pool.m_pComponent[I];
                     }( xcore::types::make_null_tuple_v<T_COMPONENTS> )
@@ -267,7 +267,7 @@ namespace xecs::game_mgr
                 {
                     [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
                     {
-                        const auto I = Pool.findIndexComponentFromUIDComponent(xecs::component::info_v<T_C>.m_UID);
+                        const auto I = Pool.findIndexComponentFromGUID(xecs::component::info_v<T_C>.m_Guid);
                         if constexpr (std::is_pointer_v<T_C>) return (I < 0) ? nullptr : Pool.m_pComponent[I];
                         else                                  return Pool.m_pComponent[I];
                     }( xcore::types::make_null_tuple_v<T_COMPONENTS> )

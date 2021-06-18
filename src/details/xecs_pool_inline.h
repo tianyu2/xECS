@@ -136,26 +136,90 @@ namespace xecs::pool
     }
 
     //-------------------------------------------------------------------------------------
+
     constexpr
-    int instance::findIndexComponentFromUIDComponent( const std::uint16_t UIDComponent ) const noexcept
+    int instance::findIndexComponentFromGUIDInSequence
+    (xecs::component::info::guid    SearchGuid
+    , int&                          Sequence 
+    ) const noexcept
+    {
+        for( auto end = static_cast<int>(m_Infos.size()); Sequence < end; ++Sequence )
+        {
+            const auto InfoGuid = m_Infos[Sequence]->m_Guid;
+            if (InfoGuid == SearchGuid) return Sequence++;
+            [[unlikely]] if (InfoGuid.m_Value > SearchGuid.m_Value) return -1;
+        }
+        return -1;
+    }
+
+    //-------------------------------------------------------------------------------------
+    constexpr
+    int instance::findIndexComponentFromGUID( xecs::component::info::guid SearchGuid) const noexcept
     {
         for( int i=0, end = static_cast<int>(m_Infos.size()); i<end; ++i )
         {
-            if(m_Infos[i]->m_UID == UIDComponent) return i;
+            const auto InfoGuid = m_Infos[i]->m_Guid;
+            if(InfoGuid == SearchGuid) return i;
+            [[unlikely]] if(InfoGuid.m_Value > SearchGuid.m_Value) return -1;
         }
         return -1;
     }
 
     //-------------------------------------------------------------------------------------
 
-    template< typename T_COMPONENT >
+    template
+    < typename T_COMPONENT
+    > requires
+    ( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>>
+    )
     T_COMPONENT& instance::getComponent( const std::uint32_t EntityIndex ) const noexcept
     {
-        static_assert( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>> );
-        const auto iComponent = findIndexComponentFromUIDComponent( xecs::component::info_v<T_COMPONENT>.m_UID );
-        return *reinterpret_cast<T_COMPONENT*>
-        (
-            &m_pComponent[iComponent][ EntityIndex * sizeof(T_COMPONENT) ]
-        );
+        if constexpr( std::is_same_v<xecs::component::entity, T_COMPONENT>)
+        {
+            return *reinterpret_cast<T_COMPONENT*>
+            (
+                &m_pComponent[0][ EntityIndex * sizeof(T_COMPONENT) ]
+            );
+        }
+        else
+        {
+            const auto iComponent = findIndexComponentFromGUID( xecs::component::info_v<T_COMPONENT>.m_Guid );
+            return *reinterpret_cast<T_COMPONENT*>
+            (
+                &m_pComponent[iComponent][ EntityIndex * sizeof(T_COMPONENT) ]
+            );
+        }
     }
+
+    //-------------------------------------------------------------------------------------
+
+    template
+    < typename T_COMPONENT
+    > requires
+    ( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>>
+    )
+    T_COMPONENT& instance::getComponentInSequence
+    ( std::uint32_t EntityIndex
+    , int&          Sequence
+    ) const noexcept
+    {
+        if constexpr (std::is_same_v<xecs::component::entity, T_COMPONENT>)
+        {
+            assert(Sequence==0);
+            Sequence = 1;
+            return *reinterpret_cast<T_COMPONENT*>
+            (
+                &m_pComponent[0][EntityIndex * sizeof(T_COMPONENT)]
+            );
+        }
+        else
+        {
+            const auto iComponent = findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_COMPONENT>.m_Guid, Sequence );
+            return *reinterpret_cast<T_COMPONENT*>
+            (
+                &m_pComponent[iComponent][ EntityIndex * sizeof(T_COMPONENT) ]
+            );
+        }
+    }
+
 }

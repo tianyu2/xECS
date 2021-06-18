@@ -6,6 +6,7 @@ namespace xecs::component
     struct info final
     {
         constexpr static auto invalid_id_v = 0xffff;
+        using guid = xcore::guid::unit<64, struct component_type_tag>;
 
         using construct_fn  = void(std::byte*) noexcept;
         using destruct_fn   = void(std::byte*) noexcept;
@@ -13,6 +14,7 @@ namespace xecs::component
 
         mutable std::uint16_t   m_UID;
         std::uint32_t           m_Size;
+        guid                    m_Guid;
         construct_fn*           m_pConstructFn;
         destruct_fn*            m_pDestructFn;
         move_fn*                m_pMoveFn;

@@ -25,12 +25,26 @@ namespace xecs::pool
         int             Size                                ( void 
                                                             ) const noexcept;
         constexpr
-        int             findIndexComponentFromUIDComponent  ( std::uint16_t UIDComponent 
+        int             findIndexComponentFromGUID          ( xecs::component::info::guid Guid
+                                                            ) const noexcept;
+        constexpr
+        int             findIndexComponentFromGUIDInSequence( xecs::component::info::guid Guid
+                                                            , int&          Sequence 
                                                             ) const noexcept;
         template
         < typename T_COMPONENT
-        >
+        > requires
+        ( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>>
+        )
         T_COMPONENT&    getComponent                        ( std::uint32_t EntityIndex 
+                                                            ) const noexcept;
+        template
+        < typename T_COMPONENT
+        > requires
+        ( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>>
+        )
+        T_COMPONENT&    getComponentInSequence              ( std::uint32_t EntityIndex
+                                                            , int&          Sequence
                                                             ) const noexcept;
 
         std::span<const component::info* const >                            m_Infos         {};
