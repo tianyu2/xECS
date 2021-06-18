@@ -47,7 +47,7 @@ namespace xecs::archetype
         xecs::tools::bits                    m_ComponentBits     {};
         xecs::pool::instance                 m_Pool              {};
         std::uint32_t                        m_DeleteGlobalIndex { invalid_delete_global_index_v };
-        int                                  m_ProcessReference  { 0 };
+        std::int8_t                          m_ProcessReference  { 0 };
         info_array                           m_InfoData          {};
     };
 }
