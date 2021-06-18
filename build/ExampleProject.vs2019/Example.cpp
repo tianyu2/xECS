@@ -155,7 +155,7 @@ struct space_ship_logic : xecs::system::instance
 
         xecs::query::instance    Query;
         Query.m_NoneOf.AddFromComponents<bullet>();
-        m_GameMgr.Foreach( m_GameMgr.Search(Query), [&](position& Pos ) noexcept
+        m_GameMgr.Foreach( m_GameMgr.Search(Query), [&](position& Pos ) noexcept -> bool
         {
             // Don't shoot myself
             if( &Pos == &Position ) return false;
@@ -172,8 +172,8 @@ struct space_ship_logic : xecs::system::instance
                 Archetype.CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
                 {
                     Direction  /= std::sqrt(DistanceSquare);
-                    Pos.m_Value = Position.m_Value + Vel.m_Value;
                     Vel.m_Value = Direction * 2.0f;
+                    Pos.m_Value = Position.m_Value + Vel.m_Value;
 
                     Bullet.m_ShipOwner = Entity;
                     Timer.m_Value      = 10;

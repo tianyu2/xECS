@@ -70,6 +70,6 @@ namespace xecs::component
         void RegisterComponent          ( void
                                         ) noexcept;
 
-        int m_UniqueID = 0;
+        inline static int m_UniqueID = 0;
     };
 }

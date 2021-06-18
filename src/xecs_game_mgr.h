@@ -44,8 +44,11 @@ namespace xecs::game_mgr
         void                                DeleteEntity            ( xecs::component::entity& Entity 
                                                                     ) noexcept;
         inline
-        void                                DeleteEntity            ( xecs::component::entity  DeletedEntity
+        void                                SystemDeleteEntity      ( xecs::component::entity  DeletedEntity
                                                                     , xecs::component::entity& SwappedEntity 
+                                                                    ) noexcept;
+        inline
+        void                                SystemDeleteEntity      ( xecs::component::entity DeletedEntity 
                                                                     ) noexcept;
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
@@ -53,7 +56,7 @@ namespace xecs::game_mgr
         ( xcore::function::is_callable_v<T_FUNCTION>
         ) __inline
         bool                                findEntity              ( xecs::component::entity Entity
-                                                                    , T_FUNCTION&&           Function = xecs::tools::empty_lambda{}
+                                                                    , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
                                                                     ) const noexcept;
         inline
         std::vector<archetype::instance*>   Search                  ( std::span<const component::info* const> Types 

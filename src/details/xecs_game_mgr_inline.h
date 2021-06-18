@@ -8,7 +8,7 @@ namespace xecs::game_mgr
         m_ComponentMgr.RegisterComponent<xecs::component::entity>();
 
         // Create a link list of empty entries
-        for( int i=0, end = xecs::settings::max_entities_v-1; i<end; ++i )
+        for( int i=0, end = xecs::settings::max_entities_v-2; i<end; ++i )
         {
             m_lEntities[i].m_PoolIndex = i+1;
         }
@@ -72,11 +72,22 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
-    void instance::DeleteEntity( xecs::component::entity DeletedEntity, xecs::component::entity& SwappedEntity ) noexcept
+    void instance::SystemDeleteEntity( xecs::component::entity DeletedEntity, xecs::component::entity& SwappedEntity ) noexcept
     {
         auto& Entry = m_lEntities[DeletedEntity.m_GlobalIndex];
         m_lEntities[SwappedEntity.m_GlobalIndex].m_PoolIndex = Entry.m_PoolIndex;
 
+        Entry.m_Validation.m_Generation++;
+        Entry.m_Validation.m_bZombie = false;
+        Entry.m_PoolIndex            = m_EmptyHead;
+        m_EmptyHead = static_cast<int>(DeletedEntity.m_GlobalIndex);
+    }
+
+    //---------------------------------------------------------------------------
+
+    void instance::SystemDeleteEntity( xecs::component::entity DeletedEntity ) noexcept
+    {
+        auto& Entry = m_lEntities[DeletedEntity.m_GlobalIndex];
         Entry.m_Validation.m_Generation++;
         Entry.m_Validation.m_bZombie = false;
         Entry.m_PoolIndex            = m_EmptyHead;
@@ -322,17 +333,9 @@ namespace xecs::game_mgr
         XCORE_PERF_FRAME_MARK_START("ecs::Frame")
 
         //
-        // Run system
+        // Run systems
         //
         m_SystemMgr.Run();
-
-        //
-        // Make sure all deleted entities are gone
-        //
-        for( auto& E : m_lArchetype )
-        {
-            E->UpdateStructuralChanges();
-        }
 
         XCORE_PERF_FRAME_MARK_END("ecs::Frame")
     }

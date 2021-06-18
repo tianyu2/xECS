@@ -99,8 +99,14 @@ namespace xecs::archetype
 
                 // Free Entity
                 m_Pool.Delete(EntityDetails.m_PoolIndex);
-                if(EntityDetails.m_PoolIndex != m_Pool.Size()) 
-                    m_GameMgr.DeleteEntity(Entity, m_Pool.getComponent<xecs::component::entity>(EntityDetails.m_PoolIndex));
+                if(EntityDetails.m_PoolIndex != m_Pool.Size())
+                {
+                    m_GameMgr.SystemDeleteEntity(Entity, m_Pool.getComponent<xecs::component::entity>(EntityDetails.m_PoolIndex));
+                }
+                else
+                {
+                    m_GameMgr.SystemDeleteEntity(Entity);
+                }
             }
             m_ToDelete.clear();
         }

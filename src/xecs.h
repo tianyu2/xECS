@@ -1,5 +1,5 @@
-#ifndef ECS_H
-#define ECS_H
+#ifndef XECS_H
+#define XECS_H
 #pragma once
 
 //--------------------------------------------------------------

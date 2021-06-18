@@ -137,7 +137,7 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
     constexpr
-    int instance::findIndexComponentFromUIDComponent( std::uint16_t UIDComponent ) const noexcept
+    int instance::findIndexComponentFromUIDComponent( const std::uint16_t UIDComponent ) const noexcept
     {
         for( int i=0, end = static_cast<int>(m_Infos.size()); i<end; ++i )
         {
@@ -149,7 +149,7 @@ namespace xecs::pool
     //-------------------------------------------------------------------------------------
 
     template< typename T_COMPONENT >
-    T_COMPONENT& instance::getComponent( std::uint32_t EntityIndex ) const noexcept
+    T_COMPONENT& instance::getComponent( const std::uint32_t EntityIndex ) const noexcept
     {
         static_assert( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>> );
         const auto iComponent = findIndexComponentFromUIDComponent( xecs::component::info_v<T_COMPONENT>.m_UID );

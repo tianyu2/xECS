@@ -8,7 +8,7 @@ namespace xecs::archetype
                                                         ) noexcept;
         
         inline
-        void                    Initialize              ( std::span<const xecs::component::info* const>  Infos
+        void                    Initialize              ( std::span<const xecs::component::info* const> Infos
                                                         , const tools::bits&                            Bits 
                                                         ) noexcept;
         
