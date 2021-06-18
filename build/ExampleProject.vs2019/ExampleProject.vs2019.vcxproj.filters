@@ -13,10 +13,10 @@
     <Filter Include="Dependencies\xCore\Details">
       <UniqueIdentifier>{472ad25f-669c-42ac-aed9-60b0d3d3c99a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="XECS">
+    <Filter Include="xECS">
       <UniqueIdentifier>{a9073648-9319-4246-bf5c-43cc10062cca}</UniqueIdentifier>
     </Filter>
-    <Filter Include="XECS\Details">
+    <Filter Include="xECS\Details">
       <UniqueIdentifier>{f37e540e-0141-479c-8574-f322de9098d3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -190,58 +190,58 @@
       <Filter>Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_archetype.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_component.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_event.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_game_mgr.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_query.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_settings.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_system.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_tools.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_system_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_archetype_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\xecs_pool.h">
-      <Filter>XECS</Filter>
+      <Filter>xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_pool_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_game_mgr_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_query_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_tools_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_component_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_event_inline.h">
-      <Filter>XECS\Details</Filter>
+      <Filter>xECS\Details</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
