@@ -77,11 +77,52 @@ namespace xecs::archetype
     ) noexcept
     {
         assert( Entity.isZombie() == false );
-        Entity.m_Validation.m_bZombie
-        = m_GameMgr.m_lEntities[Entity.m_GlobalIndex].m_Validation.m_bZombie
-        = true;
-        m_ToDelete.push_back(Entity);
-        if( 0 == m_ProcessReference ) UpdateStructuralChanges();
+
+        //
+        // Validate the crap out of the entity
+        //
+        auto& GlobalEntry = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
+
+        if(Entity.m_Validation != GlobalEntry.m_Validation
+        || GlobalEntry.m_pArchetype != this ) return;
+        
+        // Make sure that we are in sync with the pool entity
+        auto& PoolEntity = m_Pool.getComponent<xecs::component::entity>(GlobalEntry.m_PoolIndex);
+        if( PoolEntity != Entity )
+            return;
+
+        //
+        // Check if we can delete it right away
+        //
+        if (0 == m_ProcessReference)
+        {
+            Entity.m_Validation.m_bZombie = true;
+            m_Pool.Delete(GlobalEntry.m_PoolIndex);
+            if (GlobalEntry.m_PoolIndex != m_Pool.Size())
+            {
+                m_GameMgr.DeleteGlobalEntity(Entity.m_GlobalIndex, PoolEntity);
+            }
+            else
+            {
+                m_GameMgr.DeleteGlobalEntity(Entity.m_GlobalIndex);
+            }
+        }
+        else
+        {
+            //
+            // Make it into a zombie
+            //
+            Entity.m_Validation.m_bZombie
+                = GlobalEntry.m_Validation.m_bZombie
+                = PoolEntity.m_Validation.m_bZombie     // Just in case that Entity is a reference and not the real entity
+                = true;
+
+            //
+            // Added into the delete link list
+            //
+            PoolEntity.m_Validation.m_Generation = m_DeleteGlobalIndex;
+            m_DeleteGlobalIndex                  = PoolEntity.m_GlobalIndex;
+        }
     }
 
     //--------------------------------------------------------------------------------------------
@@ -90,25 +131,24 @@ namespace xecs::archetype
     ( void
     ) noexcept
     {
-        if( m_ToDelete.size() )
+        while( m_DeleteGlobalIndex != invalid_delete_global_index_v )
         {
-            for( auto& Entity : m_ToDelete )
-            {
-                auto& EntityDetails = m_GameMgr.getEntityDetails(Entity);
-                assert(EntityDetails.m_pArchetype == this);
+            auto&       Entry                   = m_GameMgr.m_lEntities[m_DeleteGlobalIndex];
+            auto&       PoolEntity              = m_Pool.getComponent<xecs::component::entity>(Entry.m_PoolIndex);
+            const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
+            assert(PoolEntity.m_Validation.m_bZombie);
 
-                // Free Entity
-                m_Pool.Delete(EntityDetails.m_PoolIndex);
-                if(EntityDetails.m_PoolIndex != m_Pool.Size())
-                {
-                    m_GameMgr.SystemDeleteEntity(Entity, m_Pool.getComponent<xecs::component::entity>(EntityDetails.m_PoolIndex));
-                }
-                else
-                {
-                    m_GameMgr.SystemDeleteEntity(Entity);
-                }
+            m_Pool.Delete(Entry.m_PoolIndex);
+            if (Entry.m_PoolIndex != m_Pool.Size())
+            {
+                m_GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
             }
-            m_ToDelete.clear();
+            else
+            {
+                m_GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
+            }
+
+            m_DeleteGlobalIndex = NextDeleteGlobalIndex;
         }
     }
 }

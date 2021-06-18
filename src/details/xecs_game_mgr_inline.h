@@ -72,26 +72,26 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
-    void instance::SystemDeleteEntity( xecs::component::entity DeletedEntity, xecs::component::entity& SwappedEntity ) noexcept
+    void instance::DeleteGlobalEntity( std::uint32_t GlobalIndex, xecs::component::entity& SwappedEntity ) noexcept
     {
-        auto& Entry = m_lEntities[DeletedEntity.m_GlobalIndex];
+        auto& Entry = m_lEntities[GlobalIndex];
         m_lEntities[SwappedEntity.m_GlobalIndex].m_PoolIndex = Entry.m_PoolIndex;
 
         Entry.m_Validation.m_Generation++;
         Entry.m_Validation.m_bZombie = false;
         Entry.m_PoolIndex            = m_EmptyHead;
-        m_EmptyHead = static_cast<int>(DeletedEntity.m_GlobalIndex);
+        m_EmptyHead = static_cast<int>(GlobalIndex);
     }
 
     //---------------------------------------------------------------------------
 
-    void instance::SystemDeleteEntity( xecs::component::entity DeletedEntity ) noexcept
+    void instance::DeleteGlobalEntity(std::uint32_t GlobalIndex ) noexcept
     {
-        auto& Entry = m_lEntities[DeletedEntity.m_GlobalIndex];
+        auto& Entry = m_lEntities[GlobalIndex];
         Entry.m_Validation.m_Generation++;
         Entry.m_Validation.m_bZombie = false;
         Entry.m_PoolIndex            = m_EmptyHead;
-        m_EmptyHead = static_cast<int>(DeletedEntity.m_GlobalIndex);
+        m_EmptyHead = static_cast<int>(GlobalIndex);
     }
 
     //---------------------------------------------------------------------------

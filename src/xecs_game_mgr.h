@@ -44,11 +44,11 @@ namespace xecs::game_mgr
         void                                DeleteEntity            ( xecs::component::entity& Entity 
                                                                     ) noexcept;
         inline
-        void                                SystemDeleteEntity      ( xecs::component::entity  DeletedEntity
-                                                                    , xecs::component::entity& SwappedEntity 
+        void                                DeleteGlobalEntity      (std::uint32_t              GlobalIndex
+                                                                    , xecs::component::entity&  SwappedEntity 
                                                                     ) noexcept;
         inline
-        void                                SystemDeleteEntity      ( xecs::component::entity DeletedEntity 
+        void                                DeleteGlobalEntity      (std::uint32_t GlobalIndex
                                                                     ) noexcept;
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
