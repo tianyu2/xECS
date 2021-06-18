@@ -20,7 +20,16 @@ namespace xecs::archetype
         ) __inline
         xecs::component::entity CreateEntity            ( T_CALLBACK&& Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
-        
+
+        template
+        < typename T_CALLBACK = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_CALLBACK>
+            && std::is_same_v<typename xcore::function::traits<T_CALLBACK>::return_type, void>
+        ) __inline
+        void                    CreateEntities          ( int Count, T_CALLBACK&& Function = xecs::tools::empty_lambda{}
+                                                        ) noexcept;
+
         inline
         void                    DestroyEntity           ( xecs::component::entity& Entity
                                                         ) noexcept;

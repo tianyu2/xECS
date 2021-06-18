@@ -73,7 +73,7 @@ namespace xecs::archetype
             assert(m_ComponentBits.getBit(component::info_v<T_COMPONENTS>.m_UID) && ...);
 
             // Allocate the entity
-            const int   EntityIndexInPool   = m_Pool.Append();
+            const int   EntityIndexInPool   = m_Pool.Append(1);
             const auto  Entity              = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
             m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) = Entity;
 
@@ -82,6 +82,38 @@ namespace xecs::archetype
                 Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
 
             return Entity;
+        }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+    }
+
+    //--------------------------------------------------------------------------------------------
+    template
+    < typename T_CALLBACK
+    > requires
+    ( xcore::function::is_callable_v<T_CALLBACK>
+   && std::is_same_v<typename xcore::function::traits<T_CALLBACK>::return_type, void>
+    )
+    void instance::CreateEntities
+    ( int               Count
+    , T_CALLBACK&&      Function 
+    ) noexcept
+    {
+        using func_traits = xcore::function::traits<T_CALLBACK>;
+        [&]< typename... T_COMPONENTS >(std::tuple<T_COMPONENTS...>*) constexpr noexcept
+        {
+            assert(m_ComponentBits.getBit(component::info_v<T_COMPONENTS>.m_UID) && ...);
+
+            // Allocate the entity
+            for( int EntityIndexInPool = m_Pool.Append(Count)
+                   , end               = EntityIndexInPool+Count; EntityIndexInPool<end; ++EntityIndexInPool )
+            {
+                m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool)
+                = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
+
+                // Call the user initializer if any
+                if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
+                    Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
+            }
+
         }( xcore::types::null_tuple_v<func_traits::args_tuple> );
     }
 

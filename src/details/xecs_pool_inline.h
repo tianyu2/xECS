@@ -49,28 +49,38 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
 
-    int instance::Append( void ) noexcept
+    int instance::Append( int Count ) noexcept
     {
         assert( m_Size < (xecs::settings::max_entities_v-1) );
 
         for( int i = 0; i < m_Infos.size(); ++i )
         {
             const auto&   MyInfo  = *m_Infos[i];
-            const auto    NexPage = getPageFromIndex(MyInfo, m_Size+1);
+            const auto    NexPage = getPageFromIndex(MyInfo, m_Size+Count);
 
             // Create pages when needed 
-            if( getPageFromIndex(MyInfo, m_Size) != NexPage)
+            if( auto Cur = getPageFromIndex(MyInfo, m_Size); Cur != NexPage )
             {
-                auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * NexPage;
-                auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, xecs::settings::virtual_page_size_v, MEM_COMMIT, PAGE_READWRITE));
+                auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * (Cur+1);
+                auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, (NexPage - Cur) * xecs::settings::virtual_page_size_v, MEM_COMMIT, PAGE_READWRITE));
                 assert(p == pNewPagePtr);
             }
 
             // Construct if required
-            if( MyInfo.m_pConstructFn ) MyInfo.m_pConstructFn( &m_pComponent[i][m_Size * MyInfo.m_Size] );
+            if( MyInfo.m_pConstructFn ) 
+            {
+                auto p = &m_pComponent[i][m_Size * MyInfo.m_Size];
+                for(int j=Count; j; --j )
+                {
+                    MyInfo.m_pConstructFn(p);
+                    p += MyInfo.m_Size;
+                }
+            }
         }
 
-        return m_Size++;
+        auto Index = m_Size;
+        m_Size += Count;
+        return Index;
     }
 
     //-------------------------------------------------------------------------------------

@@ -16,7 +16,7 @@ namespace xecs::pool
         void            Clear                               ( void 
                                                             ) noexcept;
         inline
-        int             Append                              ( void 
+        int             Append                              ( int Count 
                                                             ) noexcept;
         inline
         void            Delete                              ( int Index 

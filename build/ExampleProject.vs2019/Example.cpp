@@ -281,10 +281,8 @@ void InitializeGame( void ) noexcept
     //
     // Generate a few random ships
     //
-    auto& SpaceShipArchetype = s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >();
-    for(int i=0; i<1000; i++ )
-    {
-        SpaceShipArchetype.CreateEntity([&]( position& Position, velocity& Velocity, timer& Timer )
+    s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >()
+        .CreateEntities( 1000, [&]( position& Position, velocity& Velocity, timer& Timer )
         {
             Position.m_Value.m_X = std::rand() % s_Game.m_W;
             Position.m_Value.m_Y = std::rand() % s_Game.m_H;
@@ -295,7 +293,6 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value = (std::rand() / (float)RAND_MAX) * 8;
         });
-    }
 }
 
 //---------------------------------------------------------------------------------------
