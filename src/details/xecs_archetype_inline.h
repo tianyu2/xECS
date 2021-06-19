@@ -21,7 +21,7 @@ namespace xecs::archetype
         , std::tuple<T_FUNCTION_ARGS... >* 
         ) noexcept
         {
-            assert(m_ComponentBits.getBit(component::info_v<T_FUNCTION_ARGS>.m_UID) && ...);
+            assert( ((Pool.findIndexComponentFromGUID(xecs::component::info_v<T_FUNCTION_ARGS>.m_Guid) >= 0 ) && ... ) );
 
             using function_args = std::tuple< T_FUNCTION_ARGS... >;
             using sorted_tuple  = xecs::component::details::sort_tuple_t< function_args >;
@@ -169,8 +169,6 @@ namespace xecs::archetype
         }
     }
 
-
-
     //--------------------------------------------------------------------------------------------
 
     instance::instance
@@ -298,11 +296,9 @@ namespace xecs::archetype
         }
         else
         {
-            auto CachePointers = details::GetComponentPointerArray
-            ( m_Pool
-            , EntityIndexInPool
-            , xcore::types::null_tuple_v<func_traits::args_tuple> 
-            );
+            auto CachePointers = details::GetComponentPointerArray( m_Pool, EntityIndexInPool
+                                                                  , xcore::types::null_tuple_v<func_traits::args_tuple> 
+                                                                  );
 
             xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
             assert( &m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) == pEntity ); 
