@@ -1,5 +1,176 @@
 namespace xecs::archetype
 {
+    namespace details
+    {
+        //-------------------------------------------------------------------------------------------------
+
+        template< typename T_FUNCTION >
+        constexpr auto function_arguments_r_refs_v = []<typename...T>(std::tuple<T...>*) constexpr
+        {
+            return (std::is_reference_v<T> && ...);
+        }( xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple> );
+
+        //-------------------------------------------------------------------------------------------------
+
+        template< typename... T_FUNCTION_ARGS >
+        requires( ((std::is_reference_v<T_FUNCTION_ARGS>) && ... ) )
+        constexpr __inline
+        auto GetComponentPointerArray
+        ( xecs::pool::instance&             Pool
+        , int                               StartingPoolIndex
+        , std::tuple<T_FUNCTION_ARGS... >* 
+        ) noexcept
+        {
+            assert(m_ComponentBits.getBit(component::info_v<T_FUNCTION_ARGS>.m_UID) && ...);
+
+            using function_args = std::tuple< T_FUNCTION_ARGS... >;
+            using sorted_tuple  = xecs::component::details::sort_tuple_t< function_args >;
+
+            std::array< std::byte*, sizeof...(T_FUNCTION_ARGS) > CachePointers;
+            [&]<typename... T_SORTED_COMPONENT >( std::tuple<T_SORTED_COMPONENT...>* ) constexpr noexcept
+            {
+                int Sequence = 0;
+                ((CachePointers[xcore::types::tuple_t2i_v< T_SORTED_COMPONENT, function_args >] = 
+                  &Pool.m_pComponent[Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_SORTED_COMPONENT>.m_Guid, Sequence)]
+                        [sizeof(std::remove_reference_t<T_SORTED_COMPONENT>) * StartingPoolIndex])
+                , ... );
+
+            }( xcore::types::null_tuple_v<sorted_tuple>);
+
+            return CachePointers;
+        }
+
+        //-------------------------------------------------------------------------------------------------
+
+        template< typename... T_FUNCTION_ARGS >
+        requires( !((std::is_reference_v<T_FUNCTION_ARGS>) && ...) )
+        constexpr __inline
+        auto GetComponentPointerArray
+        ( xecs::pool::instance&             Pool
+        , int                               StartingPoolIndex
+        , std::tuple<T_FUNCTION_ARGS... >* 
+        ) noexcept
+        {
+            static_assert(((std::is_reference_v<T_FUNCTION_ARGS> || std::is_pointer_v<T_FUNCTION_ARGS>) && ...));
+
+            using function_args = std::tuple< T_FUNCTION_ARGS... >;
+            using sorted_tuple  = xecs::component::details::sort_tuple_t< function_args >;
+
+            std::array< std::byte*, sizeof...(T_FUNCTION_ARGS) > CachePointers;
+            [&]<typename... T_SORTED_COMPONENT >( std::tuple<T_SORTED_COMPONENT...>* ) constexpr noexcept
+            {
+                int Sequence = 0;
+                ((CachePointers[xcore::types::tuple_t2i_v< T_SORTED_COMPONENT, function_args >] = [&]<typename T>(std::tuple<T>*) constexpr noexcept 
+                {
+                    const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T>.m_Guid, Sequence);
+                    if constexpr (std::is_pointer_v<T>)
+                        return (I < 0) ? nullptr : &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex];
+                    else
+                        return &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex];
+                }(xcore::types::make_null_tuple_v<T_SORTED_COMPONENT>))
+                , ... );
+
+            }( xcore::types::null_tuple_v<sorted_tuple>);
+
+            return CachePointers;
+        }
+
+        //-------------------------------------------------------------------------------------------------
+        template< typename T_FUNCTION, typename T_ARRAY >
+        requires( function_arguments_r_refs_v<T_FUNCTION>
+                  && std::is_same_v< void, typename xcore::function::traits<T_FUNCTION>::return_type >
+                )
+        constexpr __inline
+        void CallFunction( T_FUNCTION&& Function, T_ARRAY& CachePointers) noexcept
+        {
+            using func_traits = xcore::function::traits<T_FUNCTION>;
+            [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
+            {
+                static_assert(((std::is_reference_v<T>) && ...));
+                Function(reinterpret_cast<T>(*CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>])
+                    ...);
+                ((CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
+            }(xcore::types::null_tuple_v<func_traits::args_tuple>);
+        }
+
+        //-------------------------------------------------------------------------------------------------
+        template< typename T_FUNCTION, typename T_ARRAY >
+        requires( function_arguments_r_refs_v<T_FUNCTION>
+                  && std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
+                )
+        constexpr __inline
+        bool CallFunction( T_FUNCTION&& Function, T_ARRAY& CachePointers) noexcept
+        {
+            using func_traits = xcore::function::traits<T_FUNCTION>;
+            return [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
+            {
+                static_assert(((std::is_reference_v<T>) && ...));
+                if( Function(reinterpret_cast<T>(*CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>])
+                    ...) ) return true;
+                ((CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
+                return false;
+            }(xcore::types::null_tuple_v<func_traits::args_tuple>);
+        }
+
+        //-------------------------------------------------------------------------------------------------
+        template< typename T_FUNCTION, typename T_ARRAY >
+        requires( xcore::function::is_callable_v<T_FUNCTION>
+                  && false == function_arguments_r_refs_v<T_FUNCTION>
+                  && std::is_same_v< void, typename xcore::function::traits<T_FUNCTION>::return_type >
+                )
+        constexpr __inline
+        void CallFunction( T_FUNCTION&& Function, T_ARRAY& CachePointers) noexcept
+        {
+            using func_traits = xcore::function::traits<T_FUNCTION>;
+            [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
+            {
+                Function([&]<typename T>(std::tuple<T>*) constexpr noexcept -> T
+                {
+                    auto& MyP = CachePointers[xcore::types::tuple_t2i_v<T, typename func_traits::args_tuple>];
+
+                    if constexpr (std::is_pointer_v<T>) if (MyP == nullptr) return reinterpret_cast<T>(nullptr);
+
+                    auto p = MyP;                   // Back up the pointer
+                    MyP += sizeof(std::decay_t<T>); // Get ready for the next entity
+
+                    if constexpr (std::is_pointer_v<T>) return reinterpret_cast<T>(p);
+                    else                                return reinterpret_cast<T>(*p);
+                }(xcore::types::make_null_tuple_v<T_COMPONENTS>)
+                ...);
+            }(xcore::types::null_tuple_v<func_traits::args_tuple>);
+        }
+
+        //-------------------------------------------------------------------------------------------------
+        template< typename T_FUNCTION, typename T_ARRAY >
+        requires( xcore::function::is_callable_v<T_FUNCTION>
+                  && false == function_arguments_r_refs_v<T_FUNCTION>
+                  && std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
+                )
+        constexpr __inline
+        bool CallFunction( T_FUNCTION&& Function, T_ARRAY& CachePointers) noexcept
+        {
+            using func_traits = xcore::function::traits<T_FUNCTION>;
+            return [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
+            {
+                return Function([&]<typename T>(std::tuple<T>*) constexpr noexcept -> T
+                {
+                    auto& MyP = CachePointers[xcore::types::tuple_t2i_v<T, typename func_traits::args_tuple>];
+
+                    if constexpr (std::is_pointer_v<T>) if (MyP == nullptr) return reinterpret_cast<T>(nullptr);
+
+                    auto p = MyP;                   // Back up the pointer
+                    MyP += sizeof(std::decay_t<T>); // Get ready for the next entity
+
+                    if constexpr (std::is_pointer_v<T>) return reinterpret_cast<T>(p);
+                    else                                return reinterpret_cast<T>(*p);
+                }(xcore::types::make_null_tuple_v<T_COMPONENTS>)
+                ...);
+            }(xcore::types::null_tuple_v<func_traits::args_tuple>);
+        }
+    }
+
+
+
     //--------------------------------------------------------------------------------------------
 
     instance::instance
@@ -108,6 +279,8 @@ namespace xecs::archetype
     ) noexcept
     {
         using func_traits = xcore::function::traits<T_CALLBACK>;
+        static_assert( []<typename...T>(std::tuple<T...>*){ return (std::is_reference_v<T> && ...); }(xcore::types::null_tuple_v<func_traits::args_tuple>)
+        , "This function requires only references in the user function");
         const int EntityIndexInPool = m_Pool.Append(Count);
 
         // Allocate the entity
@@ -125,21 +298,11 @@ namespace xecs::archetype
         }
         else
         {
-            std::array< std::byte*, func_traits::arg_count_v > CachePointers;
-            {
-                using sorted_tuple = xecs::component::details::sort_tuple_t<func_traits::args_tuple>;
-                int Sequence = 0;
-                [&] <typename... T >(std::tuple<T...>*) constexpr noexcept
-                {
-                    assert(m_ComponentBits.getBit(component::info_v<T>.m_UID) && ...);
-                    static_assert( ((std::is_reference_v<T> ) && ... ) );
-                    ((CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
-                    {
-                        const auto I = m_Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence);
-                        return &m_Pool.m_pComponent[I][sizeof(T_C) * EntityIndexInPool];
-                    }(xcore::types::make_null_tuple_v<T>)), ...);
-                }(xcore::types::null_tuple_v<sorted_tuple>);
-            }
+            auto CachePointers = details::GetComponentPointerArray
+            ( m_Pool
+            , EntityIndexInPool
+            , xcore::types::null_tuple_v<func_traits::args_tuple> 
+            );
 
             xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
             assert( &m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) == pEntity ); 
@@ -155,12 +318,7 @@ namespace xecs::archetype
                     pEntity++;
 
                     // Call the user initializer
-                    [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
-                    {
-                        Function( reinterpret_cast<T>( *CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] )
-                                ... );
-                        ((CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ... );
-                    }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    details::CallFunction( Function, CachePointers );
                 }
             });
         }

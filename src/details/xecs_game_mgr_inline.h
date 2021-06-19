@@ -201,44 +201,15 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            const auto& Pool = pE->m_Pool;
-            std::array< std::byte*, func_traits::arg_count_v > CachePointers;
-            {
-                using sorted_tuple = xecs::component::details::sort_tuple_t<func_traits::args_tuple>;
-                int Sequence = 0;
-                [&]<typename... T >(std::tuple<T...>*) constexpr noexcept
-                {
-                    ( (CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>( std::tuple<T_C>*) constexpr noexcept
-                    {
-                        const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence);
-                        if constexpr (std::is_pointer_v<T_C>) return (I < 0) ? nullptr : Pool.m_pComponent[I];
-                        else                                  return Pool.m_pComponent[I];
-                    }( xcore::types::make_null_tuple_v<T> ) ), ... );
-
-                }( xcore::types::null_tuple_v<sorted_tuple> );
-            }
+            auto& Pool = pE->m_Pool;
+            auto CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple>);
 
             bool bBreak = false;
             pE->AccessGuard([&]
             {
                 for( int i=Pool.Size(); i; --i )
                 {
-                    if( [&]<typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
-                    {
-                        return Function([&]<typename T>(std::tuple<T>*) constexpr noexcept -> T
-                        {
-                            auto& MyP = CachePointers[xcore::types::tuple_t2i_v<T, typename func_traits::args_tuple>];
-
-                            if constexpr (std::is_pointer_v<T>) if (MyP == nullptr) return reinterpret_cast<T>(nullptr);
-
-                            auto p = MyP;                     // Back up the pointer
-                            MyP   += sizeof(std::decay_t<T>); // Get ready for the next entity
-
-                            if constexpr (std::is_pointer_v<T>) return reinterpret_cast<T>(p);
-                            else                                return reinterpret_cast<T>(*p);
-                        }( xcore::types::make_null_tuple_v<T_COMPONENTS> ) 
-                        ...);
-                    }( xcore::types::null_tuple_v<func_traits::args_tuple> ) ) 
+                    if( archetype::details::CallFunction(Function, CachePointers) )
                     {
                         bBreak = true;
                         break;
@@ -262,43 +233,13 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            const auto& Pool = pE->m_Pool;
-            std::array< std::byte*, func_traits::arg_count_v > CachePointers;
-            {
-                using sorted_tuple = xecs::component::details::sort_tuple_t<func_traits::args_tuple>;
-                int Sequence = 0;
-                [&] <typename... T >(std::tuple<T...>*) constexpr noexcept
-                {
-                    ((CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
-                    {
-                        const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence);
-                        if constexpr (std::is_pointer_v<T_C>) return (I < 0) ? nullptr : Pool.m_pComponent[I];
-                        else                                  return Pool.m_pComponent[I];
-                    }(xcore::types::make_null_tuple_v<T>)), ...);
-
-                }(xcore::types::null_tuple_v<sorted_tuple>);
-            }
-
+            auto& Pool = pE->m_Pool;
+            auto CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple> );
             pE->AccessGuard([&]
             {
                 for( int i=Pool.Size(); i; --i )
                 {
-                    [&]<typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
-                    {
-                        Function([&]<typename T>(std::tuple<T>*) constexpr noexcept -> T
-                        {
-                            auto& MyP = CachePointers[xcore::types::tuple_t2i_v<T, typename func_traits::args_tuple>];
-
-                            if constexpr (std::is_pointer_v<T>) if (MyP == nullptr) return reinterpret_cast<T>(nullptr);
-
-                            auto p = MyP;                   // Back up the pointer
-                            MyP += sizeof(std::decay_t<T>); // Get ready for the next entity
-
-                            if constexpr (std::is_pointer_v<T>) return reinterpret_cast<T>(p);
-                            else                                return reinterpret_cast<T>(*p);
-                        }( xcore::types::make_null_tuple_v<T_COMPONENTS> ) 
-                        ...);
-                    }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    archetype::details::CallFunction(Function, CachePointers);
                 }
             });
         }
