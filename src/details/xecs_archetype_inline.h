@@ -81,6 +81,9 @@ namespace xecs::archetype
             if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
                 Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
 
+            // Update the official count if we can
+            if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+
             return Entity;
         }( xcore::types::null_tuple_v<func_traits::args_tuple> );
     }
@@ -93,25 +96,25 @@ namespace xecs::archetype
    && std::is_same_v<typename xcore::function::traits<T_CALLBACK>::return_type, void>
     )
     void instance::CreateEntities
-    ( int               Count
+    ( const int         Count
     , T_CALLBACK&&      Function 
     ) noexcept
     {
         using func_traits = xcore::function::traits<T_CALLBACK>;
+        const int EntityIndexInPool = m_Pool.Append(Count);
 
         // Allocate the entity
         if constexpr ( std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK > )
         {
-            for (int EntityIndexInPool = m_Pool.Append(Count)
-                , end = EntityIndexInPool + Count; EntityIndexInPool < end; ++EntityIndexInPool)
+            xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
+            for (int i = 0; i < Count; ++i)
             {
-                m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool)
-                    = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
+                *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
+                pEntity++;
             }
         }
         else
         {
-            int EntityIndexInPool = m_Pool.Append(Count);
             std::array< std::byte*, func_traits::arg_count_v > CachePointers;
             {
                 using sorted_tuple = xecs::component::details::sort_tuple_t<func_traits::args_tuple>;
@@ -122,16 +125,22 @@ namespace xecs::archetype
                     static_assert( ((std::is_reference_v<T> ) && ... ) );
                     ((CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
                     {
-                        return &m_Pool.m_pComponent[m_Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence)][sizeof(T_C) * EntityIndexInPool];
+                        const auto I = m_Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence);
+                        assert( m_Pool.m_Infos[I]->m_Size == sizeof(T_C) );
+                        return &m_Pool.m_pComponent[I][sizeof(T_C) * EntityIndexInPool];
                     }(xcore::types::make_null_tuple_v<T>)), ...);
                 }(xcore::types::null_tuple_v<sorted_tuple>);
             }
 
             xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
-            for( ; Count; --Count )
+            assert( &m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) == pEntity ); 
+
+            for( int i=0; i<Count; ++i )
             {
                 // Fill the entity data
-                *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
+                *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
+                assert(m_GameMgr.getEntityDetails(*pEntity).m_pArchetype == this );
+                assert(m_GameMgr.getEntityDetails(*pEntity).m_PoolIndex  == EntityIndexInPool + i );
                 pEntity++;
 
                 // Call the user initializer
@@ -143,6 +152,9 @@ namespace xecs::archetype
                 }( xcore::types::null_tuple_v<func_traits::args_tuple> );
             }
         }
+
+        // Update the official count if we can
+        if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
     }
 
     //--------------------------------------------------------------------------------------------
@@ -167,37 +179,19 @@ namespace xecs::archetype
             return;
 
         //
-        // Check if we can delete it right away
+        // Make sure everything is marked as zombie
         //
-        if (0 == m_ProcessReference)
-        {
-            Entity.m_Validation.m_bZombie = true;
-            m_Pool.Delete(GlobalEntry.m_PoolIndex);
-            if (GlobalEntry.m_PoolIndex != m_Pool.Size())
-            {
-                m_GameMgr.DeleteGlobalEntity(Entity.m_GlobalIndex, PoolEntity);
-            }
-            else
-            {
-                m_GameMgr.DeleteGlobalEntity(Entity.m_GlobalIndex);
-            }
-        }
-        else
-        {
-            //
-            // Make it into a zombie
-            //
-            Entity.m_Validation.m_bZombie
-                = GlobalEntry.m_Validation.m_bZombie
-                = PoolEntity.m_Validation.m_bZombie     // Just in case that Entity is a reference and not the real entity
-                = true;
+        Entity.m_Validation.m_bZombie
+            = PoolEntity.m_Validation.m_bZombie
+            = GlobalEntry.m_Validation.m_bZombie
+            = true;
 
-            //
-            // Added into the delete link list
-            //
-            PoolEntity.m_Validation.m_Generation = m_DeleteGlobalIndex;
-            m_DeleteGlobalIndex                  = PoolEntity.m_GlobalIndex;
-        }
+        //
+        // Delete from pool
+        //
+        m_Pool.Delete(GlobalEntry.m_PoolIndex);
+
+        if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
     }
 
     //--------------------------------------------------------------------------------------------
@@ -206,24 +200,6 @@ namespace xecs::archetype
     ( void
     ) noexcept
     {
-        while( m_DeleteGlobalIndex != invalid_delete_global_index_v )
-        {
-            auto&       Entry                   = m_GameMgr.m_lEntities[m_DeleteGlobalIndex];
-            auto&       PoolEntity              = m_Pool.getComponent<xecs::component::entity>(Entry.m_PoolIndex);
-            const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
-            assert(PoolEntity.m_Validation.m_bZombie);
-
-            m_Pool.Delete(Entry.m_PoolIndex);
-            if (Entry.m_PoolIndex != m_Pool.Size())
-            {
-                m_GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
-            }
-            else
-            {
-                m_GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
-            }
-
-            m_DeleteGlobalIndex = NextDeleteGlobalIndex;
-        }
+        m_Pool.UpdateStructuralChanges(m_GameMgr);
     }
 }

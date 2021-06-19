@@ -50,12 +50,10 @@ namespace xecs::archetype
 
 
         using info_array = std::array<const xecs::component::info*, xecs::settings::max_components_per_entity_v >;
-        constexpr static std::uint32_t invalid_delete_global_index_v = 0xffffffffu >> 1;
 
         xecs::game_mgr::instance&            m_GameMgr;
         xecs::tools::bits                    m_ComponentBits     {};
         xecs::pool::instance                 m_Pool              {};
-        std::uint32_t                        m_DeleteGlobalIndex { invalid_delete_global_index_v };
         std::int8_t                          m_ProcessReference  { 0 };
         info_array                           m_InfoData          {};
     };

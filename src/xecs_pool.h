@@ -1,5 +1,7 @@
 namespace xecs::pool
 {
+    constexpr static std::uint32_t invalid_delete_global_index_v = 0xffffffffu >> 1;
+
     struct instance final
     {
                         instance                            ( void 
@@ -19,7 +21,10 @@ namespace xecs::pool
         int             Append                              ( int Count 
                                                             ) noexcept;
         inline
-        void            Delete                              ( int Index 
+        void            Delete                              ( int Index
+                                                            ) noexcept;
+        inline
+        void            Free                                ( int Index 
                                                             ) noexcept;
         constexpr
         int             Size                                ( void 
@@ -31,6 +36,13 @@ namespace xecs::pool
         int             findIndexComponentFromGUIDInSequence( xecs::component::info::guid Guid
                                                             , int&          Sequence 
                                                             ) const noexcept;
+        inline
+        void            UpdateStructuralChanges             ( xecs::game_mgr::instance& GameMgr
+                                                            ) noexcept;
+        constexpr
+        bool            isLastEntry                         ( int Index 
+                                                            ) const noexcept;
+
         template
         < typename T_COMPONENT
         > requires
@@ -47,8 +59,10 @@ namespace xecs::pool
                                                             , int&          Sequence
                                                             ) const noexcept;
 
-        std::span<const component::info* const >                            m_Infos         {};
-        int                                                                 m_Size          {};
-        std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent    {};
+        std::span<const component::info* const >                            m_Infos             {};
+        int                                                                 m_CurrentCount      {};
+        int                                                                 m_Size              {};
+        std::uint32_t                                                       m_DeleteGlobalIndex { invalid_delete_global_index_v };
+        std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent        {};
     };
 }

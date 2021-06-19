@@ -31,7 +31,7 @@ namespace xecs::pool
         for( int i=0; i< m_Infos.size(); ++i )
         {
             assert(m_Infos[i]->m_Size <= xecs::settings::virtual_page_size_v);
-            auto nPages     = getPageFromIndex( *m_Infos[i], xecs::settings::max_entities_v ) + 1;
+            auto nPages     = getPageFromIndex( *m_Infos[i], xecs::settings::max_entity_count_per_pool_v ) + 1;
             m_pComponent[i] = reinterpret_cast<std::byte*>(VirtualAlloc(nullptr, nPages * xecs::settings::virtual_page_size_v, MEM_RESERVE, PAGE_NOACCESS));
             assert(m_pComponent[i]);
         }
@@ -85,7 +85,7 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
 
-    void instance::Delete( int Index ) noexcept
+    void instance::Free( int Index ) noexcept
     {
         assert(Index < m_Size );
         assert(Index>=0);
@@ -142,7 +142,7 @@ namespace xecs::pool
     constexpr
     int instance::Size( void ) const noexcept
     {
-        return m_Size;
+        return m_CurrentCount;
     }
 
     //-------------------------------------------------------------------------------------
@@ -234,4 +234,48 @@ namespace xecs::pool
         }
     }
 
+    //-------------------------------------------------------------------------------------
+
+    void instance::UpdateStructuralChanges( xecs::game_mgr::instance& GameMgr ) noexcept
+    {
+        while( m_DeleteGlobalIndex != invalid_delete_global_index_v )
+        {
+            auto&       Entry                   = GameMgr.m_lEntities[m_DeleteGlobalIndex];
+            auto&       PoolEntity              = getComponent<xecs::component::entity>(Entry.m_PoolIndex);
+            const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
+            assert(PoolEntity.m_Validation.m_bZombie);
+
+            Free(Entry.m_PoolIndex);
+            if (Entry.m_PoolIndex == m_Size )
+            {
+                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
+            }
+            else
+            {
+                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
+            }
+
+            m_DeleteGlobalIndex = NextDeleteGlobalIndex;
+        }
+
+        // Update the current count
+        m_CurrentCount = m_Size;
+    }
+
+    //-------------------------------------------------------------------------------------
+    inline
+    void instance::Delete( int Index ) noexcept
+    {
+        auto& Entity = getComponent<xecs::component::entity>(Index);
+        assert(Entity.m_Validation.m_bZombie);
+        Entity.m_Validation.m_Generation = m_DeleteGlobalIndex;
+        m_DeleteGlobalIndex = Entity.m_GlobalIndex;
+    }
+
+    //--------------------------------------------------------------------------------------------
+    constexpr
+    bool instance::isLastEntry( int Index ) const noexcept
+    {
+        return Index == m_Size - 1;
+    }
 }

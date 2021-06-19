@@ -104,7 +104,6 @@ struct bullet_logic : xecs::system::instance
         // Check for collisions
         xecs::query::instance Query;
         Query.m_Must.AddFromComponents<position>();
-
         m_GameMgr.Foreach
         (   m_GameMgr.Search(Query)
         ,   [&]( entity& E, position& Pos ) noexcept -> bool
