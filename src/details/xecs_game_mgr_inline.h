@@ -201,8 +201,8 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            auto& Pool = pE->m_Pool;
-            auto CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple>);
+            const auto& Pool = pE->m_Pool;
+            auto        CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple>);
 
             bool bBreak = false;
             pE->AccessGuard([&]
@@ -233,8 +233,8 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            auto& Pool = pE->m_Pool;
-            auto CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple> );
+            const auto& Pool = pE->m_Pool;
+            auto        CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple> );
             pE->AccessGuard([&]
             {
                 for( int i=Pool.Size(); i; --i )

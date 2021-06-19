@@ -16,8 +16,8 @@ namespace xecs::archetype
         requires( ((std::is_reference_v<T_FUNCTION_ARGS>) && ... ) )
         constexpr __inline
         auto GetComponentPointerArray
-        ( xecs::pool::instance&             Pool
-        , int                               StartingPoolIndex
+        ( const xecs::pool::instance&             Pool
+        , const int                               StartingPoolIndex
         , std::tuple<T_FUNCTION_ARGS... >* 
         ) noexcept
         {
@@ -46,8 +46,8 @@ namespace xecs::archetype
         requires( !((std::is_reference_v<T_FUNCTION_ARGS>) && ...) )
         constexpr __inline
         auto GetComponentPointerArray
-        ( xecs::pool::instance&             Pool
-        , int                               StartingPoolIndex
+        ( const xecs::pool::instance&             Pool
+        , const int                               StartingPoolIndex
         , std::tuple<T_FUNCTION_ARGS... >* 
         ) noexcept
         {
