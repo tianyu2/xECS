@@ -78,11 +78,18 @@ namespace xecs::archetype
             m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) = Entity;
 
             // Call the user initializer if any
-            if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
-                Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
-
-            // Update the official count if we can
-            if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+            if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
+            {
+                // Update the official count if we can
+                if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+            }
+            else
+            {
+                AccessGuard([&]
+                {
+                    Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
+                });
+            }
 
             return Entity;
         }( xcore::types::null_tuple_v<func_traits::args_tuple> );
@@ -112,6 +119,9 @@ namespace xecs::archetype
                 *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
                 pEntity++;
             }
+
+            // Update the official count if we can
+            if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
         }
         else
         {
@@ -126,7 +136,6 @@ namespace xecs::archetype
                     ((CachePointers[xcore::types::tuple_t2i_v< T, func_traits::args_tuple>] = [&]<typename T_C>(std::tuple<T_C>*) constexpr noexcept
                     {
                         const auto I = m_Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_C>.m_Guid, Sequence);
-                        assert( m_Pool.m_Infos[I]->m_Size == sizeof(T_C) );
                         return &m_Pool.m_pComponent[I][sizeof(T_C) * EntityIndexInPool];
                     }(xcore::types::make_null_tuple_v<T>)), ...);
                 }(xcore::types::null_tuple_v<sorted_tuple>);
@@ -135,26 +144,26 @@ namespace xecs::archetype
             xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
             assert( &m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) == pEntity ); 
 
-            for( int i=0; i<Count; ++i )
+            AccessGuard([&]
             {
-                // Fill the entity data
-                *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
-                assert(m_GameMgr.getEntityDetails(*pEntity).m_pArchetype == this );
-                assert(m_GameMgr.getEntityDetails(*pEntity).m_PoolIndex  == EntityIndexInPool + i );
-                pEntity++;
-
-                // Call the user initializer
-                [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+                for( int i=0; i<Count; ++i )
                 {
-                    Function( reinterpret_cast<T>( *CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] )
-                            ... );
-                    ((CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ... );
-                }( xcore::types::null_tuple_v<func_traits::args_tuple> );
-            }
-        }
+                    // Fill the entity data
+                    *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
+                    assert(m_GameMgr.getEntityDetails(*pEntity).m_pArchetype == this );
+                    assert(m_GameMgr.getEntityDetails(*pEntity).m_PoolIndex  == EntityIndexInPool + i );
+                    pEntity++;
 
-        // Update the official count if we can
-        if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+                    // Call the user initializer
+                    [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+                    {
+                        Function( reinterpret_cast<T>( *CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] )
+                                ... );
+                        ((CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ... );
+                    }( xcore::types::null_tuple_v<func_traits::args_tuple> );
+                }
+            });
+        }
     }
 
     //--------------------------------------------------------------------------------------------
