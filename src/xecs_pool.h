@@ -24,7 +24,11 @@ namespace xecs::pool
         void            Delete                              ( int Index
                                                             ) noexcept;
         inline
-        void            Free                                ( int Index 
+        void            MoveDelete                          ( int Index
+                                                            ) noexcept;
+        inline
+        void            Free                                ( int   Index
+                                                            , bool  bCallDestructors
                                                             ) noexcept;
         constexpr
         int             Size                                ( void 
@@ -34,7 +38,7 @@ namespace xecs::pool
                                                             ) const noexcept;
         constexpr
         int             findIndexComponentFromGUIDInSequence( xecs::component::type::guid Guid
-                                                            , int&                              Sequence 
+                                                            , int&                        Sequence 
                                                             ) const noexcept;
         inline
         void            UpdateStructuralChanges             ( xecs::game_mgr::instance& GameMgr
@@ -42,7 +46,10 @@ namespace xecs::pool
         constexpr
         bool            isLastEntry                         ( int Index 
                                                             ) const noexcept;
-
+        inline
+        int             MoveInFromPool                      ( int               IndexToMove
+                                                            , pool::instance&   Pool
+                                                            ) noexcept;
         template
         < typename T_COMPONENT
         > requires
@@ -63,6 +70,7 @@ namespace xecs::pool
         int                                                                 m_CurrentCount      {};
         int                                                                 m_Size              {};
         std::uint32_t                                                       m_DeleteGlobalIndex { invalid_delete_global_index_v };
+        std::uint32_t                                                       m_DeleteMoveIndex   { invalid_delete_global_index_v };
         std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent        {};
     };
 }

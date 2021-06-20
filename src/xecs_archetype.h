@@ -37,15 +37,12 @@ namespace xecs::archetype
         inline
         void                    UpdateStructuralChanges ( void 
                                                         ) noexcept;
-
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         >
-        void MoveInEntity( xecs::component::entity Entity, T_FUNCTION&& Function = xecs::tools::empty_lambda{} ) noexcept
-        {
-            
-        }
-
+        void                    MoveInEntity            ( xecs::component::entity   Entity
+                                                        , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
+                                                        ) noexcept;
         template
         < typename T_FUNCTION
         > requires
@@ -55,7 +52,6 @@ namespace xecs::archetype
         ) __inline
         void                    AccessGuard             ( T_FUNCTION&& Function
                                                         ) noexcept;
-
 
         using info_array = std::array<const xecs::component::info*, xecs::settings::max_components_per_entity_v >;
 

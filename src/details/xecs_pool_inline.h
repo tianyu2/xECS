@@ -85,7 +85,7 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
 
-    void instance::Free( int Index ) noexcept
+    void instance::Free( int Index, bool bCallDestructors ) noexcept
     {
         assert(Index < m_Size );
         assert(Index>=0);
@@ -97,7 +97,7 @@ namespace xecs::pool
             {
                 const auto& MyInfo = *m_Infos[i];
                 auto        pData  = m_pComponent[i];
-                if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn( &pData[m_Size * MyInfo.m_Size] );
+                if (MyInfo.m_pDestructFn && bCallDestructors) MyInfo.m_pDestructFn( &pData[m_Size * MyInfo.m_Size] );
 
                 // Free page if we cross over
                 const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size+1);
@@ -122,7 +122,6 @@ namespace xecs::pool
                 }
                 else
                 {
-                    if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index * MyInfo.m_Size]);
                     memcpy(&pData[Index * MyInfo.m_Size], &pData[m_Size * MyInfo.m_Size], MyInfo.m_Size );
                 }
 
@@ -238,14 +237,17 @@ namespace xecs::pool
 
     void instance::UpdateStructuralChanges( xecs::game_mgr::instance& GameMgr ) noexcept
     {
+        //
+        // Delete the regular entries
+        //
         while( m_DeleteGlobalIndex != invalid_delete_global_index_v )
         {
             auto&       Entry                   = GameMgr.m_lEntities[m_DeleteGlobalIndex];
-            auto&       PoolEntity              = getComponent<xecs::component::entity>(Entry.m_PoolIndex);
+            auto&       PoolEntity              = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity)*Entry.m_PoolIndex]);
             const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
             assert(PoolEntity.m_Validation.m_bZombie);
 
-            Free(Entry.m_PoolIndex);
+            Free( Entry.m_PoolIndex, true );
             if (Entry.m_PoolIndex == m_Size )
             {
                 GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
@@ -256,6 +258,22 @@ namespace xecs::pool
             }
 
             m_DeleteGlobalIndex = NextDeleteGlobalIndex;
+        }
+
+        //
+        // Delete Entities that were moved
+        //
+        while (m_DeleteMoveIndex != invalid_delete_global_index_v)
+        {
+            auto&       PoolEntity            = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_DeleteMoveIndex]);
+            const auto  NextDeleteGlobalIndex = PoolEntity.m_Validation.m_Generation;
+            Free( m_DeleteMoveIndex, false );
+            if (m_DeleteMoveIndex != m_Size)
+            {
+                GameMgr.MovedGlobalEntity( m_DeleteMoveIndex, PoolEntity );
+            }
+
+            m_DeleteMoveIndex = NextDeleteGlobalIndex;
         }
 
         // Update the current count
@@ -272,10 +290,87 @@ namespace xecs::pool
         m_DeleteGlobalIndex = Entity.m_GlobalIndex;
     }
 
+    //-------------------------------------------------------------------------------------
+    inline
+    void instance::MoveDelete( int Index ) noexcept
+    {
+        auto& Entity = getComponent<xecs::component::entity>(Index);
+        Entity.m_Validation.m_bZombie    = true;
+        Entity.m_Validation.m_Generation = m_DeleteMoveIndex;
+        m_DeleteMoveIndex = Index;
+    }
+
     //--------------------------------------------------------------------------------------------
     constexpr
     bool instance::isLastEntry( int Index ) const noexcept
     {
         return Index == m_Size - 1;
     }
+
+    //--------------------------------------------------------------------------------------------
+    inline
+    int instance::MoveInFromPool( int IndexToMove, pool::instance& FromPool ) noexcept
+    {
+        const int iNewIndex = Append(1);
+
+        int iPoolFrom = 0;
+        int iPoolTo   = 0;
+        while( true )
+        {
+            if( FromPool.m_Infos[iPoolFrom] == m_Infos[iPoolTo] )
+            {
+                auto& Info = *FromPool.m_Infos[iPoolFrom];
+                if( Info.m_pMoveFn )
+                {
+                    Info.m_pMoveFn
+                    (
+                        &m_pComponent[iPoolTo][Info.m_Size* iNewIndex]
+                    ,   &FromPool.m_pComponent[iPoolFrom][Info.m_Size* IndexToMove]
+                    );
+                }
+                else
+                {
+                    std::memcpy
+                    ( 
+                        &m_pComponent[iPoolTo][Info.m_Size * iNewIndex]
+                    ,   &FromPool.m_pComponent[iPoolFrom][Info.m_Size * IndexToMove]
+                    ,   Info.m_Size
+                    );
+                }
+                iPoolFrom++;
+                iPoolTo++;
+                if (iPoolFrom >= FromPool.m_Infos.size() || iPoolTo >= m_Infos.size())
+                    break;
+            }
+            else if(FromPool.m_Infos[iPoolFrom]->m_Guid.m_Value < m_Infos[iPoolTo]->m_Guid.m_Value )
+            {
+                auto& Info = *FromPool.m_Infos[iPoolFrom];
+                if( Info.m_pDestructFn ) Info.m_pDestructFn( &FromPool.m_pComponent[iPoolFrom][Info.m_Size * IndexToMove] );
+                iPoolFrom++;
+                if (iPoolFrom >= FromPool.m_Infos.size())
+                    break;
+            }
+            else
+            {
+                // This is already constructed so there is nothing for me to do
+                iPoolTo++;
+                if (iPoolTo >= m_Infos.size())
+                    break;
+            }
+        }
+
+        //
+        // Destruct any pending component
+        //
+        while (iPoolFrom < FromPool.m_Infos.size())
+        {
+            auto& Info = *FromPool.m_Infos[iPoolFrom];
+            if (Info.m_pDestructFn) Info.m_pDestructFn(&FromPool.m_pComponent[iPoolFrom][Info.m_Size * IndexToMove]);
+            iPoolFrom++;
+            if (iPoolFrom >= FromPool.m_Infos.size()) break;
+        }
+
+        return iNewIndex;
+    }
+
 }

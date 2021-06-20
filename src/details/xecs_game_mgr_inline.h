@@ -95,6 +95,13 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
+    void instance::MovedGlobalEntity(std::uint32_t PoolIndex, xecs::component::entity& SwappedEntity ) noexcept
+    {
+        m_lEntities[SwappedEntity.m_GlobalIndex].m_PoolIndex = PoolIndex;
+    }
+
+    //---------------------------------------------------------------------------
+
     std::vector<archetype::instance*> instance::Search( std::span<const component::info* const> Types ) const noexcept
     {
         tools::bits Query;

@@ -391,4 +391,27 @@ namespace xecs::archetype
     {
         m_Pool.UpdateStructuralChanges(m_GameMgr);
     }
+
+    //--------------------------------------------------------------------------------------------
+    template< typename T_FUNCTION >
+    void instance::MoveInEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
+    {
+        auto&      GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
+        const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
+
+        if( GlobalEntity.m_pArchetype->m_ProcessReference == 0 ) GlobalEntity.m_pArchetype->m_Pool.Free(GlobalEntity.m_PoolIndex, false);
+        else                                                     GlobalEntity.m_pArchetype->m_Pool.MoveDelete(GlobalEntity.m_PoolIndex);
+
+        GlobalEntity.m_pArchetype = this;
+        GlobalEntity.m_PoolIndex  = NewPoolIndex;
+
+        if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda> )
+        {
+            if(m_ProcessReference==0) UpdateStructuralChanges();
+        }
+        else
+        {
+            AccessGuard( Function );
+        }
+    }
 }

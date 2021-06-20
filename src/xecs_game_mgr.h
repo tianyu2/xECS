@@ -4,7 +4,7 @@ namespace xecs::game_mgr
 
     struct entity_info final
     {
-        archetype::instance*            m_pArchetype    {};
+        xecs::archetype::instance*      m_pArchetype    {};
         int                             m_PoolIndex     {-1};
         component::entity::validation   m_Validation    {};
     };
@@ -68,6 +68,10 @@ namespace xecs::game_mgr
                                                                     ) noexcept;
         inline
         void                                DeleteGlobalEntity      ( std::uint32_t GlobalIndex
+                                                                    ) noexcept;
+        inline
+        void                                MovedGlobalEntity       ( std::uint32_t             PoolIndex
+                                                                    , xecs::component::entity&  SwappedEntity
                                                                     ) noexcept;
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
