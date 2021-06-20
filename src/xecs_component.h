@@ -57,7 +57,7 @@ namespace xecs::component
     //
     struct info final
     {
-        constexpr static auto invalid_id_v = 0xffff;
+        constexpr static auto invalid_bit_id_v = 0xffff;
 
         using construct_fn  = void(std::byte*) noexcept;
         using destruct_fn   = void(std::byte*) noexcept;

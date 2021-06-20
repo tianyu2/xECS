@@ -13,7 +13,7 @@ namespace xecs::component
                                     : T_COMPONENT::typedef_v.m_Guid.m_Value
                                         ? T_COMPONENT::typedef_v.m_Guid
                                         : type::guid{ __FUNCSIG__ }
-            ,   .m_BitID        = info::invalid_id_v
+            ,   .m_BitID        = info::invalid_bit_id_v
             ,   .m_TypeID       = T_COMPONENT::typedef_v.id_v
             ,   .m_Size         = static_cast<std::uint32_t>(sizeof(T_COMPONENT))
             ,   .m_pConstructFn = std::is_trivially_constructible_v<T_COMPONENT>
@@ -76,7 +76,7 @@ namespace xecs::component
     requires (xecs::component::type::is_valid_v<T_COMPONENT>)
     void mgr::RegisterComponent(void) noexcept
     {
-        if (component::info_v<T_COMPONENT>.m_BitID == info::invalid_id_v)
+        if (component::info_v<T_COMPONENT>.m_BitID == info::invalid_bit_id_v)
             component::info_v<T_COMPONENT>.m_BitID = m_UniqueID++;
     }
 }

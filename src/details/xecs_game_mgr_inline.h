@@ -148,7 +148,7 @@ namespace xecs::game_mgr
         tools::bits Query;
         for (const auto& pE : Types)
         {
-            assert(pE->m_BitID != xecs::component::info::invalid_id_v );
+            assert(pE->m_BitID != xecs::component::info::invalid_bit_id_v );
             Query.setBit(pE->m_BitID);
         }
             
