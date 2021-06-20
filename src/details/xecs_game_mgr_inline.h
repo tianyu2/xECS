@@ -104,7 +104,7 @@ namespace xecs::game_mgr
         std::vector<archetype::instance*> ArchetypesFound;
         for (auto& E : m_lArchetypeBits)
         {
-            if( E.Compare(Query) )
+            if( E.Equals(Query) )
             {
                 const auto Index = static_cast<std::size_t>(&E - &m_lArchetypeBits[0]);
                 ArchetypesFound.push_back(m_lArchetype[Index].get());
@@ -157,7 +157,7 @@ namespace xecs::game_mgr
         
         for( auto& E : m_lArchetypeBits )
         {
-            if ( E.Compare(Query) )
+            if ( E.Equals(Query) )
             {
                 const auto Index = static_cast<std::size_t>( &E - m_lArchetypeBits.data() );
                 return *m_lArchetype[Index];
@@ -267,6 +267,132 @@ namespace xecs::game_mgr
             return true;
         }
         return false;
+    }
+
+    //---------------------------------------------------------------------------
+
+    template
+    < typename T_FUNCTION
+    > requires
+    ( xcore::function::is_callable_v<T_FUNCTION>
+    )
+    void instance::AddOrRemoveComponents( xecs::component::entity                       Entity
+                                        , std::span<const xecs::component::info* const> Add
+                                        , std::span<const xecs::component::info* const> Sub
+                                        , T_FUNCTION&&                                  Function ) noexcept
+    {
+        auto& Entry = getEntityDetails(Entity);
+        auto  Bits  = Entry.m_pArchetype->m_ComponentBits;
+
+        for( auto& pE : Add ) 
+        {
+            // Cant add the entity
+            assert( pE->m_BitID !=0 );
+            Bits.setBit( pE->m_BitID );
+        }
+        for( auto& pE : Sub ) 
+        {
+            // Cant remove the entity
+            assert(pE->m_BitID != 0);
+            Bits.clearBit(pE->m_BitID);
+        }
+        for( auto& E : m_lArchetypeBits )
+        {
+            if( E.Equals(Bits) )
+            {
+                const auto Index = static_cast<std::size_t>(&E - &m_lArchetypeBits[0]);
+                if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) m_lArchetype[Index]->MoveInEntity( Entity );
+                else                                                                  m_lArchetype[Index]->MoveInEntity( Entity, Function );
+                return;
+            }
+        }
+
+        std::array<const xecs::component::info*, xecs::settings::max_components_per_entity_v > ComponentList;
+        int Count = 0;
+
+        // Copy the existing ones
+        for( auto& pE : std::span{ Entry.m_pArchetype->m_InfoData.data(), Entry.m_pArchetype->m_nComponents } ) 
+            ComponentList[Count++] = pE;
+
+        // Add
+        for( auto& pE : Add )
+        {
+            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::info* pA, const xecs::component::info* pB)
+            {
+                return pA->m_Guid < pB->m_Guid;
+            }) - ComponentList.begin());
+            assert(Index > 0);
+
+            // Check for duplicates
+            if( ComponentList[Index - 1] == pE )
+                continue;
+
+            // Create a hole to insert our entry
+            if( Index != Count )
+            {
+                std::memmove( &ComponentList[Index+1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::info*) );
+            }
+            ComponentList[Index] = pE;
+            Count++;
+        }
+
+        // Remove
+        for (auto& pE : Sub)
+        {
+            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::info* pA, const xecs::component::info* pB)
+            {
+                return pA->m_Guid < pB->m_Guid;
+            }) - ComponentList.begin());
+            assert(Index > 0);
+
+            // Check if we found it
+            if ( ComponentList[Index - 1] == pE )
+            {
+                std::memmove(&ComponentList[Index-1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::info*));
+                Count--;
+            }
+        }
+
+        //
+        // Create Archetype...
+        //
+        m_lArchetype.push_back(std::make_unique<archetype::instance>(*this));
+        m_lArchetypeBits.push_back(Bits);
+
+        auto& Archetype = *m_lArchetype.back();
+        Archetype.Initialize({ ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
+        if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) Archetype.MoveInEntity(Entity);
+        else                                                                  Archetype.MoveInEntity(Entity, Function);
+    }
+
+    //---------------------------------------------------------------------------
+
+    template
+    <   typename T_TUPLE_ADD
+    ,   typename T_TUPLE_SUBTRACT
+    ,   typename T_FUNCTION
+    > requires
+    ( xcore::function::is_callable_v<T_FUNCTION>
+        && xcore::types::is_specialized_v<std::tuple, T_TUPLE_ADD>
+        && xcore::types::is_specialized_v<std::tuple, T_TUPLE_SUBTRACT>
+    )
+    void instance::AddOrRemoveComponents( xecs::component::entity   Entity
+                                        , T_FUNCTION&&              Function 
+                                        ) noexcept
+    {
+        if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda > )
+            AddOrRemoveComponents
+            ( Entity
+            , xecs::component::details::sorted_info_array_v<T_TUPLE_ADD>
+            , xecs::component::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
+            );
+        else
+            AddOrRemoveComponents
+            ( Entity
+            , xecs::component::details::sorted_info_array_v<T_TUPLE_ADD>
+            , xecs::component::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
+            , Function
+            );
     }
 
     //---------------------------------------------------------------------------

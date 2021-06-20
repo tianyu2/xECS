@@ -40,12 +40,34 @@ namespace xecs::game_mgr
         inline
         void                                DeleteEntity            ( xecs::component::entity& Entity 
                                                                     ) noexcept;
-        inline
-        void                                DeleteGlobalEntity      (std::uint32_t              GlobalIndex
-                                                                    , xecs::component::entity&  SwappedEntity 
+        template
+        < typename T_FUNCTION = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_FUNCTION>
+        )
+        void                                AddOrRemoveComponents   ( xecs::component::entity                       Entity
+                                                                    , std::span<const xecs::component::info* const> Add
+                                                                    , std::span<const xecs::component::info* const> Sub
+                                                                    , T_FUNCTION&&                                  Function = xecs::tools::empty_lambda{}
+                                                                    ) noexcept;
+        template
+        <   typename T_TUPLE_ADD
+        ,   typename T_TUPLE_SUBTRACT   = std::tuple<>
+        ,   typename T_FUNCTION         = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_FUNCTION>
+        && xcore::types::is_specialized_v<std::tuple, T_TUPLE_ADD>
+        && xcore::types::is_specialized_v<std::tuple, T_TUPLE_SUBTRACT>
+        )
+        void                                AddOrRemoveComponents   ( xecs::component::entity   Entity
+                                                                    , T_FUNCTION&&              Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         inline
-        void                                DeleteGlobalEntity      (std::uint32_t GlobalIndex
+        void                                DeleteGlobalEntity      ( std::uint32_t              GlobalIndex
+                                                                    , xecs::component::entity&   SwappedEntity 
+                                                                    ) noexcept;
+        inline
+        void                                DeleteGlobalEntity      ( std::uint32_t GlobalIndex
                                                                     ) noexcept;
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
@@ -85,7 +107,7 @@ namespace xecs::game_mgr
         &&  std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
-                                                                    , T_FUNCTION&&                                  Function 
+                                                                    , T_FUNCTION&&                                   Function 
                                                                     ) const noexcept;
         template
         < typename T_FUNCTION
@@ -94,12 +116,11 @@ namespace xecs::game_mgr
         && std::is_same_v< void, typename xcore::function::traits<T_FUNCTION>::return_type >
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
-                                                                    , T_FUNCTION&&                                  Function 
+                                                                    , T_FUNCTION&&                                   Function 
                                                                     ) const noexcept;
         inline
         void                                Run                     ( void 
                                                                     ) noexcept;
-
 
         xecs::system::mgr                                   m_SystemMgr         {};
         xecs::component::mgr                                m_ComponentMgr      {};

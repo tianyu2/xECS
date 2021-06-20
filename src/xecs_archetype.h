@@ -39,6 +39,14 @@ namespace xecs::archetype
                                                         ) noexcept;
 
         template
+        < typename T_FUNCTION = xecs::tools::empty_lambda
+        >
+        void MoveInEntity( xecs::component::entity Entity, T_FUNCTION&& Function = xecs::tools::empty_lambda{} ) noexcept
+        {
+            
+        }
+
+        template
         < typename T_FUNCTION
         > requires
         ( xcore::function::is_callable_v<T_FUNCTION>
@@ -54,7 +62,8 @@ namespace xecs::archetype
         xecs::game_mgr::instance&            m_GameMgr;
         xecs::tools::bits                    m_ComponentBits     {};
         xecs::pool::instance                 m_Pool              {};
-        std::int8_t                          m_ProcessReference  { 0 };
+        std::int8_t                          m_ProcessReference  {};
+        std::uint8_t                         m_nComponents       {};
         info_array                           m_InfoData          {};
     };
 }

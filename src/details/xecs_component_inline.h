@@ -56,8 +56,9 @@ namespace xecs::component
         template< typename T_TUPLE >
         static constexpr auto sorted_info_array_v = []<typename...T>(std::tuple<T...>*) constexpr
         {
-            return std::array{ &component::info_v<xecs::component::entity>, &component::info_v<T>... };
-        }(xcore::types::null_tuple_v< sort_tuple_t<T_TUPLE> > );
+            if constexpr (sizeof...(T) == 0 )   return std::span<const xecs::component::info*>{};
+            else                                return std::array{ &component::info_v<T>... };
+        }(xcore::types::null_tuple_v< sort_tuple_t<T_TUPLE> >);
 
         template< typename...T_TUPLES_OR_COMPONENTS >
         using combined_t = xcore::types::tuple_cat_t

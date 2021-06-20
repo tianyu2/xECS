@@ -13,8 +13,20 @@ namespace xecs::tools
                                         ) const noexcept;
 
         constexpr
-        bool        Compare             ( const bits& B 
+        bool        Superset            ( const bits& B 
                                         ) const noexcept;
+
+        constexpr
+        bool        Subset              ( const bits& B 
+                                        ) const noexcept;
+
+        constexpr
+        bool        Equals              ( const bits& B 
+                                        ) const noexcept;
+
+        constexpr
+        void        clearBit            ( int Bit
+                                        ) noexcept;
 
         template
         < typename... T_COMPONENTS

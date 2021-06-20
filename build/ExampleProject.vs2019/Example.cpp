@@ -34,19 +34,28 @@ struct position
 
 struct velocity
 {
-    constexpr static auto typedef_v = xecs::component::type::data{};
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName = "Velocity"
+    };
     xcore::vector2 m_Value;
 };
 
 struct timer
 {
-    constexpr static auto typedef_v = xecs::component::type::data{};
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName = "Timer"
+    };
     float m_Value{};
 };
 
 struct bullet
 {
-    constexpr static auto typedef_v = xecs::component::type::data{};
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName = "Bullet"
+    };
     xecs::component::entity m_ShipOwner;
 };
 
@@ -299,6 +308,11 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value = (std::rand() / (float)RAND_MAX) * 8;
         });
+
+    auto E = s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >().CreateEntity();
+
+    s_Game.m_GameMgr->AddOrRemoveComponents<std::tuple<>, std::tuple<velocity>>(E);
+    
 }
 
 //---------------------------------------------------------------------------------------

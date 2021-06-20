@@ -204,7 +204,7 @@ namespace xecs::archetype
         for( int i=0; i<Infos.size(); ++i )
         {
             m_InfoData[i] = Infos[i];
-            if( i && m_InfoData[i-1] > m_InfoData[i] ) AreTheySorted = false;
+            if( i && m_InfoData[i-1]->m_Guid.m_Value > m_InfoData[i]->m_Guid.m_Value ) AreTheySorted = false;
         }
 
         // Short Infos base on their GUID (smaller first) entry 0 should be the entity
@@ -219,9 +219,35 @@ namespace xecs::archetype
             });
         }
 
+        //
+        // Lets run a sanity check
+        //
+#ifdef _DEBUG
+        {
+            // First component should the the entity
+            assert(m_InfoData[0] == &xecs::component::info_v<xecs::component::entity>);
+
+            // Entity bit should be turn on
+            assert(Bits.getBit(xecs::component::info_v<xecs::component::entity>.m_BitID));
+
+            // Check all other components
+            for (int i = 1; i < Infos.size(); ++i)
+            {
+                // There should be no duplication of components
+                assert(m_InfoData[i - 1] != m_InfoData[i]);
+
+                // Check that the bits match
+                assert( Bits.getBit(m_InfoData[i]->m_BitID));
+            }
+        }
+#endif
+
+        //
         // We can initialize our default pool
+        //
         m_Pool.Initialize( { m_InfoData.data(), Infos.size() } );
         m_ComponentBits = Bits;
+        m_nComponents   = xcore::types::static_cast_safe<std::uint8_t>(Infos.size());
     }
 
     //--------------------------------------------------------------------------------------------
