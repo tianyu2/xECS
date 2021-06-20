@@ -34,6 +34,6 @@ namespace xecs::tools
     template< typename... T_COMPONENTS >
     void bits::AddFromComponents( void ) noexcept
     {
-        ((setBit(xecs::component::info_v<T_COMPONENTS>.m_UID)), ...);
+        ((setBit(xecs::component::info_v<T_COMPONENTS>.m_BitID)), ...);
     }
 }

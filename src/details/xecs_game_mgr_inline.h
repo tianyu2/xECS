@@ -26,7 +26,6 @@ namespace xecs::game_mgr
     //---------------------------------------------------------------------------
 
     template< typename...T_COMPONENTS >
-    requires( ((sizeof(T_COMPONENTS) <= xecs::settings::virtual_page_size_v) && ...) )
     void instance::RegisterComponents(void) noexcept
     {
         ((m_ComponentMgr.RegisterComponent<T_COMPONENTS>()), ...);
@@ -100,7 +99,7 @@ namespace xecs::game_mgr
     {
         tools::bits Query;
         for( const auto& pE : Types )
-            Query.setBit( pE->m_UID );
+            Query.setBit( pE->m_BitID );
 
         std::vector<archetype::instance*> ArchetypesFound;
         for (auto& E : m_lArchetypeBits)
@@ -149,12 +148,12 @@ namespace xecs::game_mgr
         tools::bits Query;
         for (const auto& pE : Types)
         {
-            assert(pE->m_UID != xecs::component::info::invalid_id_v );
-            Query.setBit(pE->m_UID);
+            assert(pE->m_BitID != xecs::component::info::invalid_id_v );
+            Query.setBit(pE->m_BitID);
         }
             
         // Make sure the entity is part of the list at this point
-        assert( Query.getBit(xecs::component::info_v<xecs::component::entity>.m_UID) );
+        assert( Query.getBit(xecs::component::info_v<xecs::component::entity>.m_BitID) );
         
         for( auto& E : m_lArchetypeBits )
         {

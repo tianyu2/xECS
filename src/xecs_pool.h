@@ -30,11 +30,11 @@ namespace xecs::pool
         int             Size                                ( void 
                                                             ) const noexcept;
         constexpr
-        int             findIndexComponentFromGUID          ( xecs::component::info::guid Guid
+        int             findIndexComponentFromGUID          ( xecs::component::type::guid Guid
                                                             ) const noexcept;
         constexpr
-        int             findIndexComponentFromGUIDInSequence( xecs::component::info::guid Guid
-                                                            , int&          Sequence 
+        int             findIndexComponentFromGUIDInSequence( xecs::component::type::guid Guid
+                                                            , int&                              Sequence 
                                                             ) const noexcept;
         inline
         void            UpdateStructuralChanges             ( xecs::game_mgr::instance& GameMgr

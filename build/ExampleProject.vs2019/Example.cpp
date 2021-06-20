@@ -25,21 +25,28 @@ static struct game
 
 struct position 
 {
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName = "Position"
+    };
     xcore::vector2 m_Value;
 };
 
 struct velocity
 {
+    constexpr static auto typedef_v = xecs::component::type::data{};
     xcore::vector2 m_Value;
 };
 
 struct timer
 {
+    constexpr static auto typedef_v = xecs::component::type::data{};
     float m_Value{};
 };
 
 struct bullet
 {
+    constexpr static auto typedef_v = xecs::component::type::data{};
     xecs::component::entity m_ShipOwner;
 };
 

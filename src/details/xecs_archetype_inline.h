@@ -239,7 +239,7 @@ namespace xecs::archetype
         using func_traits = xcore::function::traits<T_CALLBACK>;
         return[&]< typename... T_COMPONENTS >(std::tuple<T_COMPONENTS...>*) constexpr noexcept
         {
-            assert(m_ComponentBits.getBit(component::info_v<T_COMPONENTS>.m_UID) && ...);
+            assert(m_ComponentBits.getBit(component::info_v<T_COMPONENTS>.m_BitID) && ...);
 
             // Allocate the entity
             const int   EntityIndexInPool   = m_Pool.Append(1);

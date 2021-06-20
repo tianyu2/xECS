@@ -149,8 +149,8 @@ namespace xecs::pool
 
     constexpr
     int instance::findIndexComponentFromGUIDInSequence
-    (xecs::component::info::guid    SearchGuid
-    , int&                          Sequence 
+    (xecs::component::type::guid  SearchGuid
+    , int&                              Sequence 
     ) const noexcept
     {
         const auto Backup = Sequence;
@@ -166,7 +166,7 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
     constexpr
-    int instance::findIndexComponentFromGUID( xecs::component::info::guid SearchGuid) const noexcept
+    int instance::findIndexComponentFromGUID( xecs::component::type::guid SearchGuid) const noexcept
     {
         for( int i=0, end = static_cast<int>(m_Infos.size()); i<end; ++i )
         {

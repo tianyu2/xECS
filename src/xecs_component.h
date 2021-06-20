@@ -1,23 +1,76 @@
 namespace xecs::component
 {
     //
+    // TYPE DEFINITIONS
+    //
+    namespace type
+    {
+        using guid = xcore::guid::unit<64, struct component_type_tag>;
+
+        enum class id : std::uint8_t
+        {
+            DATA
+        ,   TAG
+        };
+
+        struct data
+        {
+            constexpr static auto   max_size_v  = xecs::settings::virtual_page_size_v;
+            constexpr static auto   id_v        = id::DATA;
+
+            guid                    m_Guid      {};
+            const char*             m_pName     {"Unnamed data component"};
+        };
+
+        struct tag
+        {
+            constexpr static auto   max_size_v  = 1;
+            constexpr static auto   id_v        = id::TAG;
+
+            guid                    m_Guid      {};
+            const char*             m_pName     { "Unnamed tag component" };
+        };
+
+        namespace details
+        {
+            template< typename T_COMPONENT >
+            struct is_valid
+            {
+                template<auto U>     struct Check;
+                template<typename>   static std::false_type Test(...);
+                template<typename C> static auto Test(Check<&C::typedef_v>*) -> std::conditional_t
+                                     <
+                                        ( std::is_same_v< const data, decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= data::max_size_v )
+                                     || ( std::is_same_v< const tag,  decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= tag::max_size_v  )
+                                     , std::true_type
+                                     , std::false_type
+                                     >;
+                constexpr static auto value = decltype(Test<T_COMPONENT>(nullptr))::value;
+            };
+        }
+        template< typename T_COMPONENT >
+        constexpr bool is_valid_v = details::is_valid<std::decay_t<T_COMPONENT>>::value;
+    } 
+
+    //
     // INFO
     //
     struct info final
     {
         constexpr static auto invalid_id_v = 0xffff;
-        using guid = xcore::guid::unit<64, struct component_type_tag>;
 
         using construct_fn  = void(std::byte*) noexcept;
         using destruct_fn   = void(std::byte*) noexcept;
         using move_fn       = void(std::byte* Dst, std::byte* Src ) noexcept;
 
-        mutable std::uint16_t   m_UID;
-        std::uint32_t           m_Size;
-        guid                    m_Guid;
-        construct_fn*           m_pConstructFn;
-        destruct_fn*            m_pDestructFn;
-        move_fn*                m_pMoveFn;
+        type::guid              m_Guid;             // Unique Identifier for the component type
+        mutable std::uint16_t   m_BitID;            // Which bit was allocated for this type at run time
+        type::id                m_TypeID;           // Simple enumeration that tells what type of component is this
+        std::uint32_t           m_Size;             // Size of the component in bytes
+        construct_fn*           m_pConstructFn;     // Constructor function pointer if required
+        destruct_fn*            m_pDestructFn;      // Destructor function pointer if required
+        move_fn*                m_pMoveFn;          // Move function pointer if required
+        const char*             m_pName;            // Friendly Human readable string name for the component type
     };
 
     namespace details
@@ -28,14 +81,20 @@ namespace xecs::component
         template< typename T >
         static constexpr auto info_v = CreateInfo<T>();
     }
-    template< typename T >
-    constexpr auto& info_v = details::info_v<std::decay_t<T>>;
+    template< typename T_COMPONENT >
+    requires( type::is_valid_v<std::decay_t<T_COMPONENT>> )
+    constexpr auto& info_v = details::info_v<std::decay_t<T_COMPONENT>>;
 
     //
     // ENTITY
     //
     union entity final
     {
+        constexpr static auto typedef_v = xecs::component::type::data
+        {
+            .m_pName = "Entity"
+        };
+
         union validation final
         {
             std::uint32_t       m_Value;
@@ -68,7 +127,9 @@ namespace xecs::component
     {
         template
         < typename T_COMPONENT
-        >
+        > requires
+        ( xecs::component::type::is_valid_v<T_COMPONENT>
+        )
         void RegisterComponent          ( void
                                         ) noexcept;
 

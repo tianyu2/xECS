@@ -27,10 +27,7 @@ namespace xecs::game_mgr
                                                                     ) noexcept;
         template
         < typename...T_COMPONENTS
-        > requires
-        ( ((sizeof(T_COMPONENTS) <= xecs::settings::virtual_page_size_v)
-           && ... )
-        )
+        > 
         void                                RegisterComponents      ( void
                                                                     ) noexcept;
         inline

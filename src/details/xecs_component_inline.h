@@ -2,29 +2,41 @@ namespace xecs::component
 {
     namespace details
     {
-        template< typename T >
+        template< typename T_COMPONENT >
         consteval info CreateInfo(void) noexcept
         {
+            static_assert( xecs::component::type::is_valid_v<T_COMPONENT> );
             return info
             {
-                .m_UID          = info::invalid_id_v
-            ,   .m_Size         = static_cast<std::uint32_t>(sizeof(T))
-            ,   .m_Guid         = std::is_same_v<xecs::component::entity,T> ? info::guid{ nullptr } : info::guid{ __FUNCSIG__ }
-            ,   .m_pConstructFn = std::is_trivially_constructible_v<T>      ? nullptr
-                                                                            : []( std::byte* p ) noexcept
-                                                                            {
-                                                                                new(p) T;
-                                                                            }
-            ,   .m_pDestructFn  = std::is_trivially_destructible_v<T>       ? nullptr
-                                                                            : []( std::byte* p ) noexcept
-                                                                            {
-                                                                                std::destroy_at(reinterpret_cast<T*>(p));   
-                                                                            }
-            ,   .m_pMoveFn      = std::is_trivially_move_assignable_v<T>    ? nullptr
-                                                                            : []( std::byte* p1, std::byte* p2 ) noexcept
-                                                                            {
-                                                                                *reinterpret_cast<T*>(p1) = std::move(*reinterpret_cast<T*>(p2));
-                                                                            }
+                .m_Guid         = std::is_same_v<xecs::component::entity,T_COMPONENT>
+                                    ? type::guid{ nullptr }
+                                    : T_COMPONENT::typedef_v.m_Guid.m_Value
+                                        ? T_COMPONENT::typedef_v.m_Guid
+                                        : type::guid{ __FUNCSIG__ }
+            ,   .m_BitID        = info::invalid_id_v
+            ,   .m_TypeID       = T_COMPONENT::typedef_v.id_v
+            ,   .m_Size         = static_cast<std::uint32_t>(sizeof(T_COMPONENT))
+            ,   .m_pConstructFn = std::is_trivially_constructible_v<T_COMPONENT>
+                                    ? nullptr
+                                    : []( std::byte* p ) noexcept
+                                    {
+                                        new(p) T_COMPONENT;
+                                    }
+            ,   .m_pDestructFn  = std::is_trivially_destructible_v<T_COMPONENT>
+                                    ? nullptr
+                                    : []( std::byte* p ) noexcept
+                                    {
+                                        std::destroy_at(reinterpret_cast<T_COMPONENT*>(p));
+                                    }
+            ,   .m_pMoveFn      = std::is_trivially_move_assignable_v<T_COMPONENT>
+                                    ? nullptr
+                                    : []( std::byte* p1, std::byte* p2 ) noexcept
+                                    {
+                                        *reinterpret_cast<T_COMPONENT*>(p1) = std::move(*reinterpret_cast<T_COMPONENT*>(p2));
+                                    }
+            ,   .m_pName        = T_COMPONENT::typedef_v.m_pName
+                                    ? T_COMPONENT::typedef_v.m_pName
+                                    : __FUNCSIG__
             };
         }
 
@@ -61,9 +73,10 @@ namespace xecs::component
     //------------------------------------------------------------------------------
 
     template< typename T_COMPONENT >
+    requires (xecs::component::type::is_valid_v<T_COMPONENT>)
     void mgr::RegisterComponent(void) noexcept
     {
-        if (component::info_v<T_COMPONENT>.m_UID == info::invalid_id_v)
-            component::info_v<T_COMPONENT>.m_UID = m_UniqueID++;
+        if (component::info_v<T_COMPONENT>.m_BitID == info::invalid_id_v)
+            component::info_v<T_COMPONENT>.m_BitID = m_UniqueID++;
     }
 }
