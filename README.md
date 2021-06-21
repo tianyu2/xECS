@@ -1,4 +1,4 @@
-# xECS
+# xECS - Introduction
 Simple Entity Component System By Lessons...
 
 * C++20
@@ -6,7 +6,7 @@ Simple Entity Component System By Lessons...
 * Single Thread
 
 ## Lessons 
-Each of the lessons will be place at different branches. So it is easy to update those in need be.
+Each of the lessons will be place at different branches.
 
 1. [Lesson01 basic ECS](https://github.com/LIONant-depot/xECS/tree/Lesson01_Basic_ECS)
 2. [Lesson02 pulish the basics](https://github.com/LIONant-depot/xECS/tree/Lesson02_Pulish_the_basics)
