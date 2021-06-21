@@ -47,7 +47,11 @@ struct timer
     {
         .m_pName = "Timer"
     };
-    float m_Value{};
+
+    using fncallback = void( xecs::system::instance&, xecs::component::entity&) noexcept;
+
+    float        m_Value{};
+    fncallback*  m_pCallback{};
 };
 
 struct bullet
@@ -100,22 +104,34 @@ struct update_movement : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
+struct update_timer : xecs::system::instance
+{
+    constexpr static auto   name_v = "update_timer";
+
+    void operator()( entity& Entity, timer& Timer ) noexcept
+    {
+        Timer.m_Value -= 0.01f;
+        if( Timer.m_Value <= 0 )
+        {
+            if( Timer.m_pCallback ) Timer.m_pCallback( *this, Entity );
+            if( Entity.isZombie() == false )
+            {
+                (void)m_GameMgr.AddOrRemoveComponents<std::tuple<>, std::tuple<timer>>(Entity);
+            }
+        }
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
 struct bullet_logic : xecs::system::instance
 {
     constexpr static auto   name_v = "bullet_logic";
 
-    void operator()( entity& Entity, position& Position, timer& Timer, bullet& Bullet ) const noexcept
+    void operator()( entity& Entity, position& Position, bullet& Bullet ) const noexcept
     {
         // If I am dead because some other bullet killed me then there is nothing for me to do...
         if (Entity.isZombie()) return;
-
-        // Update my timer
-        Timer.m_Value -= 0.01f;
-        if (Timer.m_Value <= 0)
-        {
-            m_GameMgr.DeleteEntity(Entity);
-            return;
-        }
 
         // Check for collisions
         xecs::query::instance Query;
@@ -157,17 +173,11 @@ struct space_ship_logic : xecs::system::instance
 
     using query = std::tuple
     <
-        xecs::query::none_of<bullet>
+        xecs::query::none_of<bullet, timer>
     >;
 
-    void operator()( entity& Entity, position& Position, timer& Time ) const noexcept
+    void operator()( entity& Entity, position& Position ) const noexcept
     {
-        if( Time.m_Value > 0 )
-        {
-            Time.m_Value -= 0.01f;
-            return;
-        }
-
         xecs::query::instance    Query;
         Query.m_NoneOf.AddFromComponents<bullet>();
         m_GameMgr.Foreach
@@ -184,7 +194,11 @@ struct space_ship_logic : xecs::system::instance
             constexpr auto min_distance_v = 30;
             if( DistanceSquare < min_distance_v*min_distance_v )
             {
-                Time.m_Value = 8;
+                auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
+                {
+                    Timer.m_Value = 8;
+                });
+
                 m_GameMgr.getOrCreateArchetype<position, velocity, timer, bullet>()
                     .CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
                     {
@@ -192,8 +206,14 @@ struct space_ship_logic : xecs::system::instance
                         Vel.m_Value = Direction * 2.0f;
                         Pos.m_Value = Position.m_Value + Vel.m_Value;
 
-                        Bullet.m_ShipOwner = Entity;
+                        Bullet.m_ShipOwner = NewEntity;
+
                         Timer.m_Value      = 10;
+                        Timer.m_pCallback  = []( xecs::system::instance& System, xecs::component::entity& Entity ) noexcept
+                        {
+                            // Ones the timer is up then just delete ourselves
+                            System.m_GameMgr.DeleteEntity(Entity);
+                        };
                     });
                 return true;
             }
@@ -235,14 +255,15 @@ struct render_ships : xecs::system::instance
     using query = std::tuple
     <
         xecs::query::none_of<bullet>
+    ,   xecs::query::one_of<entity>
     >;
 
-    void operator()( position& Position, timer& Timer ) const noexcept
+    void operator()( position& Position, timer* pTimer ) const noexcept
     {
         constexpr auto Size = 3;
         glBegin(GL_QUADS);
-        if(Timer.m_Value > 0 ) glColor3f(1.0, 1.0, 1.0);
-        else                   glColor3f(0.5, 1.0, 0.5);
+        if(pTimer) glColor3f(1.0, 1.0, 1.0);
+        else       glColor3f(0.5, 1.0, 0.5);
         glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y - Size);
         glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y + Size);
         glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y + Size);
@@ -285,9 +306,10 @@ void InitializeGame( void ) noexcept
     >();
 
     s_Game.m_GameMgr->RegisterSystems
-    <   update_movement         // Structural: No
-    ,   space_ship_logic        // Structural: Can Create Bullets
-    ,   bullet_logic            // Structural: Can Destroy Bullets and Ships
+    <   update_timer            // Structural: Yes, AddOrRemoveComponent, User define... (Destroy Bullets)
+    ,   update_movement         // Structural: No
+    ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent, Create Bullets
+    ,   bullet_logic            // Structural: Yes, Destroy Bullets and Ships
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -306,13 +328,8 @@ void InitializeGame( void ) noexcept
             Velocity.m_Value.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
             Velocity.m_Value.Normalize();
 
-            Timer.m_Value = (std::rand() / (float)RAND_MAX) * 8;
+            Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
         });
-
-    auto E = s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >().CreateEntity();
-
-    s_Game.m_GameMgr->AddOrRemoveComponents<std::tuple<>, std::tuple<velocity>>(E);
-    
 }
 
 //---------------------------------------------------------------------------------------

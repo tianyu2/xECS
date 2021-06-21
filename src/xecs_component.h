@@ -82,8 +82,8 @@ namespace xecs::component
         static constexpr auto info_v = CreateInfo<T>();
     }
     template< typename T_COMPONENT >
-    requires( type::is_valid_v<std::decay_t<T_COMPONENT>> )
-    constexpr auto& info_v = details::info_v<std::decay_t<T_COMPONENT>>;
+    requires( type::is_valid_v<xcore::types::decay_full_t<T_COMPONENT>> )
+    constexpr auto& info_v = details::info_v<xcore::types::decay_full_t<T_COMPONENT>>;
 
     //
     // ENTITY

@@ -44,8 +44,8 @@ namespace xecs::game_mgr
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
         ( xcore::function::is_callable_v<T_FUNCTION>
-        )
-        void                                AddOrRemoveComponents   ( xecs::component::entity                       Entity
+        ) [[nodiscard]] xecs::component::entity
+                                            AddOrRemoveComponents   ( xecs::component::entity                       Entity
                                                                     , std::span<const xecs::component::info* const> Add
                                                                     , std::span<const xecs::component::info* const> Sub
                                                                     , T_FUNCTION&&                                  Function = xecs::tools::empty_lambda{}
@@ -58,8 +58,8 @@ namespace xecs::game_mgr
         ( xcore::function::is_callable_v<T_FUNCTION>
         && xcore::types::is_specialized_v<std::tuple, T_TUPLE_ADD>
         && xcore::types::is_specialized_v<std::tuple, T_TUPLE_SUBTRACT>
-        )
-        void                                AddOrRemoveComponents   ( xecs::component::entity   Entity
+        ) [[nodiscard]] xecs::component::entity
+                                            AddOrRemoveComponents   ( xecs::component::entity   Entity
                                                                     , T_FUNCTION&&              Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         inline

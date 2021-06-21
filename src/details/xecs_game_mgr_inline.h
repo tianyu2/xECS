@@ -283,13 +283,17 @@ namespace xecs::game_mgr
     > requires
     ( xcore::function::is_callable_v<T_FUNCTION>
     )
-    void instance::AddOrRemoveComponents( xecs::component::entity                       Entity
-                                        , std::span<const xecs::component::info* const> Add
-                                        , std::span<const xecs::component::info* const> Sub
-                                        , T_FUNCTION&&                                  Function ) noexcept
+    xecs::component::entity instance::AddOrRemoveComponents
+    ( xecs::component::entity                       Entity
+    , std::span<const xecs::component::info* const> Add
+    , std::span<const xecs::component::info* const> Sub
+    , T_FUNCTION&&                                  Function 
+    ) noexcept
     {
+        assert(Entity.isZombie() == false);
         auto& Entry = getEntityDetails(Entity);
         auto  Bits  = Entry.m_pArchetype->m_ComponentBits;
+        assert(Entry.m_Validation.m_bZombie == false);
 
         for( auto& pE : Add ) 
         {
@@ -308,9 +312,8 @@ namespace xecs::game_mgr
             if( E.Equals(Bits) )
             {
                 const auto Index = static_cast<std::size_t>(&E - &m_lArchetypeBits[0]);
-                if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) m_lArchetype[Index]->MoveInEntity( Entity );
-                else                                                                  m_lArchetype[Index]->MoveInEntity( Entity, Function );
-                return;
+                if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return m_lArchetype[Index]->MoveInEntity( Entity );
+                else                                                                  return m_lArchetype[Index]->MoveInEntity( Entity, Function );
             }
         }
 
@@ -368,8 +371,8 @@ namespace xecs::game_mgr
 
         auto& Archetype = *m_lArchetype.back();
         Archetype.Initialize({ ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
-        if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) Archetype.MoveInEntity(Entity);
-        else                                                                  Archetype.MoveInEntity(Entity, Function);
+        if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return Archetype.MoveInEntity(Entity);
+        else                                                                  return Archetype.MoveInEntity(Entity, Function);
     }
 
     //---------------------------------------------------------------------------
@@ -383,18 +386,19 @@ namespace xecs::game_mgr
         && xcore::types::is_specialized_v<std::tuple, T_TUPLE_ADD>
         && xcore::types::is_specialized_v<std::tuple, T_TUPLE_SUBTRACT>
     )
-    void instance::AddOrRemoveComponents( xecs::component::entity   Entity
-                                        , T_FUNCTION&&              Function 
-                                        ) noexcept
+    xecs::component::entity instance::AddOrRemoveComponents
+    ( xecs::component::entity   Entity
+    , T_FUNCTION&&              Function 
+    ) noexcept
     {
         if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda > )
-            AddOrRemoveComponents
+            return AddOrRemoveComponents
             ( Entity
             , xecs::component::details::sorted_info_array_v<T_TUPLE_ADD>
             , xecs::component::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
             );
         else
-            AddOrRemoveComponents
+            return AddOrRemoveComponents
             ( Entity
             , xecs::component::details::sorted_info_array_v<T_TUPLE_ADD>
             , xecs::component::details::sorted_info_array_v<T_TUPLE_SUBTRACT>

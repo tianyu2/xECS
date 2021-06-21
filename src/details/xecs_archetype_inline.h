@@ -394,7 +394,8 @@ namespace xecs::archetype
 
     //--------------------------------------------------------------------------------------------
     template< typename T_FUNCTION >
-    void instance::MoveInEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
+    xecs::component::entity
+    instance::MoveInEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
     {
         auto&      GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
         const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
@@ -411,7 +412,21 @@ namespace xecs::archetype
         }
         else
         {
-            AccessGuard( Function );
+            AccessGuard( [&]
+            {
+                auto CachedPointer = details::GetComponentPointerArray
+                ( m_Pool
+                , NewPoolIndex
+                , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>
+                );
+
+                details::CallFunction
+                ( Function
+                , CachedPointer
+                );
+            });
         }
+
+        return Entity;
     }
 }

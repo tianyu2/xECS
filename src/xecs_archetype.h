@@ -39,8 +39,8 @@ namespace xecs::archetype
                                                         ) noexcept;
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
-        >
-        void                    MoveInEntity            ( xecs::component::entity   Entity
+        > [[nodiscard]] xecs::component::entity
+                                MoveInEntity            ( xecs::component::entity   Entity
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
                                                         ) noexcept;
         template
