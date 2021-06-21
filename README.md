@@ -1,7 +1,15 @@
 # xECS - Lesson 01, The Basics
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
-This lessons presents the basic structure of an single threaded ECS. We do not care too much about correctness here.
+This lessons presents the basic structure of an single threaded ECS. We do not care too much about correctness in this lesson.
+
+* Basic pool
+* Basic Archetype
+* Basic GameMgr
+* Basic Query
+* Basic Component
+* Basic...etc
+* Simple example to follow
 
 ## To build
 1. Go to the build directory 
