@@ -198,6 +198,9 @@ struct space_ship_logic : xecs::system::instance
                 {
                     Timer.m_Value = 8;
                 });
+                assert( NewEntity.m_GlobalIndex             == Entity.m_GlobalIndex          );
+                assert( NewEntity.m_Validation              != Entity.m_Validation           );
+                assert( NewEntity.m_Validation.m_bZombie    != Entity.m_Validation.m_bZombie );
 
                 m_GameMgr.getOrCreateArchetype<position, velocity, timer, bullet>()
                     .CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
