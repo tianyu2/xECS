@@ -198,9 +198,9 @@ struct space_ship_logic : xecs::system::instance
                 {
                     Timer.m_Value = 8;
                 });
-                assert( NewEntity.m_GlobalIndex             == Entity.m_GlobalIndex          );
-                assert( NewEntity.m_Validation              != Entity.m_Validation           );
-                assert( NewEntity.m_Validation.m_bZombie    != Entity.m_Validation.m_bZombie );
+                assert( NewEntity.m_GlobalIndex             == Entity.m_GlobalIndex          );     // This still remains the same but old Entity should not longer be used
+                assert( NewEntity.m_Validation              != Entity.m_Validation           );     // Destroy because of the link-list
+                assert( NewEntity.m_Validation.m_bZombie    != Entity.m_Validation.m_bZombie );     // Also the entity is marked as deleted from the pool
 
                 m_GameMgr.getOrCreateArchetype<position, velocity, timer, bullet>()
                     .CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
@@ -309,10 +309,10 @@ void InitializeGame( void ) noexcept
     >();
 
     s_Game.m_GameMgr->RegisterSystems
-    <   update_timer            // Structural: Yes, AddOrRemoveComponent, User define... (Destroy Bullets)
+    <   update_timer            // Structural: Yes, AddOrRemoveComponent(timer), User defined... (Destroy Bullets)
     ,   update_movement         // Structural: No
-    ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent, Create Bullets
-    ,   bullet_logic            // Structural: Yes, Destroy Bullets and Ships
+    ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent(timer), Create(Bullets)
+    ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
