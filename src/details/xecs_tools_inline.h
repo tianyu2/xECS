@@ -23,7 +23,7 @@ namespace xecs::tools
     {
         for (int i = 0, size = static_cast<int>(m_Bits.size()); i < size; ++i)
         {
-            if ((m_Bits[i] & B.m_Bits[i]) != B.m_Bits[i])
+            if (m_Bits[i] == B.m_Bits[i])
                 return false;
         }
 
