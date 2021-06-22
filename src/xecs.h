@@ -30,6 +30,11 @@ namespace xecs::game_mgr
     struct instance;
 }
 
+namespace xecs::system
+{
+    struct instance;
+}
+
 //--------------------------------------------------------------
 // FILES
 //--------------------------------------------------------------

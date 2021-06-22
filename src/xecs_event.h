@@ -16,14 +16,19 @@ namespace xecs::event
                                                     ) noexcept = default;
         template
         < auto      T_FUNCTION_PTR_V
-        , typename  T
+        , typename  T_CLASS
         > __inline
-        void                Register                ( T& Class 
+        void                Register                ( T_CLASS& Class
                                                     ) noexcept;
         constexpr __inline
         void                NotifyAll               ( T_ARGS... Args 
                                                     ) const noexcept;
 
+        template
+        < typename T_CLASS
+        >
+        void                RemoveDelegate          ( T_CLASS& Class
+                                                    ) noexcept;
         std::vector<info>   m_Delegates{};
     };
 }

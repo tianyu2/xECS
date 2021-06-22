@@ -402,6 +402,12 @@ namespace xecs::game_mgr
 
     void instance::Run( void ) noexcept
     {
+        if( m_isRunning == false )
+        {
+            m_isRunning = true;
+            m_SystemMgr.m_Events.m_OnGameStart.NotifyAll();
+        }
+
         XCORE_PERF_FRAME_MARK()
         XCORE_PERF_FRAME_MARK_START("ecs::Frame")
 
@@ -412,4 +418,32 @@ namespace xecs::game_mgr
 
         XCORE_PERF_FRAME_MARK_END("ecs::Frame")
     }
+
+    //---------------------------------------------------------------------------
+
+    void instance::Stop(void) noexcept
+    {
+        if(m_isRunning)
+        {
+            m_isRunning = false;
+            m_SystemMgr.m_Events.m_OnGameEnd.NotifyAll();
+        }
+    }
+
+    //---------------------------------------------------------------------------
+    template< typename T_SYSTEM >
+    T_SYSTEM* instance::findSystem( void ) noexcept
+    {
+        return m_SystemMgr.find<T_SYSTEM>();
+    }
+
+    //---------------------------------------------------------------------------
+    template< typename T_SYSTEM >
+    T_SYSTEM& instance::getSystem(void) noexcept
+    {
+        auto p = m_SystemMgr.find<T_SYSTEM>();
+        assert(p);
+        return *p;
+    }
+
 }

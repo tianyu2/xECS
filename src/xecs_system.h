@@ -1,14 +1,50 @@
 namespace xecs::system
 {
+    namespace type
+    {
+        using guid = xcore::guid::unit<64, struct system_tag>;
+        
+        struct simple
+        {
+            const char*  m_pName = "Unnamed System";
+            guid         m_Guid{};
+        };
+
+        struct info
+        {
+            using call_run = void( xecs::system::instance&);
+
+            call_run*                               m_CallRun;
+            type::guid                              m_Guid;
+            const char*                             m_pName;
+        };
+
+        namespace details
+        {
+            template< typename T >
+            consteval type::info CreateInfo(void) noexcept;
+
+            template< typename T >
+            static constexpr auto info_v = CreateInfo<T>();
+        }
+
+        template< typename T_SYSTEM >
+        constexpr static auto& info_v = details::info_v<T_SYSTEM>;
+    }
+
     //-----------------------------------------------------------------
     // ECS USER DEFINITIONS
     //-----------------------------------------------------------------
     struct overrides
     {
         using                   query       = std::tuple<>;
-        constexpr static auto   name_v      = "unnamed system";
+        constexpr static auto   typedef_v   = type::simple{};
 
-        void                    OnUpdate    ( void ) noexcept {}
+        void                    OnUpdate        ( void ) noexcept {}
+        void                    OnGameStart     ( void ) noexcept {}
+        void                    OnGameEnd       ( void ) noexcept {}
+        void                    OnFrameStart    ( void ) noexcept {}
+        void                    OnFrameEnd      ( void ) noexcept {}
     };
 
     struct instance : overrides
@@ -29,13 +65,12 @@ namespace xecs::system
     //-----------------------------------------------------------------
     struct mgr final
     {
-        struct info
+        struct events
         {
-            using call_run = void( xecs::system::instance&);
-
-            std::unique_ptr<xecs::system::instance> m_System;
-            call_run*                               m_CallRun;
-            const char*                             m_pName;
+            xecs::event::instance<>     m_OnGameStart;
+            xecs::event::instance<>     m_OnGameEnd;
+            xecs::event::instance<>     m_OnFrameStart;
+            xecs::event::instance<>     m_OnFrameEnd;
         };
 
                                 mgr                 ( const mgr&
@@ -52,7 +87,14 @@ namespace xecs::system
         inline 
         void                    Run                 ( void 
                                                     ) noexcept;
+        template< typename T_SYSTEM >
+        T_SYSTEM*               find                ( void
+                                                    ) noexcept;
 
-        std::vector< info >  m_Systems;
+        using system_list = std::vector< std::tuple<std::unique_ptr<xecs::system::instance>, const type::info* > >;
+
+        std::unordered_map<type::guid, xecs::system::instance*> m_SystemMaps;
+        system_list                                             m_Systems;
+        events                                                  m_Events;
     };
 }

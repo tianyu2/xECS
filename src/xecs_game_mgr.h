@@ -120,6 +120,19 @@ namespace xecs::game_mgr
         inline
         void                                Run                     ( void 
                                                                     ) noexcept;
+        inline
+        void                                Stop                    ( void 
+                                                                    ) noexcept;
+        template
+        < typename T_SYSTEM
+        > __inline
+        T_SYSTEM*                           findSystem              ( void
+                                                                    ) noexcept;
+        template
+        < typename T_SYSTEM
+        > __inline
+        T_SYSTEM&                           getSystem               ( void
+                                                                    ) noexcept;
 
         using archetype_map = std::unordered_map<xecs::archetype::guid, xecs::archetype::instance* >;
 
@@ -130,5 +143,6 @@ namespace xecs::game_mgr
         std::vector<tools::bits>                            m_lArchetypeBits    {};
         std::unique_ptr<entity_info[]>                      m_lEntities         = std::make_unique<entity_info[]>(xecs::settings::max_entities_v);
         int                                                 m_EmptyHead         = 0;
+        bool                                                m_isRunning         = false;
     };
 }

@@ -69,13 +69,140 @@ using bullet_tuple = std::tuple<position, velocity, timer, bullet>;
 // SYSTEM
 //---------------------------------------------------------------------------------------
 
+struct grid
+{
+    struct info
+    {
+        xecs::component::entity m_Entity;
+        xcore::vector2          m_Pos;
+        bool                    m_isBullet;
+    };
+
+    struct cell
+    {
+        std::vector<info> m_EntityList;
+    };
+
+    constexpr static int cell_width_v  = 10;
+    constexpr static int cell_height_v = 10;
+
+    void Initialize()
+    {
+        m_CellXCount = s_Game.m_W / cell_width_v;
+        m_CellYCount = s_Game.m_H / cell_height_v;
+        m_CellCount  = m_CellXCount* m_CellYCount;
+        m_Cells = std::make_unique<cell[]>(m_CellCount);
+    }
+
+    void Clear()
+    {
+        for (auto& E : std::span{ m_Cells.get(), (std::size_t)m_CellCount }) 
+            E.m_EntityList.clear();
+    }
+
+    std::tuple<int,int> ComputeFromWorldToGrid( xcore::vector2 Position ) noexcept
+    {
+        return
+        { static_cast<int>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  (float)m_CellXCount-1)))
+        , static_cast<int>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, (float)m_CellYCount-1)))
+        };
+    }
+
+    void Insert( xecs::component::entity Entity, xcore::vector2 Position, bool isBullet ) noexcept
+    {
+        const auto[X,Y] = ComputeFromWorldToGrid(Position);
+        const int Index = X + Y * m_CellXCount;
+        assert(Index>=0);
+        assert(Index < m_CellCount );
+        m_Cells[Index].m_EntityList.push_back( info
+        {
+            .m_Entity   = Entity
+        ,   .m_Pos      = Position
+        ,   .m_isBullet = isBullet
+        });
+    }
+
+    std::tuple<int,int> findEntity(xecs::component::entity Entity, xcore::vector2 Position )
+    {
+        const auto [X, Y] = ComputeFromWorldToGrid(Position);
+        const int Index = X + Y * m_CellXCount;
+        assert(Index >= 0);
+        assert(Index < m_CellCount);
+        auto& Cell = m_Cells[Index].m_EntityList;
+        for (int i = 0; i < Cell.size(); ++i)
+        {
+            auto& Entry = Cell[i];
+            if (Entry.m_Entity.m_GlobalIndex == Entity.m_GlobalIndex)
+            {
+                return {Index, i};
+            }
+        }
+        return { Index,-1};
+    }
+
+    void RemoveEntity( xecs::component::entity Entity, xcore::vector2 Position )
+    {
+        auto [Index,i] = findEntity(Entity, Position);
+        assert(i>=0);
+        auto& Cell = m_Cells[Index].m_EntityList;
+        Cell[i] = Cell.back();
+        Cell.pop_back();
+    }
+
+    template<typename T_FUNCTION>
+    void Search( xcore::vector2 Position, T_FUNCTION&& Function ) noexcept
+    {
+        const auto [X, Y] = ComputeFromWorldToGrid(Position);
+        for (int y = std::max(0, Y - 1), endY = std::min(Y + 1,  m_CellYCount); y < endY; ++y)
+            for (int x = std::max(0,X-1), endX = std::min(X + 1, m_CellXCount); x < endX; ++x)
+            {
+                int Index  = x + y * m_CellXCount;
+                assert(Index< m_CellCount);
+                assert(Index>=0);
+                auto& Cell = m_Cells[Index].m_EntityList;
+                for( int i=0; i< Cell.size(); ++i)
+                {
+                    auto& Entry = Cell[i];
+                    bool  Break = Function(Cell[i]);
+                    if( Entry.m_Entity.isZombie() )
+                    {
+                        Entry = Cell.back();
+                        Cell.pop_back();
+                        --i;
+                    }
+                    if( Break ) return;
+                }
+            }
+    }
+
+    std::unique_ptr<cell[]> m_Cells{};
+    int                     m_CellXCount;
+    int                     m_CellYCount;
+    int                     m_CellCount;
+};
+
 //---------------------------------------------------------------------------------------
 
 struct update_movement : xecs::system::instance
 {
-    constexpr static auto   name_v = "update_movement";
+    constexpr static auto typedef_v = xecs::system::type::simple
+    {
+        .m_pName = "update_movement"
+    };
 
-    void operator()(position& Position, velocity& Velocity) const noexcept
+    grid            m_Grid;
+
+    void OnGameStart()
+    {
+        m_Grid.Initialize();
+    }
+
+    void OnFrameStart()
+    {
+        m_Grid.Clear();
+    }
+
+    void operator()( entity* pEntity, position& Position, velocity& Velocity, bullet* pBullet ) noexcept
     {
         Position.m_Value += Velocity.m_Value;
 
@@ -101,6 +228,8 @@ struct update_movement : xecs::system::instance
             Position.m_Value.m_Y = s_Game.m_H - 1;
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
+
+        m_Grid.Insert( *pEntity, Position.m_Value, !!pBullet );
     }
 };
 
@@ -108,7 +237,10 @@ struct update_movement : xecs::system::instance
 
 struct update_timer : xecs::system::instance
 {
-    constexpr static auto   name_v = "update_timer";
+    constexpr static auto typedef_v = xecs::system::type::simple
+    {
+        .m_pName = "update_timer"
+    };
 
     void operator()( entity& Entity, timer& Timer ) noexcept
     {
@@ -128,7 +260,17 @@ struct update_timer : xecs::system::instance
 
 struct bullet_logic : xecs::system::instance
 {
-    constexpr static auto   name_v = "bullet_logic";
+    constexpr static auto typedef_v = xecs::system::type::simple
+    {
+        .m_pName = "bullet_logic"
+    };
+
+    grid* m_pGrid{};
+
+    void OnGameStart()
+    {
+        m_pGrid = &m_GameMgr.getSystem<update_movement>().m_Grid;
+    }
 
     void operator()( entity& Entity, position& Position, bullet& Bullet ) const noexcept
     {
@@ -136,29 +278,23 @@ struct bullet_logic : xecs::system::instance
         if (Entity.isZombie()) return;
 
         // Check for collisions
-        xecs::query::instance Query;
-        Query.m_Must.AddFromComponents<position>();
-        m_GameMgr.Foreach
-        (   m_GameMgr.Search(Query)
-        ,   [&]( entity& E, position& Pos ) noexcept -> bool
+        m_pGrid->Search( Position.m_Value, [&]( auto& CellEntry ) -> bool
         {
-            assert( Entity.isZombie() == false );
+            assert(CellEntry.m_Entity.isZombie() == false );
 
             // Our we checking against my self?
-            if( &Entity == &E ) return false;
-
-            // Is this bullet or ship already dead?
-            if( E.isZombie() ) return false;
+            if ( Entity == CellEntry.m_Entity ) return false;
 
             // Are we colliding with our own ship?
             // If so lets just continue
-            if( Bullet.m_ShipOwner.m_Value == E.m_Value ) return false;
+            if( Bullet.m_ShipOwner.m_Value == CellEntry.m_Entity.m_Value ) return false;
 
             constexpr auto distance_v = 3;
-            if ((Pos.m_Value - Position.m_Value).getLengthSquared() < distance_v * distance_v)
+            if ((CellEntry.m_Pos - Position.m_Value).getLengthSquared() < distance_v * distance_v)
             {
                 m_GameMgr.DeleteEntity(Entity);
-                m_GameMgr.DeleteEntity(E);
+                m_GameMgr.DeleteEntity(CellEntry.m_Entity);
+                m_pGrid->RemoveEntity(Entity, Position.m_Value);
                 return true;
             }
 
@@ -171,25 +307,34 @@ struct bullet_logic : xecs::system::instance
 
 struct space_ship_logic : xecs::system::instance
 {
-    constexpr static auto   name_v = "space_ship_logic";
+    constexpr static auto typedef_v = xecs::system::type::simple
+    {
+        .m_pName = "space_ship_logic"
+    };
 
     using query = std::tuple
     <
         xecs::query::none_of<bullet, timer>
     >;
 
+    grid*                       m_pGrid{};
+    xecs::archetype::instance*  m_pBulletArchetype{};
+
+    void OnGameStart()
+    {
+        m_pGrid             = &m_GameMgr.getSystem<update_movement>().m_Grid;
+        m_pBulletArchetype  = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
+    }
+
     void operator()( entity& Entity, position& Position ) const noexcept
     {
-        xecs::query::instance    Query;
-        Query.m_NoneOf.AddFromComponents<bullet>();
-        m_GameMgr.Foreach
-        ( m_GameMgr.Search(Query)
-        , [&](position& Pos ) noexcept -> bool
+        // Check for collisions
+        m_pGrid->Search( Position.m_Value, [&]( auto& CellEntry ) -> bool
         {
-            // Don't shoot myself
-            if( &Pos == &Position ) return false;
+            // Don't shoot myself, or try to shoot another bullet
+            if ( Entity == CellEntry.m_Entity || CellEntry.m_isBullet ) return false;
 
-            auto        Direction        = Pos.m_Value - Position.m_Value;
+            auto        Direction        = CellEntry.m_Pos - Position.m_Value;
             const auto  DistanceSquare   = Direction.getLengthSquared();
 
             // Shoot a bullet if close enough
@@ -204,8 +349,7 @@ struct space_ship_logic : xecs::system::instance
                 assert( NewEntity.m_Validation              != Entity.m_Validation           );     // Destroy because of the link-list
                 assert( NewEntity.m_Validation.m_bZombie    != Entity.m_Validation.m_bZombie );     // Also the entity is marked as deleted from the pool
 
-                m_GameMgr.findArchetype(xecs::archetype::guid_v<bullet_tuple>)
-                    ->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
+                m_pBulletArchetype->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
                     {
                         Direction  /= std::sqrt(DistanceSquare);
                         Vel.m_Value = Direction * 2.0f;
@@ -231,7 +375,10 @@ struct space_ship_logic : xecs::system::instance
 
 struct render_bullets : xecs::system::instance
 {
-    constexpr static auto   name_v = "render_bullets";
+    constexpr static auto typedef_v = xecs::system::type::simple
+    {
+        .m_pName = "render_bullets"
+    };
 
     using query = std::tuple
     <
@@ -255,7 +402,10 @@ struct render_bullets : xecs::system::instance
 
 struct render_ships : xecs::system::instance
 {
-    constexpr static auto   name_v = "render_ships";
+    constexpr static auto typedef_v = xecs::system::type::simple
+    {
+        .m_pName = "render_ships"
+    };
 
     using query = std::tuple
     <
@@ -281,7 +431,10 @@ struct render_ships : xecs::system::instance
 
 struct page_flip : xecs::system::instance
 {
-    constexpr static auto   name_v = "page_flip";
+    constexpr static auto typedef_v = xecs::system::type::simple
+    {
+        .m_pName = "page_flip"
+    };
 
     __inline
     void OnUpdate( void ) noexcept
@@ -313,8 +466,8 @@ void InitializeGame( void ) noexcept
     s_Game.m_GameMgr->RegisterSystems
     <   update_timer            // Structural: Yes, AddOrRemoveComponent(timer), User defined... (Destroy Bullets)
     ,   update_movement         // Structural: No
-    ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent(timer), Create(Bullets)
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
+    ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent(timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -335,11 +488,6 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
         });
-
-    //
-    // Lets create the archetype for a bullet so that we can get it faster later
-    //
-    s_Game.m_GameMgr->getOrCreateArchetype<bullet_tuple>();
 }
 
 //---------------------------------------------------------------------------------------
