@@ -24,11 +24,8 @@ namespace xecs::pool
         void            Delete                              ( int Index
                                                             ) noexcept;
         inline
-        void            MoveDelete                          ( int Index
-                                                            ) noexcept;
-        inline
-        void            Free                                ( int   Index
-                                                            , bool  bCallDestructors
+        int             MoveInFromPool                      ( int               IndexToMove
+                                                            , pool::instance&   Pool
                                                             ) noexcept;
         constexpr
         int             Size                                ( void 
@@ -46,10 +43,6 @@ namespace xecs::pool
         constexpr
         bool            isLastEntry                         ( int Index 
                                                             ) const noexcept;
-        inline
-        int             MoveInFromPool                      ( int               IndexToMove
-                                                            , pool::instance&   Pool
-                                                            ) noexcept;
         template
         < typename T_COMPONENT
         > requires
@@ -65,6 +58,11 @@ namespace xecs::pool
         T_COMPONENT&    getComponentInSequence              ( std::uint32_t EntityIndex
                                                             , int&          Sequence
                                                             ) const noexcept;
+        inline
+        void            Free                                ( int   Index
+                                                            , bool  bCallDestructors
+                                                            ) noexcept;
+
 
         std::span<const component::info* const >                            m_Infos             {};
         int                                                                 m_CurrentCount      {};
