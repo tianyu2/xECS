@@ -153,23 +153,20 @@ namespace xecs::game_mgr
     archetype::instance& instance::getOrCreateArchetype( std::span<const component::info* const> Types ) noexcept
     {
         tools::bits Query;
+        xecs::archetype::guid ArchetypeGuid{};
         for (const auto& pE : Types)
         {
             assert(pE->m_BitID != xecs::component::info::invalid_bit_id_v );
             Query.setBit(pE->m_BitID);
+            ArchetypeGuid.m_Value += pE->m_Guid.m_Value;
         }
             
         // Make sure the entity is part of the list at this point
         assert( Query.getBit(xecs::component::info_v<xecs::component::entity>.m_BitID) );
-        
-        for( auto& E : m_lArchetypeBits )
-        {
-            if ( E.Equals(Query) )
-            {
-                const auto Index = static_cast<std::size_t>( &E - m_lArchetypeBits.data() );
-                return *m_lArchetype[Index];
-            }
-        }
+
+        // Return the archetype
+        if( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
+            return *I->second;
 
         //
         // Create Archetype...
@@ -180,7 +177,19 @@ namespace xecs::game_mgr
         auto& Archetype = *m_lArchetype.back();
         Archetype.Initialize(Types, Query);
 
+        m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
+
+
         return Archetype;
+    }
+
+    //---------------------------------------------------------------------------
+    inline
+    archetype::instance* instance::findArchetype(xecs::archetype::guid ArchetypeGuid ) const noexcept
+    {
+        if ( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
+            return I->second;
+        return nullptr;
     }
 
     //---------------------------------------------------------------------------

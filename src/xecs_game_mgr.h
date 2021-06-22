@@ -96,6 +96,9 @@ namespace xecs::game_mgr
         std::vector<archetype::instance*>   Search                  ( const xecs::query::instance& Query 
                                                                     ) const noexcept;
         inline
+        archetype::instance*                findArchetype           ( xecs::archetype::guid Guid 
+                                                                    ) const noexcept;
+        inline
         archetype::instance&                getOrCreateArchetype    ( std::span<const component::info* const> Types 
                                                                     ) noexcept;
 
@@ -126,8 +129,11 @@ namespace xecs::game_mgr
         void                                Run                     ( void 
                                                                     ) noexcept;
 
+        using archetype_map = std::unordered_map<xecs::archetype::guid, xecs::archetype::instance* >;
+
         xecs::system::mgr                                   m_SystemMgr         {};
         xecs::component::mgr                                m_ComponentMgr      {};
+        archetype_map                                       m_ArchetypeMap      {};
         std::vector<std::unique_ptr<archetype::instance>>   m_lArchetype        {};
         std::vector<tools::bits>                            m_lArchetypeBits    {};
         std::unique_ptr<entity_info[]>                      m_lEntities         = std::make_unique<entity_info[]>(xecs::settings::max_entities_v);

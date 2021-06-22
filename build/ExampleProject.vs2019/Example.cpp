@@ -63,6 +63,8 @@ struct bullet
     xecs::component::entity m_ShipOwner;
 };
 
+using bullet_tuple = std::tuple<position, velocity, timer, bullet>;
+
 //---------------------------------------------------------------------------------------
 // SYSTEM
 //---------------------------------------------------------------------------------------
@@ -202,8 +204,8 @@ struct space_ship_logic : xecs::system::instance
                 assert( NewEntity.m_Validation              != Entity.m_Validation           );     // Destroy because of the link-list
                 assert( NewEntity.m_Validation.m_bZombie    != Entity.m_Validation.m_bZombie );     // Also the entity is marked as deleted from the pool
 
-                m_GameMgr.getOrCreateArchetype<position, velocity, timer, bullet>()
-                    .CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer )
+                m_GameMgr.findArchetype(xecs::archetype::guid_v<bullet_tuple>)
+                    ->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
                     {
                         Direction  /= std::sqrt(DistanceSquare);
                         Vel.m_Value = Direction * 2.0f;
@@ -333,6 +335,11 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
         });
+
+    //
+    // Lets create the archetype for a bullet so that we can get it faster later
+    //
+    s_Game.m_GameMgr->getOrCreateArchetype<bullet_tuple>();
 }
 
 //---------------------------------------------------------------------------------------

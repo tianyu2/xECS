@@ -2,6 +2,24 @@ namespace xecs::tools
 {
     using empty_lambda = decltype([]() {});
 
+    namespace details
+    {
+        template< typename T>
+        struct as_tuple
+        {
+            using type = T;
+        };
+
+        template< typename...T >
+        struct as_tuple<std::tuple<T...>>
+        {
+            using type = std::tuple<T...>;
+        };
+    }
+
+    template< typename... T >
+    using united_tuple = xcore::types::tuple_cat_t< typename details::as_tuple<T>::type ... >;
+
     struct bits final
     {
         __inline 

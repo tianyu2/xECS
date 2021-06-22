@@ -1,5 +1,15 @@
 namespace xecs::archetype
 {
+    using guid = xcore::guid::unit<64, struct archetype_tag>;
+
+    template< typename...T_TUPLES_OF_COMPONENTS_OR_COMPONENTS >
+    constexpr static auto guid_v = []<typename...T>(std::tuple<T...>*) consteval
+    {
+        static_assert( ((xecs::component::type::is_valid_v<T>) && ... ) );
+        return guid{ ((xecs::component::info_v<T>.m_Guid.m_Value) + ...) };
+    }( xcore::types::null_tuple_v< xecs::tools::united_tuple<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...> > );
+
+
     struct instance final
     {
                                 instance                ( const instance& 
