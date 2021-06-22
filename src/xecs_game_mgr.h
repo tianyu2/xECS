@@ -17,7 +17,6 @@ namespace xecs::game_mgr
                                                                     ) = delete;
         inline                              instance                ( void
                                                                     ) noexcept;
-
         template
         < typename...T_SYSTEMS
         > requires
@@ -78,25 +77,16 @@ namespace xecs::game_mgr
         > requires
         ( xcore::function::is_callable_v<T_FUNCTION>
         ) __inline
-        bool                                findEntity              ( xecs::component::entity Entity
+        [[nodiscard]] bool                  findEntity              ( xecs::component::entity Entity
                                                                     , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
                                                                     ) const noexcept;
-        inline
-        std::vector<archetype::instance*>   Search                  ( std::span<const component::info* const> Types 
-                                                                    ) const noexcept;
-
         template
         < typename... T_COMPONENTS
-        >
-        std::vector<archetype::instance*>   Search                  ( void 
-                                                                    ) const noexcept;
-        template
-        < typename... T_COMPONENTS
-        >
-        std::vector<archetype::instance*>   Search                  ( const xecs::query::instance& Query 
+        > [[nodiscard]] std::vector<archetype::instance*>
+                                            Search                  ( const xecs::query::instance& Query
                                                                     ) const noexcept;
         inline
-        archetype::instance*                findArchetype           ( xecs::archetype::guid Guid 
+        [[nodiscard]] archetype::instance*  findArchetype           ( xecs::archetype::guid Guid 
                                                                     ) const noexcept;
         inline
         archetype::instance&                getOrCreateArchetype    ( std::span<const component::info* const> Types 

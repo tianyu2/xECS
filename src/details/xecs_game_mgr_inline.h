@@ -102,36 +102,6 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
-    std::vector<archetype::instance*> instance::Search( std::span<const component::info* const> Types ) const noexcept
-    {
-        tools::bits Query;
-        for( const auto& pE : Types )
-            Query.setBit( pE->m_BitID );
-
-        std::vector<archetype::instance*> ArchetypesFound;
-        for (auto& E : m_lArchetypeBits)
-        {
-            if( E.Equals(Query) )
-            {
-                const auto Index = static_cast<std::size_t>(&E - &m_lArchetypeBits[0]);
-                ArchetypesFound.push_back(m_lArchetype[Index].get());
-            }
-        }
-
-        return std::move(ArchetypesFound);
-    }
-
-    //---------------------------------------------------------------------------
-
-    template< typename... T_COMPONENTS >
-    std::vector<archetype::instance*> instance::Search( void ) const noexcept
-    {
-        static constexpr auto ComponentList = std::array{ &component::info_v<T_COMPONENTS>... };
-        return Search(ComponentList);
-    }
-
-    //---------------------------------------------------------------------------
-
     template< typename... T_COMPONENTS >
     std::vector<archetype::instance*> instance::Search( const xecs::query::instance& Query ) const noexcept
     {
