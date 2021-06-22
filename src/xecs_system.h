@@ -3,19 +3,68 @@ namespace xecs::system
     namespace type
     {
         using guid = xcore::guid::unit<64, struct system_tag>;
-        
-        struct simple
+
+        enum class id : std::uint8_t
         {
-            const char*  m_pName = "Unnamed System";
-            guid         m_Guid{};
+            UPDATE
+        ,   NOTIFY_CREATE
+        ,   NOTIFY_DESTROY
+        ,   NOTIFY_MODIFIED
+        ,   NOTIFY_MOVE_IN
+        ,   NOTIFY_MOVE_OUT
+        ,   NOTIFY_COMPONENT_CHANGE
+        ,   NOTIFY_COMPONENT_ADDED
+        ,   NOTIFY_COMPONENT_REMOVE
+        };
+
+        struct update
+        {
+            static constexpr auto   id_v    = id::UPDATE;
+            const char*             m_pName = "Unnamed Update System";
+            guid                    m_Guid  {};
+        };
+
+        struct notify_create
+        {
+            static constexpr auto   id_v    = id::NOTIFY_CREATE;
+            const char*             m_pName = "Unnamed Notified Create Entity System";
+            guid                    m_Guid  {};
+        };
+
+        struct notify_destroy
+        {
+            static constexpr auto   id_v    = id::NOTIFY_DESTROY;
+            const char*             m_pName = "Unnamed Notified Destroy Entity System";
+            guid                    m_Guid  {};
+        };
+
+        struct notify_moved_in
+        {
+            static constexpr auto   id_v    = id::NOTIFY_MOVE_IN;
+            const char*             m_pName = "Unnamed Notified Move In Entity System";
+            guid                    m_Guid  {};
+        };
+
+        struct notify_moved_out
+        {
+            static constexpr auto   id_v    = id::NOTIFY_MOVE_OUT;
+            const char*             m_pName = "Unnamed Notified Move Out System";
+            guid                    m_Guid  {};
+        };
+
+        struct notify_component_change
+        {
+            static constexpr auto        id_v             = id::NOTIFY_COMPONENT_CHANGE;
+            const char*                  m_pName          = "Unnamed Component Change System";
+            guid                         m_Guid          {};
+            const xecs::component::info* m_pComponentInfo{};
         };
 
         struct info
         {
-            using call_run = void( xecs::system::instance&);
-
             type::guid                              m_Guid;
             const char*                             m_pName;
+            id                                      m_ID;
         };
 
         namespace details
@@ -37,13 +86,14 @@ namespace xecs::system
     struct overrides
     {
         using                   query       = std::tuple<>;
-        constexpr static auto   typedef_v   = type::simple{};
+        constexpr static auto   typedef_v   = type::update{};
 
-        void                    OnUpdate        ( void ) noexcept {}
         void                    OnGameStart     ( void ) noexcept {}
-        void                    OnGameEnd       ( void ) noexcept {}
         void                    OnFrameStart    ( void ) noexcept {}
+        void                    OnUpdate        ( void ) noexcept {}
         void                    OnFrameEnd      ( void ) noexcept {}
+        void                    OnGameEnd       ( void ) noexcept {}
+        void                    OnNotified      ( xecs::component::entity& Entity ) noexcept {}
     };
 
     struct instance : overrides

@@ -206,7 +206,7 @@ struct grid
 
 struct update_movement : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::simple
+    constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "update_movement"
     };
@@ -259,7 +259,7 @@ struct update_movement : xecs::system::instance
 
 struct update_timer : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::simple
+    constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "update_timer"
     };
@@ -282,7 +282,7 @@ struct update_timer : xecs::system::instance
 
 struct bullet_logic : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::simple
+    constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "bullet_logic"
     };
@@ -330,7 +330,7 @@ struct bullet_logic : xecs::system::instance
 
 struct space_ship_logic : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::simple
+    constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "space_ship_logic"
     };
@@ -398,7 +398,7 @@ struct space_ship_logic : xecs::system::instance
 
 struct render_bullets : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::simple
+    constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "render_bullets"
     };
@@ -425,7 +425,7 @@ struct render_bullets : xecs::system::instance
 
 struct render_ships : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::simple
+    constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "render_ships"
     };
@@ -454,7 +454,7 @@ struct render_ships : xecs::system::instance
 
 struct page_flip : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::simple
+    constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "page_flip"
     };

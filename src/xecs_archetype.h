@@ -12,6 +12,15 @@ namespace xecs::archetype
 
     struct instance final
     {
+        struct events
+        {
+            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityCreated;
+            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityDestroyed;
+            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityMovedIn;
+            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityMovedOut;
+            std::array<xecs::event::instance<xecs::system::instance&, instance&, int, int>, xecs::settings::max_components_per_entity_v> m_OnComponentUpdated;
+        };
+
                                 instance                ( const instance& 
                                                         ) = delete;
         inline                  instance                ( xecs::game_mgr::instance& GameMgr 
@@ -65,11 +74,12 @@ namespace xecs::archetype
 
         using info_array = std::array<const xecs::component::info*, xecs::settings::max_components_per_entity_v >;
 
-        xecs::game_mgr::instance&            m_GameMgr;
-        xecs::tools::bits                    m_ComponentBits     {};
-        xecs::pool::instance                 m_Pool              {};
-        std::int8_t                          m_ProcessReference  {};
-        std::uint8_t                         m_nComponents       {};
-        info_array                           m_InfoData          {};
+        xecs::game_mgr::instance&           m_GameMgr;
+        xecs::tools::bits                   m_ComponentBits     {};
+        xecs::pool::instance                m_Pool              {};
+        std::int8_t                         m_ProcessReference  {};
+        std::uint8_t                        m_nComponents       {};
+        events                              m_Events            {};
+        info_array                          m_InfoData          {};
     };
 }

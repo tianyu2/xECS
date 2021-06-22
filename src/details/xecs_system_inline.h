@@ -15,7 +15,7 @@ namespace xecs::system
             __inline
             void Run( void ) noexcept
             {
-                if constexpr (std::is_same_v<std::decay_t<decltype(T_USER_SYSTEM::typedef_v)>, xecs::system::type::simple>)
+                if constexpr (std::is_same_v<std::decay_t<decltype(T_USER_SYSTEM::typedef_v)>, xecs::system::type::update>)
                 {
                     XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
                     if constexpr (&T_USER_SYSTEM::OnUpdate != &instance::OnUpdate)
@@ -47,6 +47,7 @@ namespace xecs::system
                               ? T_SYSTEM::typedef_v.m_Guid
                               : type::guid{ __FUNCSIG__ }
             ,   .m_pName = T_SYSTEM::typedef_v.m_pName
+            ,   .m_ID    = T_SYSTEM::typedef_v.id_v
             };
         }
     }
@@ -84,7 +85,7 @@ namespace xecs::system
         //
         // Connect all the delegates
         //
-        if constexpr( std::is_same_v<std::decay_t<decltype(real_system::typedef_v)>, xecs::system::type::simple> )
+        if constexpr( std::is_same_v<std::decay_t<decltype(real_system::typedef_v)>, xecs::system::type::update> )
         {
             m_Events.m_OnUpdate.Register<&real_system::Run>(System);
         }
