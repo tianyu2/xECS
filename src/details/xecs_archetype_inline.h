@@ -400,7 +400,7 @@ namespace xecs::archetype
         auto&      GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
         const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
 
-        GlobalEntity.m_pArchetype->m_Pool.MoveDelete(GlobalEntity.m_PoolIndex);
+//        GlobalEntity.m_pArchetype->m_Pool.MoveDelete(GlobalEntity.m_PoolIndex);
 
         GlobalEntity.m_pArchetype = this;
         GlobalEntity.m_PoolIndex  = NewPoolIndex;

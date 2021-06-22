@@ -43,7 +43,7 @@ namespace xecs::pool
     {
         while(m_Size)
         {
-            Delete(m_Size-1);
+            Free( m_Size-1, true );
         }
     }
 
@@ -290,16 +290,6 @@ namespace xecs::pool
         m_DeleteGlobalIndex = Entity.m_GlobalIndex;
     }
 
-    //-------------------------------------------------------------------------------------
-    inline
-    void instance::MoveDelete( int Index ) noexcept
-    {
-        auto& Entity = getComponent<xecs::component::entity>(Index);
-        Entity.m_Validation.m_bZombie    = true;
-        Entity.m_Validation.m_Generation = m_DeleteMoveIndex;
-        m_DeleteMoveIndex = Index;
-    }
-
     //--------------------------------------------------------------------------------------------
     constexpr
     bool instance::isLastEntry( int Index ) const noexcept
@@ -368,6 +358,16 @@ namespace xecs::pool
             if (Info.m_pDestructFn) Info.m_pDestructFn(&FromPool.m_pComponent[iPoolFrom][Info.m_Size * IndexToMove]);
             iPoolFrom++;
             if (iPoolFrom >= FromPool.m_Infos.size()) break;
+        }
+
+        //
+        // Put the deleted entity into the move deleted linklist
+        //
+        {
+            auto& Entity = FromPool.getComponent<xecs::component::entity>(IndexToMove);
+            Entity.m_Validation.m_bZombie    = true;
+            Entity.m_Validation.m_Generation = FromPool.m_DeleteMoveIndex;
+            FromPool.m_DeleteMoveIndex       = IndexToMove;
         }
 
         return iNewIndex;
