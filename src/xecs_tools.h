@@ -7,7 +7,7 @@ namespace xecs::tools
         template< typename T>
         struct as_tuple
         {
-            using type = T;
+            using type = std::tuple<T>;
         };
 
         template< typename...T >

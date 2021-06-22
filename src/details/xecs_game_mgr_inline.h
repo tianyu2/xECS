@@ -194,12 +194,25 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
-    template< typename... T_COMPONENTS >
+    template
+    < typename... T_TUPLES_OF_COMPONENTS_OR_COMPONENTS
+    > requires
+    ( !!xecs::archetype::guid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...>.m_Value
+    )
     archetype::instance& instance::getOrCreateArchetype( void ) noexcept
     {
-        static_assert( ((std::is_same_v<T_COMPONENTS, xecs::component::entity> == false ) && ...) );
-        return getOrCreateArchetype
-        ( xecs::component::details::sorted_info_array_v< xecs::component::details::combined_t<xecs::component::entity, T_COMPONENTS... >> );
+        return [&]<typename...T>(std::tuple<T...>*) constexpr noexcept -> archetype::instance&
+        {
+            // Set the fast path here as it will be the most common case
+            if( auto p = findArchetype(xecs::archetype::guid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...>); p ) 
+                return *p;
+
+            // Slow path for creation
+            return getOrCreateArchetype
+            (
+                xecs::component::details::sorted_info_array_v< xecs::component::details::combined_t<xecs::component::entity, T... >>
+            );
+        }( xcore::types::null_tuple_v< xecs::tools::united_tuple<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...> > );
     }
 
     //---------------------------------------------------------------------------

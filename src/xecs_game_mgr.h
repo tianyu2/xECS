@@ -103,8 +103,10 @@ namespace xecs::game_mgr
                                                                     ) noexcept;
 
         template
-        < typename... T_COMPONENTS
-        >
+        < typename... T_TUPLES_OF_COMPONENTS_OR_COMPONENTS
+        > requires
+        ( !!xecs::archetype::guid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...>.m_Value
+        )
         archetype::instance&                getOrCreateArchetype    ( void 
                                                                     ) noexcept;
         template
