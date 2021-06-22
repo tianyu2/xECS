@@ -14,7 +14,6 @@ namespace xecs::system
         {
             using call_run = void( xecs::system::instance&);
 
-            call_run*                               m_CallRun;
             type::guid                              m_Guid;
             const char*                             m_pName;
         };
@@ -69,6 +68,7 @@ namespace xecs::system
         {
             xecs::event::instance<>     m_OnGameStart;
             xecs::event::instance<>     m_OnGameEnd;
+            xecs::event::instance<>     m_OnUpdate;
             xecs::event::instance<>     m_OnFrameStart;
             xecs::event::instance<>     m_OnFrameEnd;
         };

@@ -8,6 +8,7 @@ namespace xecs::event
             using callback = void(void* pPtr, T_ARGS...);
             callback*   m_pCallback;
             void*       m_pClass;
+            const char* m_pName;
         };
 
                             instance                ( const instance&
