@@ -83,14 +83,14 @@ struct grid
         std::vector<info> m_EntityList;
     };
 
-    constexpr static int cell_width_v  = 10;
-    constexpr static int cell_height_v = 10;
+    constexpr static int cell_width_v  = 30;
+    constexpr static int cell_height_v = 30;
 
     void Initialize()
     {
-        m_CellXCount = s_Game.m_W / cell_width_v;
-        m_CellYCount = s_Game.m_H / cell_height_v;
-        m_CellCount  = m_CellXCount* m_CellYCount;
+        m_CellXCount = s_Game.m_W / cell_width_v  + 1;
+        m_CellYCount = s_Game.m_H / cell_height_v + 1;
+        m_CellCount  = m_CellXCount * m_CellYCount;
         m_Cells = std::make_unique<cell[]>(m_CellCount);
     }
 
@@ -114,6 +114,7 @@ struct grid
         const int Index = X + Y * m_CellXCount;
         assert(Index>=0);
         assert(Index < m_CellCount );
+        assert(Entity.isZombie() == false);
         m_Cells[Index].m_EntityList.push_back( info
         {
             .m_Entity   = Entity
@@ -149,6 +150,26 @@ struct grid
         Cell.pop_back();
     }
 
+    void DrawGrid()
+    {
+        glBegin(GL_LINES);
+        glColor3f(0.5, 0.5, 0.5);
+
+        for(int y = 0; y<=m_CellYCount; ++y  )
+        {
+            glVertex2i( 0, y* cell_height_v);
+            glVertex2i(m_CellXCount* cell_width_v, y* cell_height_v);
+        }
+
+        for (int x = 0; x <= m_CellXCount; x ++ )
+        {
+            glVertex2i(x* cell_width_v, 0);
+            glVertex2i(x* cell_width_v, m_CellYCount * cell_height_v);
+        }
+
+        glEnd();
+    }
+
     template<typename T_FUNCTION>
     void Search( xcore::vector2 Position, T_FUNCTION&& Function ) noexcept
     {
@@ -163,7 +184,7 @@ struct grid
                 for( int i=0; i< Cell.size(); ++i)
                 {
                     auto& Entry = Cell[i];
-                    bool  Break = Function(Cell[i]);
+                    bool  Break = Function(Entry);
                     if( Entry.m_Entity.isZombie() )
                     {
                         Entry = Cell.back();
@@ -200,6 +221,7 @@ struct update_movement : xecs::system::instance
     void OnFrameStart()
     {
         m_Grid.Clear();
+    //    m_Grid.DrawGrid();
     }
 
     void operator()( entity* pEntity, position& Position, velocity& Velocity, bullet* pBullet ) noexcept
@@ -294,12 +316,13 @@ struct bullet_logic : xecs::system::instance
             {
                 m_GameMgr.DeleteEntity(Entity);
                 m_GameMgr.DeleteEntity(CellEntry.m_Entity);
-                m_pGrid->RemoveEntity(Entity, Position.m_Value);
                 return true;
             }
 
             return false;
         });
+
+        if(Entity.isZombie()) m_pGrid->RemoveEntity(Entity, Position.m_Value);
     }
 };
 
@@ -312,19 +335,19 @@ struct space_ship_logic : xecs::system::instance
         .m_pName = "space_ship_logic"
     };
 
+    grid* m_pGrid{};
+    xecs::archetype::instance* m_pBulletArchetype{};
+
+    void OnGameStart()
+    {
+        m_pGrid = &m_GameMgr.getSystem<update_movement>().m_Grid;
+        m_pBulletArchetype = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
+    }
+
     using query = std::tuple
     <
         xecs::query::none_of<bullet, timer>
     >;
-
-    grid*                       m_pGrid{};
-    xecs::archetype::instance*  m_pBulletArchetype{};
-
-    void OnGameStart()
-    {
-        m_pGrid             = &m_GameMgr.getSystem<update_movement>().m_Grid;
-        m_pBulletArchetype  = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
-    }
 
     void operator()( entity& Entity, position& Position ) const noexcept
     {
@@ -338,7 +361,7 @@ struct space_ship_logic : xecs::system::instance
             const auto  DistanceSquare   = Direction.getLengthSquared();
 
             // Shoot a bullet if close enough
-            constexpr auto min_distance_v = 30;
+            constexpr auto min_distance_v = 60;
             if( DistanceSquare < min_distance_v*min_distance_v )
             {
                 auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
