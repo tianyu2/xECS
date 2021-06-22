@@ -322,7 +322,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >()
-        .CreateEntities( 1000, [&]( position& Position, velocity& Velocity, timer& Timer )
+        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer )
         {
             Position.m_Value.m_X = std::rand() % s_Game.m_W;
             Position.m_Value.m_Y = std::rand() % s_Game.m_H;

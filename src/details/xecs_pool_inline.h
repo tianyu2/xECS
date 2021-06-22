@@ -51,7 +51,7 @@ namespace xecs::pool
 
     int instance::Append( int Count ) noexcept
     {
-        assert( m_Size < (xecs::settings::max_entities_v-1) );
+        assert( (Count + m_Size) <= xecs::settings::max_entity_count_per_pool_v );
 
         for( int i = 0; i < m_Infos.size(); ++i )
         {
