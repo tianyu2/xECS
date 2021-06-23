@@ -37,6 +37,7 @@ namespace xecs::query
     void instance::AddQueryFromFunction( void ) noexcept
     {
         using func_traits = xcore::function::traits<T_FUNCTION>;
+        static_assert( func_traits::arg_count_v > 0 );
 
         [&] < typename...T_COMPONENTS >(std::tuple<T_COMPONENTS...>*) constexpr noexcept
         {

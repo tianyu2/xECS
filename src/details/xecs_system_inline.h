@@ -24,10 +24,11 @@ namespace xecs::system
                     }
                     else
                     {
-                        xecs::query::instance Query;
-                        Query.AddQueryFromTuple(xcore::types::null_tuple_v< T_USER_SYSTEM::query >);
-                        Query.AddQueryFromFunction(*this);
-                        T_USER_SYSTEM::m_GameMgr.Foreach(T_USER_SYSTEM::m_GameMgr.Search(Query), *this);
+                        T_USER_SYSTEM::m_GameMgr.Foreach
+                        (
+                            T_USER_SYSTEM::m_GameMgr.Search( type::info_v<T_USER_SYSTEM>.m_Query )
+                        ,   *this
+                        );
                     }
                 }
             }
@@ -64,8 +65,6 @@ namespace xecs::system
                 .m_Guid                 = T_SYSTEM::typedef_v.m_Guid.m_Value
                                              ? T_SYSTEM::typedef_v.m_Guid
                                              : type::guid{ __FUNCSIG__ }
-            ,   .m_pName                = T_SYSTEM::typedef_v.m_pName
-            ,   .m_ID                   = T_SYSTEM::typedef_v.id_v
             ,   .m_NotifierRegistration = (T_SYSTEM::typedef_v.id_v == type::id::UPDATE)
                                            ? nullptr
                                            : []( xecs::archetype::instance&     Archetype
@@ -98,6 +97,8 @@ namespace xecs::system
                                                     static_assert( xcore::types::always_false_v<T_SYSTEM>, "Case is not supported for right now");
                                                 }
                                             }
+            ,   .m_pName                = T_SYSTEM::typedef_v.m_pName
+            ,   .m_ID                   = T_SYSTEM::typedef_v.id_v
             };
         }
     }
@@ -138,12 +139,14 @@ namespace xecs::system
             { type::info_v<T_SYSTEM>.m_Guid, static_cast<instance*>(&System) } 
             );
 
-        if constexpr ( T_SYSTEM::typedef_v.is_notifier_v )
         {
             xecs::query::instance Q;
             Q.AddQueryFromTuple(xcore::types::null_tuple_v< T_SYSTEM::query >);
-            Q.AddQueryFromFunction<T_SYSTEM()>();
-            type::info_v<T_SYSTEM>.m_NotifierQuery = Q;
+            if constexpr ( xcore::function::is_callable_v<T_SYSTEM>)
+            {
+                Q.AddQueryFromFunction<T_SYSTEM>();
+            }
+            type::info_v<T_SYSTEM>.m_Query = Q;
         }
 
         //
@@ -198,7 +201,7 @@ namespace xecs::system
         for( auto& E : m_NotifierSystems )
         {
             auto& Entry = *E;
-            if( Entry.m_TypeInfo.m_NotifierQuery.Compare(Archetype.m_ComponentBits) )
+            if( Entry.m_TypeInfo.m_Query.Compare(Archetype.m_ComponentBits) )
             {
                 Entry.m_TypeInfo.m_NotifierRegistration( Archetype, Entry );
             }

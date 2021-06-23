@@ -69,7 +69,7 @@ struct bullet
 using bullet_tuple = std::tuple<position, velocity, timer, bullet>;
 
 //---------------------------------------------------------------------------------------
-// SYSTEM
+// TOOLS
 //---------------------------------------------------------------------------------------
 
 struct grid
@@ -205,6 +205,8 @@ struct grid
     int                     m_CellCount;
 };
 
+//---------------------------------------------------------------------------------------
+// SYSTEMS
 //---------------------------------------------------------------------------------------
 
 struct update_movement : xecs::system::instance
@@ -554,7 +556,10 @@ void InitializeGame( void ) noexcept
     ,   page_flip               // Structural: No
     >();
 
-    // Register notifiers
+    // Register notifiers. Note that the order for this system are not related with the update systems
+    // Since these are event base they can happen at any time. But if many of them are going to get the
+    // same message they will get them in the order that are here.
+    // This is why I create a separate section for these even thought they still are systems.
     s_Game.m_GameMgr->RegisterSystems
     < detroy_ships_reporter     // Structural: No
     >();
