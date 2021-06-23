@@ -13,6 +13,11 @@ namespace xecs::game_mgr
 
     struct instance final
     {
+        struct events
+        {
+            xecs::event::instance<xecs::archetype::instance&>         m_OnNewArchetype;
+        };
+
                                             instance                ( const instance& 
                                                                     ) = delete;
         inline                              instance                ( void
@@ -136,6 +141,7 @@ namespace xecs::game_mgr
 
         using archetype_map = std::unordered_map<xecs::archetype::guid, xecs::archetype::instance* >;
 
+        events                                              m_Events            {};
         xecs::system::mgr                                   m_SystemMgr         {};
         xecs::component::mgr                                m_ComponentMgr      {};
         archetype_map                                       m_ArchetypeMap      {};

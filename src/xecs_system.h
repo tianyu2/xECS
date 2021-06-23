@@ -19,52 +19,62 @@ namespace xecs::system
 
         struct update
         {
-            static constexpr auto   id_v    = id::UPDATE;
-            const char*             m_pName = "Unnamed Update System";
-            guid                    m_Guid  {};
+            static constexpr auto       id_v                = id::UPDATE;
+            static constexpr auto       is_notifier_v       = false;
+            const char*                 m_pName             = "Unnamed Update System";
+            guid                        m_Guid              {};
         };
 
         struct notify_create
         {
-            static constexpr auto   id_v    = id::NOTIFY_CREATE;
-            const char*             m_pName = "Unnamed Notified Create Entity System";
-            guid                    m_Guid  {};
+            static constexpr auto       id_v                = id::NOTIFY_CREATE;
+            static constexpr auto       is_notifier_v       = true;
+            const char*                 m_pName             = "Unnamed Notified Create Entity System";
+            guid                        m_Guid              {};
         };
 
         struct notify_destroy
         {
-            static constexpr auto   id_v    = id::NOTIFY_DESTROY;
-            const char*             m_pName = "Unnamed Notified Destroy Entity System";
-            guid                    m_Guid  {};
+            static constexpr auto       id_v                = id::NOTIFY_DESTROY;
+            static constexpr auto       is_notifier_v       = true;
+            const char*                 m_pName             = "Unnamed Notified Destroy Entity System";
+            guid                        m_Guid              {};
         };
 
         struct notify_moved_in
         {
-            static constexpr auto   id_v    = id::NOTIFY_MOVE_IN;
-            const char*             m_pName = "Unnamed Notified Move In Entity System";
-            guid                    m_Guid  {};
+            static constexpr auto       id_v                = id::NOTIFY_MOVE_IN;
+            static constexpr auto       is_notifier_v       = true;
+            const char*                 m_pName             = "Unnamed Notified Move In Entity System";
+            guid                        m_Guid              {};
         };
 
         struct notify_moved_out
         {
-            static constexpr auto   id_v    = id::NOTIFY_MOVE_OUT;
-            const char*             m_pName = "Unnamed Notified Move Out System";
-            guid                    m_Guid  {};
+            static constexpr auto       id_v                = id::NOTIFY_MOVE_OUT;
+            static constexpr auto       is_notifier_v       = true;
+            const char*                 m_pName             = "Unnamed Notified Move Out System";
+            guid                        m_Guid              {};
         };
 
         struct notify_component_change
         {
-            static constexpr auto        id_v             = id::NOTIFY_COMPONENT_CHANGE;
-            const char*                  m_pName          = "Unnamed Component Change System";
-            guid                         m_Guid          {};
-            const xecs::component::info* m_pComponentInfo{};
+            static constexpr auto        id_v               = id::NOTIFY_COMPONENT_CHANGE;
+            static constexpr auto        is_notifier_v      = true;
+            const char*                  m_pName            = "Unnamed Component Change System";
+            guid                         m_Guid             {};
+            const xecs::component::info* m_pComponentInfo   {};
         };
 
         struct info
         {
+            using notifier_registration = void( xecs::archetype::instance&, xecs::system::instance&);
+
             type::guid                              m_Guid;
             const char*                             m_pName;
             id                                      m_ID;
+            notifier_registration*                  m_NotifierRegistration;
+            mutable xecs::query::instance           m_NotifierQuery;
         };
 
         namespace details
@@ -93,7 +103,7 @@ namespace xecs::system
         void                    OnUpdate        ( void ) noexcept {}
         void                    OnFrameEnd      ( void ) noexcept {}
         void                    OnGameEnd       ( void ) noexcept {}
-        void                    OnNotified      ( xecs::component::entity& Entity ) noexcept {}
+        void                    OnNotify        ( xecs::component::entity& Entity ) noexcept {}
     };
 
     struct instance : overrides
@@ -103,10 +113,12 @@ namespace xecs::system
                     instance            ( const instance&
                                         ) noexcept = delete;
 
-        inline      instance            ( xecs::game_mgr::instance& GameMgr 
+        constexpr   instance            ( xecs::game_mgr::instance& GameMgr
+                                        , const type::info&         TypeInfo
                                         ) noexcept;
 
-        xecs::game_mgr::instance& m_GameMgr;
+        xecs::game_mgr::instance&   m_GameMgr;
+        const type::info&           m_TypeInfo;
     };
 
     //-----------------------------------------------------------------
@@ -140,11 +152,15 @@ namespace xecs::system
         template< typename T_SYSTEM >
         T_SYSTEM*               find                ( void
                                                     ) noexcept;
+        inline
+        void                    OnNewArchetype      ( xecs::archetype::instance& Archetype
+                                                    ) noexcept;
 
-        using system_list = std::vector< std::tuple<std::unique_ptr<xecs::system::instance>, const type::info* > >;
+        using system_list      = std::vector< std::unique_ptr<xecs::system::instance> >;
 
         std::unordered_map<type::guid, xecs::system::instance*> m_SystemMaps;
-        system_list                                             m_Systems;
+        system_list                                             m_UpdaterSystems;
+        system_list                                             m_NotifierSystems;
         events                                                  m_Events;
     };
 }

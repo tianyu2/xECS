@@ -7,6 +7,9 @@ namespace xecs::game_mgr
         // Register the Entity
         m_ComponentMgr.RegisterComponent<xecs::component::entity>();
 
+        // Add the System Mgr to the On New Archetype Event
+        m_Events.m_OnNewArchetype.Register<&xecs::system::mgr::OnNewArchetype>(m_SystemMgr);
+
         // Create a link list of empty entries
         for( int i=0, end = xecs::settings::max_entities_v-2; i<end; ++i )
         {
@@ -149,6 +152,10 @@ namespace xecs::game_mgr
 
         m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
 
+        //
+        // Notify anyone interested on the new Archetype
+        //
+        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
 
         return Archetype;
     }

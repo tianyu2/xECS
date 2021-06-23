@@ -22,7 +22,7 @@ namespace xecs::tools
 
     struct bits final
     {
-        __inline 
+        constexpr __inline
         void        setBit              ( int Bit 
                                         ) noexcept;
 
@@ -48,7 +48,7 @@ namespace xecs::tools
 
         template
         < typename... T_COMPONENTS
-        > __inline
+        > constexpr __inline
         void        AddFromComponents   ( void 
                                         ) noexcept;
 

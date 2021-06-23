@@ -17,6 +17,9 @@ static struct game
     int m_W = 1024;
     int m_H = 800;
 
+    int m_nEntityThinkingDead = 0;
+    int m_nEntityWaitingDead  = 0;
+
 } s_Game;
 
 //---------------------------------------------------------------------------------------
@@ -452,6 +455,56 @@ struct render_ships : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
+template< typename... T_ARGS>
+void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
+{
+    std::array<char, 256> FinalString;
+    auto len = sprintf_s(FinalString.data(), FinalString.size(), pFmt, Args... );
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, s_Game.m_W, 0, s_Game.m_H);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glRasterPos2i(x, s_Game.m_H - (y + 1) * 20);  // move in 10 pixels from the left and bottom edges
+    for (int i = 0; i < len; ++i)
+    {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, FinalString[i]);
+    }
+    glPopMatrix();
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
+
+//---------------------------------------------------------------------------------------
+
+struct detroy_ships_reporter : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::notify_destroy
+    {
+        .m_pName = "detroy_ships_reporter"
+    };
+
+    using query = std::tuple
+    <
+        xecs::query::none_of<bullet>
+    ,   xecs::query::one_of<entity>
+    >;
+
+    void operator()( entity& Entity, position& Position, timer* pTimer ) noexcept
+    {
+        if(pTimer) s_Game.m_nEntityWaitingDead++;
+        else       s_Game.m_nEntityThinkingDead++;
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
 struct page_flip : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::update
@@ -462,6 +515,10 @@ struct page_flip : xecs::system::instance
     __inline
     void OnUpdate( void ) noexcept
     {
+        GlutPrint(0, 0, "Thinking Dead: %d", s_Game.m_nEntityThinkingDead);
+        GlutPrint(0, 1, "Waiting Dead: %d", s_Game.m_nEntityWaitingDead);
+
+        glFlush();
         glutSwapBuffers();
         glClear(GL_COLOR_BUFFER_BIT);
     }
@@ -486,6 +543,7 @@ void InitializeGame( void ) noexcept
     ,   bullet
     >();
 
+    // Register updated systems
     s_Game.m_GameMgr->RegisterSystems
     <   update_timer            // Structural: Yes, AddOrRemoveComponent(timer), User defined... (Destroy Bullets)
     ,   update_movement         // Structural: No
@@ -494,6 +552,11 @@ void InitializeGame( void ) noexcept
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
+    >();
+
+    // Register notifiers
+    s_Game.m_GameMgr->RegisterSystems
+    < detroy_ships_reporter     // Structural: No
     >();
 
     //

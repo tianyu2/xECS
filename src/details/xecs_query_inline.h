@@ -33,14 +33,12 @@ namespace xecs::query
 
     template
     < typename T_FUNCTION
-    > requires
-    ( xcore::function::is_callable_v<T_FUNCTION> 
-    )
-    void instance::AddQueryFromFunction( T_FUNCTION&& ) noexcept
+    > 
+    void instance::AddQueryFromFunction( void ) noexcept
     {
         using func_traits = xcore::function::traits<T_FUNCTION>;
 
-        [&] < typename...T_COMPONENTS >(std::tuple<T_COMPONENTS...>*)
+        [&] < typename...T_COMPONENTS >(std::tuple<T_COMPONENTS...>*) constexpr noexcept
         {
             ( [&]<typename T_C>(std::tuple<T_C>*)
             {
@@ -66,11 +64,23 @@ namespace xecs::query
     //---------------------------------------------------------------------------
 
     template
+    < typename T_FUNCTION
+    > requires
+    ( xcore::function::is_callable_v<T_FUNCTION>
+    )
+    void instance::AddQueryFromFunction(T_FUNCTION&&) noexcept
+    {
+        AddQueryFromFunction<T_FUNCTION>();
+    }
+
+    //---------------------------------------------------------------------------
+
+    template
     < typename... T_QUERIES
-    >
+    > 
     void instance::AddQueryFromTuple(std::tuple<T_QUERIES...>*) noexcept
     {
-        ( [&]<template<typename...> class T_QTYPE, typename... T_COMPONENTS>(T_QTYPE<T_COMPONENTS...>*)
+        ( [&]<template<typename...> class T_QTYPE, typename... T_COMPONENTS>(T_QTYPE<T_COMPONENTS...>*) constexpr noexcept
         {
             using t = T_QTYPE<T_COMPONENTS...>;
             if constexpr (std::is_same_v< t, xecs::query::must<T_COMPONENTS...>>)

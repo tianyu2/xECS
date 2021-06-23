@@ -14,11 +14,11 @@ namespace xecs::archetype
     {
         struct events
         {
-            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityCreated;
-            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityDestroyed;
-            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityMovedIn;
-            xecs::event::instance<xecs::system::instance&, instance&, int>      m_OnEntityMovedOut;
-            std::array<xecs::event::instance<xecs::system::instance&, instance&, int, int>, xecs::settings::max_components_per_entity_v> m_OnComponentUpdated;
+            xecs::event::instance<xecs::component::entity&>      m_OnEntityCreated;
+            xecs::event::instance<xecs::component::entity&>      m_OnEntityDestroyed;
+            xecs::event::instance<xecs::component::entity&>      m_OnEntityMovedIn;
+            xecs::event::instance<xecs::component::entity&>      m_OnEntityMovedOut;
+            std::array<xecs::event::instance<xecs::component::entity&>, xecs::settings::max_components_per_entity_v> m_OnComponentUpdated;
         };
 
                                 instance                ( const instance& 

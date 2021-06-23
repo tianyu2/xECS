@@ -20,6 +20,11 @@ namespace xecs::query
                                                         ) const noexcept;
         template
         < typename T_FUNCTION
+        > 
+        void                    AddQueryFromFunction    ( void
+                                                        ) noexcept;
+        template
+        < typename T_FUNCTION
         > requires
         ( xcore::function::is_callable_v<T_FUNCTION> 
         )

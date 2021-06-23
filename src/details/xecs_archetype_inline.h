@@ -270,11 +270,15 @@ namespace xecs::archetype
             // Allocate the entity
             const int   EntityIndexInPool   = m_Pool.Append(1);
             const auto  Entity              = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
-            m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) = Entity;
+            auto&       EntityInPool        = m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool);
+            EntityInPool = Entity;
 
             // Call the user initializer if any
             if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
             {
+                // Notify anyone that cares
+                m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
+
                 // Update the official count if we can
                 if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
             }
@@ -283,6 +287,9 @@ namespace xecs::archetype
                 AccessGuard([&]
                 {
                     Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
+
+                    // Notify anyone that cares
+                    m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
                 });
             }
 
@@ -314,6 +321,11 @@ namespace xecs::archetype
             for (int i = 0; i < Count; ++i)
             {
                 *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
+
+                // Notify anyone that cares
+                m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
+
+                // Next entity
                 pEntity++;
             }
 
@@ -337,10 +349,14 @@ namespace xecs::archetype
                     *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
                     assert(m_GameMgr.getEntityDetails(*pEntity).m_pArchetype == this );
                     assert(m_GameMgr.getEntityDetails(*pEntity).m_PoolIndex  == EntityIndexInPool + i );
-                    pEntity++;
 
                     // Call the user initializer
                     details::CallFunction( Function, CachePointers );
+
+                    // Notify anyone that cares
+                    m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
+
+                    pEntity++;
                 }
             });
         }
@@ -366,6 +382,11 @@ namespace xecs::archetype
         auto& PoolEntity = m_Pool.getComponent<xecs::component::entity>(GlobalEntry.m_PoolIndex);
         if( PoolEntity != Entity )
             return;
+
+        //
+        // Notify any one that cares
+        //
+        m_Events.m_OnEntityDestroyed.NotifyAll(PoolEntity);
 
         //
         // Make sure everything is marked as zombie
@@ -398,15 +419,26 @@ namespace xecs::archetype
     instance::MoveInEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
     {
         auto&      GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
-        const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
 
-//        GlobalEntity.m_pArchetype->m_Pool.MoveDelete(GlobalEntity.m_PoolIndex);
+        // Notify any that cares
+        if(m_Events.m_OnEntityMovedOut.m_Delegates.size())
+        {
+            m_Events.m_OnEntityMovedOut.NotifyAll(GlobalEntity.m_pArchetype->m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+        }
+
+        const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
 
         GlobalEntity.m_pArchetype = this;
         GlobalEntity.m_PoolIndex  = NewPoolIndex;
 
         if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda> )
         {
+            // Notify any that cares
+            if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
+            {
+                m_Events.m_OnEntityMovedIn.NotifyAll(m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+            }
+
             if(m_ProcessReference==0) UpdateStructuralChanges();
         }
         else
@@ -423,6 +455,12 @@ namespace xecs::archetype
                 ( Function
                 , CachedPointer
                 );
+
+                // Notify any that cares
+                if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
+                {
+                    m_Events.m_OnEntityMovedIn.NotifyAll(m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+                }
             });
         }
 

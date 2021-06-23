@@ -7,15 +7,15 @@ namespace xecs::system
         struct compleated final : T_USER_SYSTEM
         {
             __inline
-            compleated(xecs::game_mgr::instance& GameMgr) noexcept
-            : T_USER_SYSTEM{ GameMgr }
+            compleated( xecs::game_mgr::instance& GameMgr, const xecs::system::type::info& TypeInfo ) noexcept
+            : T_USER_SYSTEM{ { GameMgr, TypeInfo } }
             {}
             compleated( void ) noexcept = delete;
 
             __inline
             void Run( void ) noexcept
             {
-                if constexpr (std::is_same_v<std::decay_t<decltype(T_USER_SYSTEM::typedef_v)>, xecs::system::type::update>)
+                if constexpr ( T_USER_SYSTEM::typedef_v.id_v == xecs::system::type::id::UPDATE )
                 {
                     XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
                     if constexpr (&T_USER_SYSTEM::OnUpdate != &instance::OnUpdate)
@@ -31,6 +31,24 @@ namespace xecs::system
                     }
                 }
             }
+
+            void Notify( xecs::component::entity& Entity ) noexcept
+            {
+                XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
+                if constexpr (T_USER_SYSTEM::typedef_v.is_notifier_v )
+                {
+                    XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
+                    if constexpr (&T_USER_SYSTEM::OnNotify != &instance::OnNotify)
+                    {
+                        T_USER_SYSTEM::OnNotify(Entity);
+                    }
+                    else
+                    {
+                        // TODO: Optimize this
+                        T_USER_SYSTEM::m_GameMgr.findEntity( Entity, *this );
+                    }
+                }
+            }
         };
     }
 
@@ -43,20 +61,53 @@ namespace xecs::system
         {
             return type::info
             {
-                .m_Guid = T_SYSTEM::typedef_v.m_Guid.m_Value
-                              ? T_SYSTEM::typedef_v.m_Guid
-                              : type::guid{ __FUNCSIG__ }
-            ,   .m_pName = T_SYSTEM::typedef_v.m_pName
-            ,   .m_ID    = T_SYSTEM::typedef_v.id_v
+                .m_Guid                 = T_SYSTEM::typedef_v.m_Guid.m_Value
+                                             ? T_SYSTEM::typedef_v.m_Guid
+                                             : type::guid{ __FUNCSIG__ }
+            ,   .m_pName                = T_SYSTEM::typedef_v.m_pName
+            ,   .m_ID                   = T_SYSTEM::typedef_v.id_v
+            ,   .m_NotifierRegistration = (T_SYSTEM::typedef_v.id_v == type::id::UPDATE)
+                                           ? nullptr
+                                           : []( xecs::archetype::instance&     Archetype
+                                            , xecs::system::instance&           System 
+                                            ) noexcept
+                                            {
+                                               using real_system = xecs::system::details::compleated<T_SYSTEM>;
+                                                if constexpr (T_SYSTEM::typedef_v.id_v == type::id::UPDATE )
+                                                {
+                                                    // NOTHING TO DO...
+                                                }
+                                                else if constexpr (T_SYSTEM::typedef_v.id_v == type::id::NOTIFY_CREATE )
+                                                {
+                                                    Archetype.m_Events.m_OnEntityCreated.Register<&real_system::Notify>(static_cast<real_system&>(System));
+                                                }
+                                                else if constexpr (T_SYSTEM::typedef_v.id_v == type::id::NOTIFY_DESTROY)
+                                                {
+                                                    Archetype.m_Events.m_OnEntityDestroyed.Register<&real_system::Notify>(static_cast<real_system&>(System));
+                                                }
+                                                else if constexpr (T_SYSTEM::typedef_v.id_v == type::id::NOTIFY_MOVE_IN)
+                                                {
+                                                    Archetype.m_Events.m_OnEntityMovedIn.Register<&real_system::Notify>(static_cast<real_system&>(System));
+                                                }
+                                                else if constexpr (T_SYSTEM::typedef_v.id_v == type::id::NOTIFY_MOVE_OUT)
+                                                {
+                                                    Archetype.m_Events.m_OnEntityMovedOut.Register<&real_system::Notify>(static_cast<real_system&>(System));
+                                                }
+                                                else 
+                                                {
+                                                    static_assert( xcore::types::always_false_v<T_SYSTEM>, "Case is not supported for right now");
+                                                }
+                                            }
             };
         }
     }
 
     //-------------------------------------------------------------------------------------------
-
-    instance::instance(xecs::game_mgr::instance& G) noexcept
-    : m_GameMgr(G)
-    {}
+    constexpr
+    instance::instance( xecs::game_mgr::instance& G, const type::info& I ) noexcept
+    : m_GameMgr( G )
+    , m_TypeInfo( I )
+    { }
 
     //-------------------------------------------------------------------------------------------
     template
@@ -69,23 +120,36 @@ namespace xecs::system
         //
         // Register System
         //
-        m_Systems.push_back
-        (
+        auto& System = *static_cast<real_system*>([&]
+        {
+            if constexpr( std::is_same_v<std::decay_t<decltype(real_system::typedef_v)>, xecs::system::type::update> )
             {
-                std::make_unique< real_system >(GameMgr)
-            ,   &type::info_v<T_SYSTEM>
+                m_UpdaterSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
+                return m_UpdaterSystems.back().get();
             }
-        );
-        auto& System = *static_cast<real_system*>(std::get<std::unique_ptr<xecs::system::instance>>(m_Systems.back()).get());
+            else
+            {
+                m_NotifierSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
+                return m_NotifierSystems.back().get();
+            }
+        }());
 
         m_SystemMaps.emplace( std::pair<type::guid, xecs::system::instance*>
-        { type::info_v<T_SYSTEM>.m_Guid, static_cast<instance*>(&System) } 
-        );
+            { type::info_v<T_SYSTEM>.m_Guid, static_cast<instance*>(&System) } 
+            );
+
+        if constexpr ( T_SYSTEM::typedef_v.is_notifier_v )
+        {
+            xecs::query::instance Q;
+            Q.AddQueryFromTuple(xcore::types::null_tuple_v< T_SYSTEM::query >);
+            Q.AddQueryFromFunction<T_SYSTEM()>();
+            type::info_v<T_SYSTEM>.m_NotifierQuery = Q;
+        }
 
         //
         // Connect all the delegates
         //
-        if constexpr( std::is_same_v<std::decay_t<decltype(real_system::typedef_v)>, xecs::system::type::update> )
+        if constexpr( type::info_v<T_SYSTEM>.m_ID == type::id::UPDATE )
         {
             m_Events.m_OnUpdate.Register<&real_system::Run>(System);
         }
@@ -125,6 +189,20 @@ namespace xecs::system
         auto I = m_SystemMaps.find( xecs::system::type::info_v<T_SYSTEM>.m_Guid );
         if(I == m_SystemMaps.end() ) return nullptr;
         return static_cast<T_SYSTEM*>(I->second);
+    }
+
+    //---------------------------------------------------------------------------
+
+    void mgr::OnNewArchetype( xecs::archetype::instance& Archetype ) noexcept
+    {
+        for( auto& E : m_NotifierSystems )
+        {
+            auto& Entry = *E;
+            if( Entry.m_TypeInfo.m_NotifierQuery.Compare(Archetype.m_ComponentBits) )
+            {
+                Entry.m_TypeInfo.m_NotifierRegistration( Archetype, Entry );
+            }
+        }
     }
 
 }
