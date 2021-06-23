@@ -277,10 +277,18 @@ namespace xecs::archetype
             if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
             {
                 // Notify anyone that cares
-                m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
-
-                // Update the official count if we can
-                if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+                if(m_Events.m_OnEntityCreated.m_Delegates.size())
+                {
+                    AccessGuard([&]
+                    {
+                        m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
+                    });
+                }
+                else
+                {
+                    // Update the official count if we can
+                    if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+                }
             }
             else
             {
@@ -318,19 +326,35 @@ namespace xecs::archetype
         if constexpr ( std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK > )
         {
             xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
-            for (int i = 0; i < Count; ++i)
+            if(m_Events.m_OnEntityCreated.m_Delegates.size())
             {
-                *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
+                AccessGuard([&]
+                {
+                    for (int i = 0; i < Count; ++i)
+                    {
+                        *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool + i, *this);
 
-                // Notify anyone that cares
-                m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
+                        // Notify anyone that cares
+                        m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
 
-                // Next entity
-                pEntity++;
+                        // Next entity
+                        pEntity++;
+                    }
+                });
             }
+            else
+            {
+                for (int i = 0; i < Count; ++i)
+                {
+                    *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool + i, *this);
 
-            // Update the official count if we can
-            if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+                    // Next entity
+                    pEntity++;
+                }
+
+                // Update the official count if we can
+                if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+            }
         }
         else
         {
@@ -386,7 +410,13 @@ namespace xecs::archetype
         //
         // Notify any one that cares
         //
-        m_Events.m_OnEntityDestroyed.NotifyAll(PoolEntity);
+        if(m_Events.m_OnEntityDestroyed.m_Delegates.size())
+        {
+            AccessGuard([&]
+            {
+                m_Events.m_OnEntityDestroyed.NotifyAll(PoolEntity);
+            });
+        }
 
         //
         // Make sure everything is marked as zombie
@@ -423,7 +453,10 @@ namespace xecs::archetype
         // Notify any that cares
         if(m_Events.m_OnEntityMovedOut.m_Delegates.size())
         {
-            m_Events.m_OnEntityMovedOut.NotifyAll(GlobalEntity.m_pArchetype->m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+            AccessGuard([&]
+            {
+                m_Events.m_OnEntityMovedOut.NotifyAll(GlobalEntity.m_pArchetype->m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+            });
         }
 
         const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
@@ -436,7 +469,10 @@ namespace xecs::archetype
             // Notify any that cares
             if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
             {
-                m_Events.m_OnEntityMovedIn.NotifyAll(m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+                AccessGuard([&]
+                {
+                    m_Events.m_OnEntityMovedIn.NotifyAll(m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+                });
             }
 
             if(m_ProcessReference==0) UpdateStructuralChanges();
