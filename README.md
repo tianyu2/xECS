@@ -1,4 +1,4 @@
-# xECS -Lesson 02, Pulish the basics
+# xECS -Lesson 03, Events and Maps
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
@@ -9,12 +9,14 @@ We cover.
   * System Events delegates
 * Formalizing the event system
   * Systems have many kinds of events now
-  * From overritting the simple OnFrameStart
+  * From overwriting the simple OnFrameStart
   * to Sending events
   * to reciving them
 * Allot more heavy usage of maps in the code
-  * System now can also cache references much more easily
-* Update the example to use new functionality
+  * Systems now can also cache references much more easily
+* Updated the example
+  * Shows new functinality
+  * Added a simple spatial data base
 
 ## To build
 1. Go to the build directory 
