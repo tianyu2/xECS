@@ -36,6 +36,44 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
+    template
+    < typename...T_GLOBAL_EVENTS
+    > requires
+    ( std::derived_from< T_GLOBAL_EVENTS, xecs::event::overrides> 
+      && ...
+    )
+    void instance::RegisterGlobalEvents( void ) noexcept
+    {
+        ((m_EventMgr.Register<T_GLOBAL_EVENTS>()), ...);
+    }
+
+    //---------------------------------------------------------------------------
+
+    template
+    < typename      T_GLOBAL_EVENT
+    , typename...   T_ARGS
+    > requires
+    ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
+    )
+    void instance::SendGlobalEvent( T_ARGS&&... Args ) const noexcept
+    {
+        m_EventMgr.getEvent<T_GLOBAL_EVENT>().NotifyAll( std::forward<T_ARGS&&>(Args) ... );
+    }
+
+    //---------------------------------------------------------------------------
+
+    template
+    < typename      T_GLOBAL_EVENT
+    > requires
+    ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
+    )
+    T_GLOBAL_EVENT& instance::getGlobalEvent( void ) const noexcept
+    {
+        return m_EventMgr.getEvent<T_GLOBAL_EVENT>();
+    }
+
+    //---------------------------------------------------------------------------
+
     xecs::component::entity instance::AllocNewEntity( int PoolIndex, xecs::archetype::instance& Archetype ) noexcept
     {
         assert(m_EmptyHead>=0);

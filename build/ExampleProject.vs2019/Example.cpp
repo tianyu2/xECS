@@ -206,6 +206,18 @@ struct grid
 };
 
 //---------------------------------------------------------------------------------------
+// GLOBAL EVENTS
+//---------------------------------------------------------------------------------------
+
+struct sound : xecs::event::instance<const char*>
+{
+    constexpr static auto typedef_v = xecs::event::type::global
+    {
+        .m_pName = "sound"
+    };
+};
+
+//---------------------------------------------------------------------------------------
 // SYSTEMS
 //---------------------------------------------------------------------------------------
 
@@ -226,7 +238,7 @@ struct update_movement : xecs::system::instance
     void OnFrameStart()
     {
         m_Grid.Clear();
-    //    m_Grid.DrawGrid();
+        m_Grid.DrawGrid();
     }
 
     void operator()( entity* pEntity, position& Position, velocity& Velocity, bullet* pBullet ) noexcept
@@ -340,13 +352,13 @@ struct space_ship_logic : xecs::system::instance
         .m_pName = "space_ship_logic"
     };
 
-    grid* m_pGrid{};
-    xecs::archetype::instance* m_pBulletArchetype{};
+    grid*                       m_pGrid             {};
+    xecs::archetype::instance*  m_pBulletArchetype  {};
 
     void OnGameStart()
     {
-        m_pGrid = &m_GameMgr.getSystem<update_movement>().m_Grid;
-        m_pBulletArchetype = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
+        m_pGrid             = &m_GameMgr.getSystem<update_movement>().m_Grid;
+        m_pBulletArchetype  = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
     }
 
     using query = std::tuple
@@ -500,6 +512,7 @@ struct detroy_ships_reporter : xecs::system::instance
 
     void operator()( entity& Entity, position& Position, timer* pTimer ) noexcept
     {
+        m_GameMgr.SendGlobalEvent<sound>( "Boom.wav" );
         if(pTimer) s_Game.m_nEntityWaitingDead++;
         else       s_Game.m_nEntityThinkingDead++;
     }
@@ -514,15 +527,62 @@ struct page_flip : xecs::system::instance
         .m_pName = "page_flip"
     };
 
+    // xCore provides a convinient way to create unique types out of objects 
+    using event_pre_page_flip  = xcore::types::make_unique< xecs::event::instance<>, struct pre_page_flip>;
+    using event_post_page_flip = xcore::types::make_unique< xecs::event::instance<>, struct post_page_flip>;
+
+    // This type name been a tuple containg all the events is required for this system events
+    // Note that inside all the event types insize the tuple need to be a unique type
+    using events = std::tuple   
+    <
+        event_pre_page_flip
+    ,   event_post_page_flip
+    >;
+
+    // This variable name and type is required for this system events
+    events m_Events;            
+
     __inline
     void OnUpdate( void ) noexcept
     {
-        GlutPrint(0, 0, "Thinking Dead: %d", s_Game.m_nEntityThinkingDead);
-        GlutPrint(0, 1, "Waiting Dead: %d", s_Game.m_nEntityWaitingDead);
+        std::get<event_pre_page_flip>(m_Events).NotifyAll();
 
         glFlush();
         glutSwapBuffers();
         glClear(GL_COLOR_BUFFER_BIT);
+
+        std::get<event_post_page_flip>(m_Events).NotifyAll();
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
+struct play_sound : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::global_event<sound>
+    {
+        .m_pName = "play_sound"
+    };
+
+    void OnEvent( const char* Sound )
+    {
+        // TODO: Play the sound every time I get a message
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
+struct print_deaths : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::system_event<page_flip, page_flip::event_pre_page_flip >
+    {
+        .m_pName = "print_deaths"
+    };
+
+    void OnEvent( void )
+    {
+        GlutPrint(0, 0, "Thinking Dead: %d", s_Game.m_nEntityThinkingDead);
+        GlutPrint(0, 1, "Waiting Dead:  %d", s_Game.m_nEntityWaitingDead);
     }
 };
 
@@ -545,6 +605,17 @@ void InitializeGame( void ) noexcept
     ,   bullet
     >();
 
+    //
+    // Register Global Events
+    //
+    s_Game.m_GameMgr->RegisterGlobalEvents
+    <   sound
+    >();
+
+    //
+    // Register Systems
+    //
+
     // Register updated systems
     s_Game.m_GameMgr->RegisterSystems
     <   update_timer            // Structural: Yes, AddOrRemoveComponent(timer), User defined... (Destroy Bullets)
@@ -562,13 +633,15 @@ void InitializeGame( void ) noexcept
     // This is why I create a separate section for these even thought they still are systems.
     s_Game.m_GameMgr->RegisterSystems
     < detroy_ships_reporter     // Structural: No
+    , play_sound                // Structural: No
+    , print_deaths              // Structural: No
     >();
 
     //
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >()
-        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer )
+        .CreateEntities( 50000, [&]( position& Position, velocity& Velocity, timer& Timer )
         {
             Position.m_Value.m_X = std::rand() % s_Game.m_W;
             Position.m_Value.m_Y = std::rand() % s_Game.m_H;

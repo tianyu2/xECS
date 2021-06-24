@@ -34,6 +34,14 @@ namespace xecs::game_mgr
         > 
         void                                RegisterComponents      ( void
                                                                     ) noexcept;
+        template
+        < typename...T_GLOBAL_EVENTS
+        > requires
+        ( std::derived_from< T_GLOBAL_EVENTS, xecs::event::overrides> 
+          && ...
+        )
+        void                                RegisterGlobalEvents    ( void 
+                                                                    ) noexcept;
         inline
         xecs::component::entity             AllocNewEntity          ( int                        PoolIndex
                                                                     , xecs::archetype::instance& Archetype 
@@ -96,7 +104,22 @@ namespace xecs::game_mgr
         inline
         archetype::instance&                getOrCreateArchetype    ( std::span<const component::info* const> Types 
                                                                     ) noexcept;
+        template
+        < typename      T_GLOBAL_EVENT
+        , typename...   T_ARGS
+        > requires
+        ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
+        )
+        void                                SendGlobalEvent         ( T_ARGS&&... Args 
+                                                                    ) const noexcept;
 
+        template
+        < typename      T_GLOBAL_EVENT
+        > requires
+        ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
+        )
+        T_GLOBAL_EVENT&                     getGlobalEvent          ( void 
+                                                                    ) const noexcept;
         template
         < typename... T_TUPLES_OF_COMPONENTS_OR_COMPONENTS
         > requires
@@ -143,6 +166,7 @@ namespace xecs::game_mgr
 
         events                                              m_Events            {};
         xecs::system::mgr                                   m_SystemMgr         {};
+        xecs::event::mgr                                    m_EventMgr          {};
         xecs::component::mgr                                m_ComponentMgr      {};
         archetype_map                                       m_ArchetypeMap      {};
         std::vector<std::unique_ptr<archetype::instance>>   m_lArchetype        {};

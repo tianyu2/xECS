@@ -72,7 +72,7 @@ namespace xecs::system
                                             ) noexcept
                                             {
                                                using real_system = xecs::system::details::compleated<T_SYSTEM>;
-                                                if constexpr (T_SYSTEM::typedef_v.id_v == type::id::UPDATE )
+                                                if constexpr ( T_SYSTEM::typedef_v.is_notifier_v == false )
                                                 {
                                                     // NOTHING TO DO...
                                                 }
@@ -117,28 +117,33 @@ namespace xecs::system
     T_SYSTEM& mgr::RegisterSystem( xecs::game_mgr::instance& GameMgr ) noexcept
     {
         using real_system = details::compleated<T_SYSTEM>;
+        using typedef_t   = std::decay_t<decltype(T_SYSTEM::typedef_v)>;
 
         //
         // Register System
         //
         auto& System = *static_cast<real_system*>([&]
         {
-            if constexpr( std::is_same_v<std::decay_t<decltype(real_system::typedef_v)>, xecs::system::type::update> )
-            {
-                m_UpdaterSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
-                return m_UpdaterSystems.back().get();
-            }
-            else
+            if constexpr(real_system::typedef_v.is_notifier_v )
             {
                 m_NotifierSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
                 return m_NotifierSystems.back().get();
             }
+            else
+            {
+                m_UpdaterSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
+                return m_UpdaterSystems.back().get();
+            }
         }());
 
         m_SystemMaps.emplace( std::pair<type::guid, xecs::system::instance*>
-            { type::info_v<T_SYSTEM>.m_Guid, static_cast<instance*>(&System) } 
-            );
+            { type::info_v<T_SYSTEM>.m_Guid, static_cast<instance*>(&System) });
 
+        //
+        // For all systems that are not type event we create the query and update the info
+        // this is like caching it...
+        // 
+        if constexpr (real_system::typedef_v.id_v != type::id::GLOBAL_EVENT )
         {
             xecs::query::instance Q;
             Q.AddQueryFromTuple(xcore::types::null_tuple_v< T_SYSTEM::query >);
@@ -150,12 +155,35 @@ namespace xecs::system
         }
 
         //
-        // Connect all the delegates
+        // For the Update systems hook the run function
+        // TODO: For optimizations we could remove the Run function with to OnUpdate
         //
-        if constexpr( type::info_v<T_SYSTEM>.m_ID == type::id::UPDATE )
+        if constexpr(real_system::typedef_v.id_v == type::id::UPDATE )
         {
             m_Events.m_OnUpdate.Register<&real_system::Run>(System);
         }
+
+        //
+        // If it is a global event delegate then we need to hook it up with the actual event
+        // NOTE: that this requires all the relevant events to be register before our system delegate
+        if constexpr (real_system::typedef_v.id_v == type::id::GLOBAL_EVENT )
+        {
+            GameMgr.m_EventMgr.getEvent< typedef_t::event_t >()
+                .Register<&T_SYSTEM::OnEvent>( GameMgr.getSystem< T_SYSTEM >() );
+        }
+
+        //
+        // If we are dealing with a system event type
+        //
+        if constexpr (real_system::typedef_v.id_v == type::id::SYSTEM_EVENT)
+        {
+            std::get<typedef_t::event_t>( find<typedef_t::system_t>()->m_Events ).Register
+                <&T_SYSTEM::OnEvent>(System);
+        }
+
+        //
+        // General messages
+        //
         if constexpr ( &real_system::OnGameStart != &xecs::system::overrides::OnGameStart )
         {
             m_Events.m_OnGameStart.Register<&real_system::OnGameStart>(System);

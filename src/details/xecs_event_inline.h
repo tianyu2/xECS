@@ -1,5 +1,25 @@
 namespace xecs::event
 {
+    //-------------------------------------------------------------------------------------------
+
+    namespace type::details
+    {
+        template< typename T_SYSTEM >
+        consteval type::info CreateInfo( void ) noexcept
+        {
+            return type::info
+            {
+                .m_Guid                 = T_SYSTEM::typedef_v.m_Guid.m_Value
+                                             ? T_SYSTEM::typedef_v.m_Guid
+                                             : type::guid{ __FUNCSIG__ }
+            ,   .m_pName                = T_SYSTEM::typedef_v.m_pName
+//            ,   .m_ID                   = T_SYSTEM::typedef_v.id_v
+            };
+        }
+    }
+
+
+
     //---------------------------------------------------------------------------
     template
     < typename...   T_ARGS

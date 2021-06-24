@@ -15,6 +15,8 @@ namespace xecs::system
         ,   NOTIFY_COMPONENT_CHANGE
         ,   NOTIFY_COMPONENT_ADDED
         ,   NOTIFY_COMPONENT_REMOVE
+        ,   GLOBAL_EVENT
+        ,   SYSTEM_EVENT
         };
 
         struct update
@@ -66,6 +68,31 @@ namespace xecs::system
             const xecs::component::info* m_pComponentInfo   {};
         };
 
+        template< typename T_EVENT >
+        requires( std::derived_from< T_EVENT, xecs::event::overrides> )
+        struct global_event
+        {
+            using                        event_t            = T_EVENT;
+            static constexpr auto        id_v               = id::GLOBAL_EVENT;
+            static constexpr auto        is_notifier_v      = false;
+            const char*                  m_pName            = "Unnamed Global Event System Delegate";
+            guid                         m_Guid             {};
+        };
+
+        template< typename T_SYSTEM, typename T_EVENT >
+        requires( std::derived_from< T_SYSTEM, xecs::system::instance>
+                  && ( xcore::types::is_specialized_v<xecs::event::instance, T_EVENT>
+                       || std::derived_from< T_EVENT, xecs::event::overrides>) )
+        struct system_event
+        {
+            using                        system_t           = T_SYSTEM;
+            using                        event_t            = T_EVENT;
+            static constexpr auto        id_v               = id::SYSTEM_EVENT;
+            static constexpr auto        is_notifier_v      = false;
+            const char*                  m_pName            = "Unnamed System Event Delegate";
+            guid                         m_Guid             {};
+        };
+
         struct info
         {
             using notifier_registration = void( xecs::archetype::instance&, xecs::system::instance&);
@@ -96,6 +123,7 @@ namespace xecs::system
     struct overrides
     {
         using                   query       = std::tuple<>;
+        using                   events      = std::tuple<>;
         constexpr static auto   typedef_v   = type::update{};
 
         void                    OnGameStart     ( void ) noexcept {}
