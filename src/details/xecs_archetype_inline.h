@@ -451,12 +451,15 @@ namespace xecs::archetype
         auto&      GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
 
         // Notify any that cares
-        if(m_Events.m_OnEntityMovedOut.m_Delegates.size())
+        if(GlobalEntity.m_pArchetype->m_Events.m_OnEntityMovedOut.m_Delegates.size())
         {
+            auto& PoolEntity = GlobalEntity.m_pArchetype->m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
             AccessGuard([&]
             {
-                m_Events.m_OnEntityMovedOut.NotifyAll(GlobalEntity.m_pArchetype->m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+                m_Events.m_OnEntityMovedOut.NotifyAll(PoolEntity);
             });
+
+            if(PoolEntity.isZombie() ) return PoolEntity;
         }
 
         const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);

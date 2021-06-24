@@ -47,8 +47,13 @@ namespace xecs::system
                     }
                     else
                     {
-                        // TODO: Optimize this
-                        T_USER_SYSTEM::m_GameMgr.findEntity( Entity, *this );
+                        using function_args = xcore::function::traits<compleated<T_USER_SYSTEM>>::args_tuple;
+                        auto& Entry         = T_USER_SYSTEM::m_GameMgr.getEntityDetails(Entity);
+                        assert(Entry.m_pArchetype->m_ProcessReference > 0 );
+                        {
+                            auto CachedArray = xecs::archetype::details::GetComponentPointerArray( Entry.m_pArchetype->m_Pool, Entry.m_PoolIndex, xcore::types::null_tuple_v<function_args> );
+                            xecs::archetype::details::CallFunction( *this, CachedArray );
+                        }
                     }
                 }
             }

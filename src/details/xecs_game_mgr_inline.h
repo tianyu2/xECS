@@ -408,6 +408,10 @@ namespace xecs::game_mgr
 
         auto& Archetype = *m_lArchetype.back();
         Archetype.Initialize({ ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
+
+        // Notify anyone intested
+        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
+
         if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return Archetype.MoveInEntity(Entity);
         else                                                                  return Archetype.MoveInEntity(Entity, Function);
     }

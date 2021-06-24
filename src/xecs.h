@@ -52,9 +52,9 @@ namespace xecs::system
 // INLINE FILES
 //--------------------------------------------------------------
 #include "details/xecs_component_inline.h"
-#include "details/xecs_system_inline.h"
 #include "details/xecs_pool_inline.h"
 #include "details/xecs_archetype_inline.h"
+#include "details/xecs_system_inline.h"
 #include "details/xecs_game_mgr_inline.h"
 #include "details/xecs_query_inline.h"
 #include "details/xecs_tools_inline.h"

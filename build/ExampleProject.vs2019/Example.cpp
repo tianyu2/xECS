@@ -51,10 +51,7 @@ struct timer
         .m_pName = "Timer"
     };
 
-    using fncallback = void( xecs::system::instance&, xecs::component::entity&) noexcept;
-
-    float        m_Value{};
-    fncallback*  m_pCallback{};
+    float        m_Value;
 };
 
 struct bullet
@@ -286,11 +283,7 @@ struct update_timer : xecs::system::instance
         Timer.m_Value -= 0.01f;
         if( Timer.m_Value <= 0 )
         {
-            if( Timer.m_pCallback ) Timer.m_pCallback( *this, Entity );
-            if( Entity.isZombie() == false )
-            {
-                (void)m_GameMgr.AddOrRemoveComponents<std::tuple<>, std::tuple<timer>>(Entity);
-            }
+            (void)m_GameMgr.AddOrRemoveComponents<std::tuple<>, std::tuple<timer>>(Entity);
         }
     }
 };
@@ -340,6 +333,26 @@ struct bullet_logic : xecs::system::instance
         });
 
         if(Entity.isZombie()) m_pGrid->RemoveEntity(Entity, Position.m_Value);
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
+struct destroy_bullet_on_timer_deletion : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::notify_moved_out
+    {
+        .m_pName = "destroy_bullet_on_timer_deletion"
+    };
+
+    using query = std::tuple
+    <
+        xecs::query::must<bullet, timer>
+    >;
+
+    void operator()(entity& Entity) noexcept
+    {
+        m_GameMgr.DeleteEntity(Entity);
     }
 };
 
@@ -398,11 +411,6 @@ struct space_ship_logic : xecs::system::instance
                         Bullet.m_ShipOwner = NewEntity;
 
                         Timer.m_Value      = 10;
-                        Timer.m_pCallback  = []( xecs::system::instance& System, xecs::component::entity& Entity ) noexcept
-                        {
-                            // Ones the timer is up then just delete ourselves
-                            System.m_GameMgr.DeleteEntity(Entity);
-                        };
                     });
                 return true;
             }
@@ -497,20 +505,21 @@ void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
 
 //---------------------------------------------------------------------------------------
 
-struct detroy_ships_reporter : xecs::system::instance
+struct on_destroy_count_dead_ships : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::notify_destroy
     {
-        .m_pName = "detroy_ships_reporter"
+        .m_pName = "on_destroy_count_dead_ships"
     };
 
     using query = std::tuple
     <
         xecs::query::none_of<bullet>
     ,   xecs::query::one_of<entity>
+    ,   xecs::query::must<position>
     >;
 
-    void operator()( entity& Entity, position& Position, timer* pTimer ) noexcept
+    void operator()( timer* pTimer ) noexcept
     {
         m_GameMgr.SendGlobalEvent<sound>( "Boom.wav" );
         if(pTimer) s_Game.m_nEntityWaitingDead++;
@@ -570,11 +579,11 @@ struct play_sound : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-struct print_deaths : xecs::system::instance
+struct print_deaths_on_page_flip : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::system_event<page_flip, page_flip::event_pre_page_flip >
     {
-        .m_pName = "print_deaths"
+        .m_pName = "print_deaths_on_page_flip"
     };
 
     void OnEvent( int )
@@ -630,16 +639,17 @@ void InitializeGame( void ) noexcept
     // same message they will get them in the order that are here.
     // This is why I create a separate section for these even thought they still are systems.
     s_Game.m_GameMgr->RegisterSystems
-    <   detroy_ships_reporter   // Structural: No
-    ,   play_sound              // Structural: No
-    ,   print_deaths            // Structural: No
+    <   on_destroy_count_dead_ships     // Structural: No
+    ,   destroy_bullet_on_timer_deletion// Structural: Yes (Deletes bullets when timer is removed)
+    ,   play_sound                      // Structural: No
+    ,   print_deaths_on_page_flip       // Structural: No
     >();
 
     //
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >()
-        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer )
+        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer )
         {
             Position.m_Value.m_X = std::rand() % s_Game.m_W;
             Position.m_Value.m_Y = std::rand() % s_Game.m_H;
