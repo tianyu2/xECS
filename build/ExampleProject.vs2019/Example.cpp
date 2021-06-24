@@ -625,7 +625,7 @@ void InitializeGame( void ) noexcept
 
     // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
-    <   update_timer            // Structural: Yes, AddOrRemoveComponent(timer), User defined... (Destroy Bullets)
+    <   update_timer            // Structural: Yes, RemoveComponent(timer)
     ,   update_movement         // Structural: No
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
     ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent(timer), Create(Bullets)
