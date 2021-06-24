@@ -6,6 +6,8 @@ namespace xecs::system
         requires( std::derived_from< T_USER_SYSTEM, xecs::system::instance > )
         struct compleated final : T_USER_SYSTEM
         {
+            T_USER_SYSTEM::events m_Events;
+
             __inline
             compleated( xecs::game_mgr::instance& GameMgr, const xecs::system::type::info& TypeInfo ) noexcept
             : T_USER_SYSTEM{ { GameMgr, TypeInfo } }
@@ -111,6 +113,21 @@ namespace xecs::system
     { }
 
     //-------------------------------------------------------------------------------------------
+    template< typename T_EVENT, typename T_CLASS, typename...T_ARGS>
+    requires( std::derived_from<T_CLASS, xecs::system::instance>
+                && (false == std::is_same_v<typename T_CLASS::events, xecs::system::overrides::events>)
+                && !!(xcore::types::tuple_t2i_v<T_EVENT, typename T_CLASS::events > +1) 
+                )
+    void instance::SendEventFrom(T_CLASS* pThis, T_ARGS&&... Args) noexcept
+    {
+        std::get<T_EVENT>
+        ( static_cast< details::compleated<T_CLASS>* >( pThis )
+          ->m_Events
+        )
+        .NotifyAll( std::forward<T_ARGS&&>(Args) ... );
+    }
+
+    //-------------------------------------------------------------------------------------------
     template
     < typename T_SYSTEM
     > requires( std::derived_from< T_SYSTEM, xecs::system::instance> )
@@ -177,8 +194,15 @@ namespace xecs::system
         //
         if constexpr (real_system::typedef_v.id_v == type::id::SYSTEM_EVENT)
         {
-            std::get<typedef_t::event_t>( find<typedef_t::system_t>()->m_Events ).Register
-                <&T_SYSTEM::OnEvent>(System);
+            static_assert( xcore::types::tuple_t2i_v<typedef_t::event_t, typedef_t::system_t::events > + 1 );
+
+            std::get<typedef_t::event_t>
+            ( 
+                reinterpret_cast< details::compleated<typedef_t::system_t>* >
+                ( find<typedef_t::system_t>()
+                )->m_Events 
+            )
+            .Register<&T_SYSTEM::OnEvent>(System);
         }
 
         //

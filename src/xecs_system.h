@@ -145,6 +145,17 @@ namespace xecs::system
                                         , const type::info&         TypeInfo
                                         ) noexcept;
 
+        template
+        < typename   T_EVENT
+        , typename   T_CLASS
+        , typename...T_ARGS
+        > requires
+        ( std::derived_from<T_CLASS, xecs::system::instance>
+            && (false == std::is_same_v<typename T_CLASS::events, xecs::system::overrides::events>)
+            && !!(xcore::types::tuple_t2i_v<T_EVENT, typename T_CLASS::events > +1)
+        ) __inline
+        static void SendEventFrom(T_CLASS* pThis, T_ARGS&&... Args) noexcept;
+
         xecs::game_mgr::instance&   m_GameMgr;
         const type::info&           m_TypeInfo;
     };

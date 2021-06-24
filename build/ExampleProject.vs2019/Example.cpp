@@ -528,30 +528,28 @@ struct page_flip : xecs::system::instance
     };
 
     // xCore provides a convinient way to create unique types out of objects 
-    using event_pre_page_flip  = xcore::types::make_unique< xecs::event::instance<>, struct pre_page_flip>;
+    using event_pre_page_flip  = xcore::types::make_unique< xecs::event::instance<int>, struct pre_page_flip>;
     using event_post_page_flip = xcore::types::make_unique< xecs::event::instance<>, struct post_page_flip>;
 
-    // This type name been a tuple containg all the events is required for this system events
-    // Note that inside all the event types insize the tuple need to be a unique type
+    // The name of this type is require (and overrides/shadows the base type), itself should also be a tuple
+    // that contains all the system events. Each even within this group should be a unique type or else
+    // the message system will have a problem identifying which one you are talking about.
     using events = std::tuple   
     <
         event_pre_page_flip
     ,   event_post_page_flip
     >;
 
-    // This variable name and type is required for this system events
-    events m_Events;            
-
     __inline
     void OnUpdate( void ) noexcept
     {
-        std::get<event_pre_page_flip>(m_Events).NotifyAll();
+        SendEventFrom<event_pre_page_flip>(this, 42);
 
         glFlush();
         glutSwapBuffers();
         glClear(GL_COLOR_BUFFER_BIT);
 
-        std::get<event_post_page_flip>(m_Events).NotifyAll();
+        SendEventFrom<event_post_page_flip>(this);
     }
 };
 
@@ -579,7 +577,7 @@ struct print_deaths : xecs::system::instance
         .m_pName = "print_deaths"
     };
 
-    void OnEvent( void )
+    void OnEvent( int )
     {
         GlutPrint(0, 0, "Thinking Dead: %d", s_Game.m_nEntityThinkingDead);
         GlutPrint(0, 1, "Waiting Dead:  %d", s_Game.m_nEntityWaitingDead);
@@ -596,7 +594,7 @@ void InitializeGame( void ) noexcept
     std::srand(100);
 
     //
-    // Register all the elements of the game
+    // Register Components (They should always be first)
     //
     s_Game.m_GameMgr->RegisterComponents
     <   position
@@ -606,7 +604,7 @@ void InitializeGame( void ) noexcept
     >();
 
     //
-    // Register Global Events
+    // Register Global Events (These should always be before the systems as well)
     //
     s_Game.m_GameMgr->RegisterGlobalEvents
     <   sound
@@ -616,7 +614,7 @@ void InitializeGame( void ) noexcept
     // Register Systems
     //
 
-    // Register updated systems
+    // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
     <   update_timer            // Structural: Yes, AddOrRemoveComponent(timer), User defined... (Destroy Bullets)
     ,   update_movement         // Structural: No
@@ -632,16 +630,16 @@ void InitializeGame( void ) noexcept
     // same message they will get them in the order that are here.
     // This is why I create a separate section for these even thought they still are systems.
     s_Game.m_GameMgr->RegisterSystems
-    < detroy_ships_reporter     // Structural: No
-    , play_sound                // Structural: No
-    , print_deaths              // Structural: No
+    <   detroy_ships_reporter   // Structural: No
+    ,   play_sound              // Structural: No
+    ,   print_deaths            // Structural: No
     >();
 
     //
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >()
-        .CreateEntities( 50000, [&]( position& Position, velocity& Velocity, timer& Timer )
+        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer )
         {
             Position.m_Value.m_X = std::rand() % s_Game.m_W;
             Position.m_Value.m_Y = std::rand() % s_Game.m_H;
