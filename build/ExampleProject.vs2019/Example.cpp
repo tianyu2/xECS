@@ -338,7 +338,7 @@ struct bullet_logic : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-struct destroy_bullet_on_timer_deletion : xecs::system::instance
+struct destroy_bullet_on_remove_timer : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::notify_moved_out
     {
@@ -640,7 +640,7 @@ void InitializeGame( void ) noexcept
     // This is why I create a separate section for these even thought they still are systems.
     s_Game.m_GameMgr->RegisterSystems
     <   on_destroy_count_dead_ships     // Structural: No
-    ,   destroy_bullet_on_timer_deletion// Structural: Yes (Deletes bullets when timer is removed)
+    ,   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets when timer is removed)
     ,   play_sound                      // Structural: No
     ,   print_deaths_on_page_flip       // Structural: No
     >();
