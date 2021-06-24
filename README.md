@@ -9,7 +9,6 @@ This lessons presents the basic structure of an single threaded ECS. We do not c
 * Basic Query
 * Basic Component
 * Basic...etc
-* Simple example to follow
 
 ## To build
 1. Go to the build directory 
