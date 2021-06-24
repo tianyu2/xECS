@@ -2,23 +2,18 @@
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
-* Components
-  * Introduction of Global Unique Indentifiers (GUID) for the types
-  * Introduction of different types of components (even though we dont do much with them)
-* Improving the pools V2
-  * No allocations when deleting std::vector is gone
-  * Structural updates now more centralize in the pools (not completly yet)
-    * Deleting is centralized here
-    * Size depends on updating the structural changes
-  * Adding and Removing Components
-  * Components are shorted by their GUID which allows for faster access
-  * Appending can now create N entities
-* Game Mgr 
-  * Adding and Removing Components to an entity
-  * Creating N entities are faster handle by CreateEntities function
-* Archetype
-  * Adding and removing components
-  * Components are shorted by their GUID for faster access
+* New types of system
+  * Updater 
+  * Notifiers
+  * Global Events delegates
+  * System Events delegates
+* Formalizing the event system
+  * Systems have many kinds of events now
+  * From overritting the simple OnFrameStart
+  * to Sending events
+  * to reciving them
+* Allot more heavy usage of maps in the code
+  * System now can also cache references much more easily
 * Update the example to use new functionality
 
 ## To build
