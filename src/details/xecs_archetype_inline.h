@@ -446,23 +446,40 @@ namespace xecs::archetype
     //--------------------------------------------------------------------------------------------
     template< typename T_FUNCTION >
     xecs::component::entity
-    instance::MoveInEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
+    instance::MoveInEntity( xecs::component::entity& Entity, T_FUNCTION&& Function ) noexcept
     {
-        auto&      GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
+        assert(Entity.isZombie() == false);
 
-        // Notify any that cares
-        if(GlobalEntity.m_pArchetype->m_Events.m_OnEntityMovedOut.m_Delegates.size())
+        //
+        // Deal with events
+        //
         {
-            auto& PoolEntity = GlobalEntity.m_pArchetype->m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
-            AccessGuard([&]
-            {
-                m_Events.m_OnEntityMovedOut.NotifyAll(PoolEntity);
-            });
+            auto& GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
+            if( GlobalEntity.m_Validation != Entity.m_Validation ) return { 0xffffffffffffffff };
 
-            if(PoolEntity.isZombie() ) return PoolEntity;
+            auto& FromArchetype = *GlobalEntity.m_pArchetype;
+            if( FromArchetype.m_Events.m_OnEntityMovedOut.m_Delegates.size() )
+            {
+                bool isZombie = false;
+                FromArchetype.AccessGuard([&]
+                {
+                    auto& PoolEntity = FromArchetype.m_Pool.getComponent<xecs::component::entity>( GlobalEntity.m_PoolIndex );
+                    m_Events.m_OnEntityMovedOut.NotifyAll(PoolEntity);
+                    Entity = PoolEntity;
+                    if(GlobalEntity.m_Validation.m_bZombie ) isZombie = true;
+                });
+
+                if( isZombie ) return { 0xffffffffffffffff };
+                if (GlobalEntity.m_Validation != Entity.m_Validation ) return { 0xffffffffffffffff };
+            }
         }
 
-        const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
+        //
+        // Ready to move then...
+        //
+        auto&       GlobalEntity  = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
+        auto&       FromArchetype = *GlobalEntity.m_pArchetype;
+        const auto  NewPoolIndex = m_Pool.MoveInFromPool( GlobalEntity.m_PoolIndex, FromArchetype.m_Pool );
 
         GlobalEntity.m_pArchetype = this;
         GlobalEntity.m_PoolIndex  = NewPoolIndex;
@@ -472,16 +489,23 @@ namespace xecs::archetype
             // Notify any that cares
             if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
             {
+                bool isZombie = false;
                 AccessGuard([&]
                 {
-                    m_Events.m_OnEntityMovedIn.NotifyAll(m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+                    auto& PoolEntity = m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                    m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
+                    if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
                 });
+                if (isZombie) return { 0xffffffffffffffff };
             }
-
-            if(m_ProcessReference==0) UpdateStructuralChanges();
+            else
+            {
+                if (m_ProcessReference == 0) UpdateStructuralChanges();
+            }
         }
         else
         {
+            bool isZombie = false;
             AccessGuard( [&]
             {
                 auto CachedPointer = details::GetComponentPointerArray
@@ -498,9 +522,12 @@ namespace xecs::archetype
                 // Notify any that cares
                 if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
                 {
-                    m_Events.m_OnEntityMovedIn.NotifyAll(m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex));
+                    auto&   PoolEntity  = m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                    m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
+                    if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
                 }
             });
+            if (isZombie) return { 0xffffffffffffffff };
         }
 
         return Entity;

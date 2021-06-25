@@ -398,9 +398,13 @@ struct space_ship_logic : xecs::system::instance
                 {
                     Timer.m_Value = 8;
                 });
-                assert( NewEntity.m_GlobalIndex             == Entity.m_GlobalIndex          );     // This still remains the same but old Entity should not longer be used
-                assert( NewEntity.m_Validation              != Entity.m_Validation           );     // Destroy because of the link-list
-                assert( NewEntity.m_Validation.m_bZombie    != Entity.m_Validation.m_bZombie );     // Also the entity is marked as deleted from the pool
+                // After moving the entity all access to its components via the function existing parameters is consider a bug
+                // Since the entity has moved to a different archetype
+                assert( Entity.isZombie() );
+
+                // Hopefully there is not system that intersects me and kills me
+                assert( !NewEntity.isZombie() );
+
 
                 m_pBulletArchetype->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
                     {

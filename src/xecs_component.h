@@ -108,7 +108,7 @@ namespace xecs::component
         };
         static_assert( sizeof(validation) == sizeof(std::uint32_t) );
 
-        std::uint64_t       m_Value;
+        std::uint64_t       m_Value{0xffffffffffffffffu};
         struct
         {
             std::uint32_t   m_GlobalIndex;      // Index of the entity in the global pool in the game_mgr
@@ -117,6 +117,7 @@ namespace xecs::component
 
         constexpr bool isZombie         ( void )                const noexcept { return m_Validation.m_bZombie; }
         constexpr bool operator ==      ( const entity& V )     const noexcept { return m_Value == V.m_Value;   }
+        constexpr bool isValid          ( void )                const noexcept { return m_Value != 0xffffffffffffffffu; }
     };
     static_assert(sizeof(entity) == sizeof(std::uint64_t));
 
