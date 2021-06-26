@@ -629,10 +629,10 @@ void InitializeGame( void ) noexcept
 
     // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
-    <   update_timer            // Structural: Yes, RemoveComponent(timer)
+    <   update_timer            // Structural: Yes, RemoveComponent(Timer)
     ,   update_movement         // Structural: No
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-    ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent(timer), Create(Bullets)
+    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -644,7 +644,7 @@ void InitializeGame( void ) noexcept
     // This is why I create a separate section for these even thought they still are systems.
     s_Game.m_GameMgr->RegisterSystems
     <   on_destroy_count_dead_ships     // Structural: No
-    ,   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets when timer is removed)
+    ,   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets entities when timer is removed)
     ,   play_sound                      // Structural: No
     ,   print_deaths_on_page_flip       // Structural: No
     >();
