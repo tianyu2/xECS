@@ -276,15 +276,13 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            const auto& Pool = pE->m_Pool;
+            auto&       Pool = pE->m_Pool;
             auto        CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple> );
-            pE->AccessGuard([&]
+            xecs::pool::access_guard Lk(Pool, pE->m_GameMgr);
+            for( int i=Pool.Size(); i; --i )
             {
-                for( int i=Pool.Size(); i; --i )
-                {
-                    archetype::details::CallFunction(Function, CachePointers);
-                }
-            });
+                archetype::details::CallFunction(Function, CachePointers);
+            }
         }
     }
 
@@ -300,13 +298,11 @@ namespace xecs::game_mgr
         {
             if constexpr ( !std::is_same_v< T_FUNCTION, xecs::tools::empty_lambda> )
             {
-                Entry.m_pArchetype->AccessGuard([&]
+                xecs::pool::access_guard Lk(Entry.m_pArchetype->m_Pool, *this );
+                [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
                 {
-                    [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
-                    {
-                        Function( Entry.m_pArchetype->m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(Entry.m_PoolIndex) ...);
-                    }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
-                });
+                    Function( Entry.m_pArchetype->m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(Entry.m_PoolIndex) ...);
+                }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
             }
             return true;
         }

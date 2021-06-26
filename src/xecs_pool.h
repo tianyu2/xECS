@@ -70,5 +70,26 @@ namespace xecs::pool
         std::uint32_t                                                       m_DeleteGlobalIndex { invalid_delete_global_index_v };
         std::uint32_t                                                       m_DeleteMoveIndex   { invalid_delete_global_index_v };
         std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent        {};
+        std::int8_t                                                         m_ProcessReference  {};
+    };
+
+    struct access_guard
+    {
+        access_guard() = delete;
+        access_guard( instance& Instance, xecs::game_mgr::instance& GameMgr )
+            : m_Instance{ Instance }
+            , m_GameMgr{ GameMgr }
+        {
+            ++m_Instance.m_ProcessReference;
+        }
+
+        ~access_guard()
+        {
+            if( --m_Instance.m_ProcessReference == 0 )
+                m_Instance.UpdateStructuralChanges(m_GameMgr);
+        }
+
+        instance&                   m_Instance;
+        xecs::game_mgr::instance&   m_GameMgr;
     };
 }

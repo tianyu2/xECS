@@ -178,7 +178,7 @@ namespace xecs::archetype
     {}
 
     //--------------------------------------------------------------------------------------------
-
+    /*
     template< typename T_FUNCTION >
     requires
     ( xcore::function::is_callable_v<T_FUNCTION>
@@ -191,7 +191,7 @@ namespace xecs::archetype
         Function();
         if(--m_ProcessReference == 0 ) UpdateStructuralChanges();
     }
-
+    */
     //--------------------------------------------------------------------------------------------
 
     void instance::Initialize
@@ -267,10 +267,14 @@ namespace xecs::archetype
         {
             assert(m_ComponentBits.getBit(component::type::info_v<T_COMPONENTS>.m_BitID) && ...);
 
+            // Lock the pool
+            xecs::pool::access_guard Lk(m_Pool, m_GameMgr);
+
             // Allocate the entity
             const int   EntityIndexInPool   = m_Pool.Append(1);
             const auto  Entity              = m_GameMgr.AllocNewEntity(EntityIndexInPool, *this);
             auto&       EntityInPool        = m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool);
+
             EntityInPool = Entity;
 
             // Call the user initializer if any
@@ -279,26 +283,15 @@ namespace xecs::archetype
                 // Notify anyone that cares
                 if(m_Events.m_OnEntityCreated.m_Delegates.size())
                 {
-                    AccessGuard([&]
-                    {
-                        m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
-                    });
-                }
-                else
-                {
-                    // Update the official count if we can
-                    if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
+                    m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
                 }
             }
             else
             {
-                AccessGuard([&]
-                {
-                    Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
+                Function(m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(EntityIndexInPool) ...);
 
-                    // Notify anyone that cares
-                    m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
-                });
+                // Notify anyone that cares
+                m_Events.m_OnEntityCreated.NotifyAll(EntityInPool);
             }
 
             return Entity;
@@ -320,6 +313,10 @@ namespace xecs::archetype
         using func_traits = xcore::function::traits<T_CALLBACK>;
         static_assert( []<typename...T>(std::tuple<T...>*){ return (std::is_reference_v<T> && ...); }(xcore::types::null_tuple_v<func_traits::args_tuple>)
         , "This function requires only references in the user function");
+
+        // Lock the pool
+        xecs::pool::access_guard Lk(m_Pool, m_GameMgr);
+
         const int EntityIndexInPool = m_Pool.Append(Count);
 
         // Allocate the entity
@@ -328,19 +325,16 @@ namespace xecs::archetype
             xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
             if(m_Events.m_OnEntityCreated.m_Delegates.size())
             {
-                AccessGuard([&]
+                for (int i = 0; i < Count; ++i)
                 {
-                    for (int i = 0; i < Count; ++i)
-                    {
-                        *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool + i, *this);
+                    *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool + i, *this);
 
-                        // Notify anyone that cares
-                        m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
+                    // Notify anyone that cares
+                    m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
 
-                        // Next entity
-                        pEntity++;
-                    }
-                });
+                    // Next entity
+                    pEntity++;
+                }
             }
             else
             {
@@ -351,9 +345,6 @@ namespace xecs::archetype
                     // Next entity
                     pEntity++;
                 }
-
-                // Update the official count if we can
-                if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
             }
         }
         else
@@ -365,24 +356,21 @@ namespace xecs::archetype
             xecs::component::entity* pEntity = &reinterpret_cast<xecs::component::entity*>(m_Pool.m_pComponent[0])[EntityIndexInPool];
             assert( &m_Pool.getComponent<xecs::component::entity>(EntityIndexInPool) == pEntity ); 
 
-            AccessGuard([&]
+            for( int i=0; i<Count; ++i )
             {
-                for( int i=0; i<Count; ++i )
-                {
-                    // Fill the entity data
-                    *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
-                    assert(m_GameMgr.getEntityDetails(*pEntity).m_pArchetype == this );
-                    assert(m_GameMgr.getEntityDetails(*pEntity).m_PoolIndex  == EntityIndexInPool + i );
+                // Fill the entity data
+                *pEntity = m_GameMgr.AllocNewEntity(EntityIndexInPool+i, *this);
+                assert(m_GameMgr.getEntityDetails(*pEntity).m_pArchetype == this );
+                assert(m_GameMgr.getEntityDetails(*pEntity).m_PoolIndex  == EntityIndexInPool + i );
 
-                    // Call the user initializer
-                    details::CallFunction( Function, CachePointers );
+                // Call the user initializer
+                details::CallFunction( Function, CachePointers );
 
-                    // Notify anyone that cares
-                    m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
+                // Notify anyone that cares
+                m_Events.m_OnEntityCreated.NotifyAll(*pEntity);
 
-                    pEntity++;
-                }
-            });
+                pEntity++;
+            }
         }
     }
 
@@ -408,14 +396,16 @@ namespace xecs::archetype
             return;
 
         //
+        // Lock the pool
+        //
+        xecs::pool::access_guard Lk(m_Pool, m_GameMgr);
+
+        //
         // Notify any one that cares
         //
         if(m_Events.m_OnEntityDestroyed.m_Delegates.size())
         {
-            AccessGuard([&]
-            {
-                m_Events.m_OnEntityDestroyed.NotifyAll(PoolEntity);
-            });
+            m_Events.m_OnEntityDestroyed.NotifyAll(PoolEntity);
         }
 
         //
@@ -430,8 +420,6 @@ namespace xecs::archetype
         // Delete from pool
         //
         m_Pool.Delete(GlobalEntry.m_PoolIndex);
-
-        if (0 == m_ProcessReference) m_Pool.UpdateStructuralChanges(m_GameMgr);
     }
 
     //--------------------------------------------------------------------------------------------
@@ -461,13 +449,12 @@ namespace xecs::archetype
             if( FromArchetype.m_Events.m_OnEntityMovedOut.m_Delegates.size() )
             {
                 bool isZombie = false;
-                FromArchetype.AccessGuard([&]
-                {
-                    auto& PoolEntity = FromArchetype.m_Pool.getComponent<xecs::component::entity>( GlobalEntity.m_PoolIndex );
-                    m_Events.m_OnEntityMovedOut.NotifyAll(PoolEntity);
-                    Entity = PoolEntity;
-                    if(GlobalEntity.m_Validation.m_bZombie ) isZombie = true;
-                });
+                xecs::pool::access_guard Lk(FromArchetype.m_Pool, m_GameMgr);
+
+                auto& PoolEntity = FromArchetype.m_Pool.getComponent<xecs::component::entity>( GlobalEntity.m_PoolIndex );
+                m_Events.m_OnEntityMovedOut.NotifyAll(PoolEntity);
+                Entity = PoolEntity;
+                if(GlobalEntity.m_Validation.m_bZombie ) isZombie = true;
 
                 if( isZombie ) return { 0xffffffffffffffff };
                 if (GlobalEntity.m_Validation != Entity.m_Validation ) return { 0xffffffffffffffff };
@@ -479,6 +466,10 @@ namespace xecs::archetype
         //
         auto&       GlobalEntity  = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
         auto&       FromArchetype = *GlobalEntity.m_pArchetype;
+
+        xecs::pool::access_guard Lk1(FromArchetype.m_Pool, m_GameMgr);
+        xecs::pool::access_guard Lk2(m_Pool, m_GameMgr);
+
         const auto  NewPoolIndex = m_Pool.MoveInFromPool( GlobalEntity.m_PoolIndex, FromArchetype.m_Pool );
 
         GlobalEntity.m_pArchetype = this;
@@ -490,43 +481,34 @@ namespace xecs::archetype
             if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
             {
                 bool isZombie = false;
-                AccessGuard([&]
-                {
-                    auto& PoolEntity = m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
-                    m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
-                    if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
-                });
+                auto& PoolEntity = m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
+                if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
                 if (isZombie) return { 0xffffffffffffffff };
-            }
-            else
-            {
-                if (m_ProcessReference == 0) UpdateStructuralChanges();
             }
         }
         else
         {
             bool isZombie = false;
-            AccessGuard( [&]
+            auto CachedPointer = details::GetComponentPointerArray
+            ( m_Pool
+            , NewPoolIndex
+            , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>
+            );
+
+            details::CallFunction
+            ( Function
+            , CachedPointer
+            );
+
+            // Notify any that cares
+            if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
             {
-                auto CachedPointer = details::GetComponentPointerArray
-                ( m_Pool
-                , NewPoolIndex
-                , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>
-                );
+                auto&   PoolEntity  = m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
+                if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
+            }
 
-                details::CallFunction
-                ( Function
-                , CachedPointer
-                );
-
-                // Notify any that cares
-                if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
-                {
-                    auto&   PoolEntity  = m_Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
-                    m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
-                    if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
-                }
-            });
             if (isZombie) return { 0xffffffffffffffff };
         }
 

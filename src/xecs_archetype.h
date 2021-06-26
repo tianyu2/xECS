@@ -62,6 +62,7 @@ namespace xecs::archetype
                                 MoveInEntity            ( xecs::component::entity&  Entity
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
                                                         ) noexcept;
+/*
         template
         < typename T_FUNCTION
         > requires
@@ -71,13 +72,12 @@ namespace xecs::archetype
         ) __inline
         void                    AccessGuard             ( T_FUNCTION&& Function
                                                         ) noexcept;
-
+*/
         using info_array = std::array<const xecs::component::type::info*, xecs::settings::max_components_per_entity_v >;
 
         xecs::game_mgr::instance&           m_GameMgr;
         xecs::tools::bits                   m_ComponentBits     {};
         xecs::pool::instance                m_Pool              {};
-        std::int8_t                         m_ProcessReference  {};
         std::uint8_t                        m_nComponents       {};
         events                              m_Events            {};
         info_array                          m_InfoData          {};
