@@ -14,8 +14,10 @@ namespace xecs::component
                                         ? T_COMPONENT::typedef_v.m_Guid
                                         : type::guid{ __FUNCSIG__ }
             ,   .m_BitID        = info::invalid_bit_id_v
+            ,   .m_Size         = xcore::types::static_cast_safe<std::uint16_t>(sizeof(T_COMPONENT))
             ,   .m_TypeID       = T_COMPONENT::typedef_v.id_v
-            ,   .m_Size         = static_cast<std::uint32_t>(sizeof(T_COMPONENT))
+            ,   .m_bGlobalScoped= []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bGlobalScoped; else return false; }()
+            ,   .m_bKeyCanFilter= []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bKeyCanFilter; else return false; }()
             ,   .m_pConstructFn = std::is_trivially_constructible_v<T_COMPONENT>
                                     ? nullptr
                                     : []( std::byte* p ) noexcept
@@ -34,6 +36,15 @@ namespace xecs::component
                                     {
                                         *reinterpret_cast<T_COMPONENT*>(p1) = std::move(*reinterpret_cast<T_COMPONENT*>(p2));
                                     }
+            ,   .m_pComputeKeyFn= []()->type::share::compute_key_fn* 
+                                  {
+                                        if constexpr (T_COMPONENT::typedef_v.id_v != type::id::SHARE) return nullptr;
+                                        else if constexpr(T_COMPONENT::typedef_v.m_ComputeKeyFn)      return T_COMPONENT::typedef_v.m_ComputeKeyFn;
+                                        else return [](std::byte* p) constexpr noexcept -> type::share::key
+                                        {
+                                            return { xcore::crc<64>{}.FromBytes( {p,sizeof(T_COMPONENT)}, type::guid{ __FUNCSIG__ }.m_Value ).m_Value };
+                                        };
+                                  }()
             ,   .m_pName        = T_COMPONENT::typedef_v.m_pName
                                     ? T_COMPONENT::typedef_v.m_pName
                                     : __FUNCSIG__

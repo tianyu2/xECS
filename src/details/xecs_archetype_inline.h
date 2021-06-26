@@ -178,21 +178,6 @@ namespace xecs::archetype
     {}
 
     //--------------------------------------------------------------------------------------------
-    /*
-    template< typename T_FUNCTION >
-    requires
-    ( xcore::function::is_callable_v<T_FUNCTION>
-    && std::is_same_v<typename xcore::function::traits<T_FUNCTION>::return_type, void>
-    && xcore::function::traits<T_FUNCTION>::arg_count_v == 0
-    )
-    void instance::AccessGuard( T_FUNCTION&& Function ) noexcept
-    {
-        ++m_ProcessReference;
-        Function();
-        if(--m_ProcessReference == 0 ) UpdateStructuralChanges();
-    }
-    */
-    //--------------------------------------------------------------------------------------------
 
     void instance::Initialize
     ( std::span<const xecs::component::type::info* const>   Infos

@@ -599,6 +599,18 @@ struct print_deaths_on_page_flip : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
+struct example
+{
+    constexpr static auto typedef_v = xecs::component::type::share
+    {
+        .m_pName        = "Example of a share component"
+    };
+
+    int m_Int;
+};
+
+//---------------------------------------------------------------------------------------
+
 void InitializeGame( void ) noexcept
 {
     //

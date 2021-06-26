@@ -62,17 +62,7 @@ namespace xecs::archetype
                                 MoveInEntity            ( xecs::component::entity&  Entity
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
                                                         ) noexcept;
-/*
-        template
-        < typename T_FUNCTION
-        > requires
-        ( xcore::function::is_callable_v<T_FUNCTION>
-            && std::is_same_v<typename xcore::function::traits<T_FUNCTION>::return_type, void>
-            && xcore::function::traits<T_FUNCTION>::arg_count_v == 0
-        ) __inline
-        void                    AccessGuard             ( T_FUNCTION&& Function
-                                                        ) noexcept;
-*/
+
         using info_array = std::array<const xecs::component::type::info*, xecs::settings::max_components_per_entity_v >;
 
         xecs::game_mgr::instance&           m_GameMgr;

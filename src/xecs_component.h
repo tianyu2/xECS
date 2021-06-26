@@ -11,24 +11,43 @@ namespace xecs::component
         {
             DATA
         ,   TAG
+        ,   SHARE
         };
 
         struct data
         {
-            constexpr static auto   max_size_v  = xecs::settings::virtual_page_size_v;
-            constexpr static auto   id_v        = id::DATA;
+            constexpr static auto   max_size_v          = xecs::settings::virtual_page_size_v;
+            constexpr static auto   id_v                = id::DATA;
 
-            guid                    m_Guid      {};
-            const char*             m_pName     {"Unnamed data component"};
+            guid                    m_Guid              {};
+            const char*             m_pName             {"Unnamed data component"};
         };
 
         struct tag
         {
-            constexpr static auto   max_size_v  = 1;
-            constexpr static auto   id_v        = id::TAG;
+            constexpr static auto   max_size_v          = 1;
+            constexpr static auto   id_v                = id::TAG;
 
-            guid                    m_Guid      {};
-            const char*             m_pName     { "Unnamed tag component" };
+            guid                    m_Guid              {};
+            const char*             m_pName             { "Unnamed tag component" };
+        };
+
+        struct share
+        {
+            constexpr static auto   max_size_v          = xecs::settings::virtual_page_size_v;
+            constexpr static auto   id_v                = id::SHARE;
+
+            struct key
+            {
+                std::uint64_t       m_Value;
+            };
+            using compute_key_fn = key(const std::byte*) noexcept;
+
+            guid                    m_Guid              {};
+            const char*             m_pName             { "Unnamed tag component" };
+            bool                    m_bGlobalScoped     { true };
+            bool                    m_bKeyCanFilter     { false };
+            compute_key_fn*         m_ComputeKeyFn      { nullptr };
         };
 
         namespace details
@@ -58,17 +77,21 @@ namespace xecs::component
         {
             constexpr static auto invalid_bit_id_v = 0xffff;
 
-            using construct_fn  = void(std::byte*) noexcept;
-            using destruct_fn   = void(std::byte*) noexcept;
-            using move_fn       = void(std::byte* Dst, std::byte* Src ) noexcept;
+            using construct_fn      = void(std::byte*) noexcept;
+            using destruct_fn       = void(std::byte*) noexcept;
+            using move_fn           = void(std::byte* Dst, std::byte* Src ) noexcept;
+            using compute_key_fn    = share::compute_key_fn;
 
             type::guid              m_Guid;             // Unique Identifier for the component type
             mutable std::uint16_t   m_BitID;            // Which bit was allocated for this type at run time
+            std::uint16_t           m_Size;             // Size of the component in bytes
             type::id                m_TypeID;           // Simple enumeration that tells what type of component is this
-            std::uint32_t           m_Size;             // Size of the component in bytes
+            bool                    m_bGlobalScoped:1   // If the component is a share, it indicates if it should be factor to a globally scope or to an archetype scope
+            ,                       m_bKeyCanFilter:1;  // If the component is a share, it indicates if the query can filter by its key
             construct_fn*           m_pConstructFn;     // Constructor function pointer if required
             destruct_fn*            m_pDestructFn;      // Destructor function pointer if required
             move_fn*                m_pMoveFn;          // Move function pointer if required
+            compute_key_fn*         m_pComputeKeyFn;    // Computes the key from a share component
             const char*             m_pName;            // Friendly Human readable string name for the component type
         };
 
