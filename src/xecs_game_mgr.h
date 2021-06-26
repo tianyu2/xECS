@@ -57,10 +57,10 @@ namespace xecs::game_mgr
         > requires
         ( xcore::function::is_callable_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
-                                            AddOrRemoveComponents   ( xecs::component::entity                       Entity
-                                                                    , std::span<const xecs::component::info* const> Add
-                                                                    , std::span<const xecs::component::info* const> Sub
-                                                                    , T_FUNCTION&&                                  Function = xecs::tools::empty_lambda{}
+                                            AddOrRemoveComponents   ( xecs::component::entity                             Entity
+                                                                    , std::span<const xecs::component::type::info* const> Add
+                                                                    , std::span<const xecs::component::type::info* const> Sub
+                                                                    , T_FUNCTION&&                                        Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         template
         <   typename T_TUPLE_ADD
@@ -102,7 +102,7 @@ namespace xecs::game_mgr
         [[nodiscard]] archetype::instance*  findArchetype           ( xecs::archetype::guid Guid 
                                                                     ) const noexcept;
         inline
-        archetype::instance&                getOrCreateArchetype    ( std::span<const component::info* const> Types 
+        archetype::instance&                getOrCreateArchetype    ( std::span<const component::type::info* const> Types 
                                                                     ) noexcept;
         template
         < typename      T_GLOBAL_EVENT

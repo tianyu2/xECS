@@ -50,40 +50,40 @@ namespace xecs::component
         }
         template< typename T_COMPONENT >
         constexpr bool is_valid_v = details::is_valid<std::decay_t<T_COMPONENT>>::value;
+
+        //
+        // TYPE INFO
+        //
+        struct info final
+        {
+            constexpr static auto invalid_bit_id_v = 0xffff;
+
+            using construct_fn  = void(std::byte*) noexcept;
+            using destruct_fn   = void(std::byte*) noexcept;
+            using move_fn       = void(std::byte* Dst, std::byte* Src ) noexcept;
+
+            type::guid              m_Guid;             // Unique Identifier for the component type
+            mutable std::uint16_t   m_BitID;            // Which bit was allocated for this type at run time
+            type::id                m_TypeID;           // Simple enumeration that tells what type of component is this
+            std::uint32_t           m_Size;             // Size of the component in bytes
+            construct_fn*           m_pConstructFn;     // Constructor function pointer if required
+            destruct_fn*            m_pDestructFn;      // Destructor function pointer if required
+            move_fn*                m_pMoveFn;          // Move function pointer if required
+            const char*             m_pName;            // Friendly Human readable string name for the component type
+        };
+
+        namespace details
+        {
+            template< typename T >
+            consteval info CreateInfo(void) noexcept;
+
+            template< typename T >
+            static constexpr auto info_v = CreateInfo<T>();
+        }
+        template< typename T_COMPONENT >
+        requires( type::is_valid_v<xcore::types::decay_full_t<T_COMPONENT>> )
+        constexpr auto& info_v = details::info_v<xcore::types::decay_full_t<T_COMPONENT>>;
     } 
-
-    //
-    // INFO
-    //
-    struct info final
-    {
-        constexpr static auto invalid_bit_id_v = 0xffff;
-
-        using construct_fn  = void(std::byte*) noexcept;
-        using destruct_fn   = void(std::byte*) noexcept;
-        using move_fn       = void(std::byte* Dst, std::byte* Src ) noexcept;
-
-        type::guid              m_Guid;             // Unique Identifier for the component type
-        mutable std::uint16_t   m_BitID;            // Which bit was allocated for this type at run time
-        type::id                m_TypeID;           // Simple enumeration that tells what type of component is this
-        std::uint32_t           m_Size;             // Size of the component in bytes
-        construct_fn*           m_pConstructFn;     // Constructor function pointer if required
-        destruct_fn*            m_pDestructFn;      // Destructor function pointer if required
-        move_fn*                m_pMoveFn;          // Move function pointer if required
-        const char*             m_pName;            // Friendly Human readable string name for the component type
-    };
-
-    namespace details
-    {
-        template< typename T >
-        consteval info CreateInfo(void) noexcept;
-
-        template< typename T >
-        static constexpr auto info_v = CreateInfo<T>();
-    }
-    template< typename T_COMPONENT >
-    requires( type::is_valid_v<xcore::types::decay_full_t<T_COMPONENT>> )
-    constexpr auto& info_v = details::info_v<xcore::types::decay_full_t<T_COMPONENT>>;
 
     //
     // ENTITY

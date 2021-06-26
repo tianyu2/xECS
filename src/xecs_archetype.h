@@ -6,7 +6,7 @@ namespace xecs::archetype
     constexpr static auto guid_v = []<typename...T>(std::tuple<T...>*) consteval
     {
         static_assert( ((xecs::component::type::is_valid_v<T>) && ... ) );
-        return guid{ ((xecs::component::info_v<T>.m_Guid.m_Value) + ...) };
+        return guid{ ((xecs::component::type::info_v<T>.m_Guid.m_Value) + ...) };
     }( xcore::types::null_tuple_v< xecs::tools::united_tuple<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...> > );
 
 
@@ -27,8 +27,8 @@ namespace xecs::archetype
                                                         ) noexcept;
         
         inline
-        void                    Initialize              ( std::span<const xecs::component::info* const> Infos
-                                                        , const tools::bits&                            Bits 
+        void                    Initialize              ( std::span<const xecs::component::type::info* const> Infos
+                                                        , const tools::bits&                                  Bits 
                                                         ) noexcept;
         
         template
@@ -72,7 +72,7 @@ namespace xecs::archetype
         void                    AccessGuard             ( T_FUNCTION&& Function
                                                         ) noexcept;
 
-        using info_array = std::array<const xecs::component::info*, xecs::settings::max_components_per_entity_v >;
+        using info_array = std::array<const xecs::component::type::info*, xecs::settings::max_components_per_entity_v >;
 
         xecs::game_mgr::instance&           m_GameMgr;
         xecs::tools::bits                   m_ComponentBits     {};

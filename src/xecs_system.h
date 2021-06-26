@@ -65,7 +65,7 @@ namespace xecs::system
             static constexpr auto        is_notifier_v      = true;
             const char*                  m_pName            = "Unnamed Component Change System";
             guid                         m_Guid             {};
-            const xecs::component::info* m_pComponentInfo   {};
+      const xecs::component::type::info* m_pComponentInfo   {};
         };
 
         template< typename T_EVENT >

@@ -161,19 +161,19 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
-    archetype::instance& instance::getOrCreateArchetype( std::span<const component::info* const> Types ) noexcept
+    archetype::instance& instance::getOrCreateArchetype( std::span<const component::type::info* const> Types ) noexcept
     {
         tools::bits Query;
         xecs::archetype::guid ArchetypeGuid{};
         for (const auto& pE : Types)
         {
-            assert(pE->m_BitID != xecs::component::info::invalid_bit_id_v );
+            assert(pE->m_BitID != xecs::component::type::info::invalid_bit_id_v );
             Query.setBit(pE->m_BitID);
             ArchetypeGuid.m_Value += pE->m_Guid.m_Value;
         }
             
         // Make sure the entity is part of the list at this point
-        assert( Query.getBit(xecs::component::info_v<xecs::component::entity>.m_BitID) );
+        assert( Query.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID) );
 
         // Return the archetype
         if( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
@@ -225,7 +225,7 @@ namespace xecs::game_mgr
             // Slow path for creation
             return getOrCreateArchetype
             (
-                xecs::component::details::sorted_info_array_v< xecs::component::details::combined_t<xecs::component::entity, T... >>
+                xecs::component::type::details::sorted_info_array_v< xecs::component::type::details::combined_t<xecs::component::entity, T... >>
             );
         }( xcore::types::null_tuple_v< xecs::tools::united_tuple<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...> > );
     }
@@ -321,10 +321,10 @@ namespace xecs::game_mgr
     ( xcore::function::is_callable_v<T_FUNCTION>
     )
     xecs::component::entity instance::AddOrRemoveComponents
-    ( xecs::component::entity                       Entity
-    , std::span<const xecs::component::info* const> Add
-    , std::span<const xecs::component::info* const> Sub
-    , T_FUNCTION&&                                  Function 
+    ( xecs::component::entity                               Entity
+    , std::span<const xecs::component::type::info* const>   Add
+    , std::span<const xecs::component::type::info* const>   Sub
+    , T_FUNCTION&&                                          Function 
     ) noexcept
     {
         assert(Entity.isZombie() == false);
@@ -354,7 +354,7 @@ namespace xecs::game_mgr
             }
         }
 
-        std::array<const xecs::component::info*, xecs::settings::max_components_per_entity_v > ComponentList;
+        std::array<const xecs::component::type::info*, xecs::settings::max_components_per_entity_v > ComponentList;
         int Count = 0;
 
         // Copy the existing ones
@@ -364,7 +364,7 @@ namespace xecs::game_mgr
         // Add
         for( auto& pE : Add )
         {
-            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::info* pA, const xecs::component::info* pB)
+            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::type::info* pA, const xecs::component::type::info* pB)
             {
                 return pA->m_Guid < pB->m_Guid;
             }) - ComponentList.begin());
@@ -377,7 +377,7 @@ namespace xecs::game_mgr
             // Create a hole to insert our entry
             if( Index != Count )
             {
-                std::memmove( &ComponentList[Index+1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::info*) );
+                std::memmove( &ComponentList[Index+1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::type::info*) );
             }
             ComponentList[Index] = pE;
             Count++;
@@ -386,7 +386,7 @@ namespace xecs::game_mgr
         // Remove
         for (auto& pE : Sub)
         {
-            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::info* pA, const xecs::component::info* pB)
+            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::type::info* pA, const xecs::component::type::info* pB)
             {
                 return pA->m_Guid < pB->m_Guid;
             }) - ComponentList.begin());
@@ -395,7 +395,7 @@ namespace xecs::game_mgr
             // Check if we found it
             if ( ComponentList[Index - 1] == pE )
             {
-                std::memmove(&ComponentList[Index-1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::info*));
+                std::memmove(&ComponentList[Index-1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::type::info*));
                 Count--;
             }
         }
@@ -435,14 +435,14 @@ namespace xecs::game_mgr
         if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda > )
             return AddOrRemoveComponents
             ( Entity
-            , xecs::component::details::sorted_info_array_v<T_TUPLE_ADD>
-            , xecs::component::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
+            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_ADD>
+            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
             );
         else
             return AddOrRemoveComponents
             ( Entity
-            , xecs::component::details::sorted_info_array_v<T_TUPLE_ADD>
-            , xecs::component::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
+            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_ADD>
+            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
             , Function
             );
     }

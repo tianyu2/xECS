@@ -64,6 +64,6 @@ namespace xecs::tools
     template< typename... T_COMPONENTS > constexpr
     void bits::AddFromComponents( void ) noexcept
     {
-        ((setBit(xecs::component::info_v<T_COMPONENTS>.m_BitID)), ...);
+        ((setBit(xecs::component::type::info_v<T_COMPONENTS>.m_BitID)), ...);
     }
 }

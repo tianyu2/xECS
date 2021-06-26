@@ -18,14 +18,14 @@ namespace xecs::pool
     // This function return which page is the last byte of a given entry
     //-------------------------------------------------------------------------------------
     constexpr inline 
-    int getPageFromIndex( const component::info& Info, int iEntity ) noexcept
+    int getPageFromIndex( const component::type::info& Info, int iEntity ) noexcept
     {
         return ((iEntity * Info.m_Size)-1) / xecs::settings::virtual_page_size_v;
     }
 
     //-------------------------------------------------------------------------------------
 
-    void instance::Initialize( std::span<const component::info* const > Span ) noexcept
+    void instance::Initialize( std::span<const component::type::info* const > Span ) noexcept
     {
         m_Infos        = Span;
         for( int i=0; i< m_Infos.size(); ++i )
@@ -194,7 +194,7 @@ namespace xecs::pool
         }
         else
         {
-            const auto iComponent = findIndexComponentFromGUID( xecs::component::info_v<T_COMPONENT>.m_Guid );
+            const auto iComponent = findIndexComponentFromGUID( xecs::component::type::info_v<T_COMPONENT>.m_Guid );
             return *reinterpret_cast<T_COMPONENT*>
             (
                 &m_pComponent[iComponent][ EntityIndex * sizeof(T_COMPONENT) ]
@@ -225,7 +225,7 @@ namespace xecs::pool
         }
         else
         {
-            const auto iComponent = findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_COMPONENT>.m_Guid, Sequence );
+            const auto iComponent = findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T_COMPONENT>.m_Guid, Sequence );
             return *reinterpret_cast<T_COMPONENT*>
             (
                 &m_pComponent[iComponent][ EntityIndex * sizeof(T_COMPONENT) ]

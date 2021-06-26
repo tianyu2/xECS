@@ -1,9 +1,9 @@
 namespace xecs::component
 {
-    namespace details
+    namespace type::details
     {
         template< typename T_COMPONENT >
-        consteval info CreateInfo(void) noexcept
+        consteval type::info CreateInfo(void) noexcept
         {
             static_assert( xecs::component::type::is_valid_v<T_COMPONENT> );
             return info
@@ -46,7 +46,7 @@ namespace xecs::component
         template< typename T_A, typename T_B >
         struct smaller_component
         {
-            constexpr static bool value = xecs::component::info_v<T_A>.m_Guid < xecs::component::info_v<T_B>.m_Guid;
+            constexpr static bool value = xecs::component::type::info_v<T_A>.m_Guid < xecs::component::type::info_v<T_B>.m_Guid;
         };
 
         template< typename T_TUPLE >
@@ -56,8 +56,8 @@ namespace xecs::component
         template< typename T_TUPLE >
         static constexpr auto sorted_info_array_v = []<typename...T>(std::tuple<T...>*) constexpr
         {
-            if constexpr (sizeof...(T) == 0 )   return std::span<const xecs::component::info*>{};
-            else                                return std::array{ &component::info_v<T>... };
+            if constexpr (sizeof...(T) == 0 )   return std::span<const xecs::component::type::info*>{};
+            else                                return std::array{ &component::type::info_v<T>... };
         }(xcore::types::null_tuple_v< sort_tuple_t<T_TUPLE> >);
 
         template< typename...T_TUPLES_OR_COMPONENTS >
@@ -77,7 +77,7 @@ namespace xecs::component
     requires (xecs::component::type::is_valid_v<T_COMPONENT>)
     void mgr::RegisterComponent(void) noexcept
     {
-        if (component::info_v<T_COMPONENT>.m_BitID == info::invalid_bit_id_v)
-            component::info_v<T_COMPONENT>.m_BitID = m_UniqueID++;
+        if (component::type::info_v<T_COMPONENT>.m_BitID == type::info::invalid_bit_id_v)
+            component::type::info_v<T_COMPONENT>.m_BitID = m_UniqueID++;
     }
 }

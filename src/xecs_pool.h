@@ -12,7 +12,7 @@ namespace xecs::pool
                        ~instance                            ( void 
                                                             ) noexcept;
         inline
-        void            Initialize                          ( std::span<const component::info* const > Span 
+        void            Initialize                          ( std::span<const component::type::info* const > Span 
                                                             ) noexcept;
         inline
         void            Clear                               ( void 
@@ -64,7 +64,7 @@ namespace xecs::pool
                                                             ) noexcept;
 
 
-        std::span<const component::info* const >                            m_Infos             {};
+        std::span<const component::type::info* const >                      m_Infos             {};
         int                                                                 m_CurrentCount      {};
         int                                                                 m_Size              {};
         std::uint32_t                                                       m_DeleteGlobalIndex { invalid_delete_global_index_v };

@@ -21,17 +21,17 @@ namespace xecs::archetype
         , std::tuple<T_FUNCTION_ARGS... >* 
         ) noexcept
         {
-            assert( ((Pool.findIndexComponentFromGUID(xecs::component::info_v<T_FUNCTION_ARGS>.m_Guid) >= 0 ) && ... ) );
+            assert( ((Pool.findIndexComponentFromGUID(xecs::component::type::info_v<T_FUNCTION_ARGS>.m_Guid) >= 0 ) && ... ) );
 
             using function_args = std::tuple< T_FUNCTION_ARGS... >;
-            using sorted_tuple  = xecs::component::details::sort_tuple_t< function_args >;
+            using sorted_tuple  = xecs::component::type::details::sort_tuple_t< function_args >;
 
             std::array< std::byte*, sizeof...(T_FUNCTION_ARGS) > CachePointers;
             [&]<typename... T_SORTED_COMPONENT >( std::tuple<T_SORTED_COMPONENT...>* ) constexpr noexcept
             {
                 int Sequence = 0;
                 ((CachePointers[xcore::types::tuple_t2i_v< T_SORTED_COMPONENT, function_args >] = 
-                  &Pool.m_pComponent[Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T_SORTED_COMPONENT>.m_Guid, Sequence)]
+                  &Pool.m_pComponent[Pool.findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T_SORTED_COMPONENT>.m_Guid, Sequence)]
                         [sizeof(std::remove_reference_t<T_SORTED_COMPONENT>) * StartingPoolIndex])
                 , ... );
 
@@ -54,7 +54,7 @@ namespace xecs::archetype
             static_assert(((std::is_reference_v<T_FUNCTION_ARGS> || std::is_pointer_v<T_FUNCTION_ARGS>) && ...));
 
             using function_args = std::tuple< T_FUNCTION_ARGS... >;
-            using sorted_tuple  = xecs::component::details::sort_tuple_t< function_args >;
+            using sorted_tuple  = xecs::component::type::details::sort_tuple_t< function_args >;
 
             std::array< std::byte*, sizeof...(T_FUNCTION_ARGS) > CachePointers;
             [&]<typename... T_SORTED_COMPONENT >( std::tuple<T_SORTED_COMPONENT...>* ) constexpr noexcept
@@ -62,7 +62,7 @@ namespace xecs::archetype
                 int Sequence = 0;
                 ((CachePointers[xcore::types::tuple_t2i_v< T_SORTED_COMPONENT, function_args >] = [&]<typename T>(std::tuple<T>*) constexpr noexcept 
                 {
-                    const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::info_v<T>.m_Guid, Sequence);
+                    const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T>.m_Guid, Sequence);
                     if constexpr (std::is_pointer_v<T>)
                         return (I < 0) ? nullptr : &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex];
                     else
@@ -195,8 +195,8 @@ namespace xecs::archetype
     //--------------------------------------------------------------------------------------------
 
     void instance::Initialize
-    ( std::span<const xecs::component::info* const>  Infos
-    , const tools::bits&                             Bits 
+    ( std::span<const xecs::component::type::info* const>   Infos
+    , const tools::bits&                                    Bits 
     ) noexcept
     {
         // Deep copy the infos just in case the user gave us data driven infos
@@ -213,7 +213,7 @@ namespace xecs::archetype
             std::sort
             ( m_InfoData.begin()
             , m_InfoData.begin() + Infos.size()
-            , []( const xecs::component::info* pA, const xecs::component::info* pB ) constexpr
+            , []( const xecs::component::type::info* pA, const xecs::component::type::info* pB ) constexpr
             {
                 return pA->m_Guid < pB->m_Guid;
             });
@@ -225,10 +225,10 @@ namespace xecs::archetype
 #ifdef _DEBUG
         {
             // First component should the the entity
-            assert(m_InfoData[0] == &xecs::component::info_v<xecs::component::entity>);
+            assert(m_InfoData[0] == &xecs::component::type::info_v<xecs::component::entity>);
 
             // Entity bit should be turn on
-            assert(Bits.getBit(xecs::component::info_v<xecs::component::entity>.m_BitID));
+            assert(Bits.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID));
 
             // Check all other components
             for (int i = 1; i < Infos.size(); ++i)
@@ -265,7 +265,7 @@ namespace xecs::archetype
         using func_traits = xcore::function::traits<T_CALLBACK>;
         return[&]< typename... T_COMPONENTS >(std::tuple<T_COMPONENTS...>*) constexpr noexcept
         {
-            assert(m_ComponentBits.getBit(component::info_v<T_COMPONENTS>.m_BitID) && ...);
+            assert(m_ComponentBits.getBit(component::type::info_v<T_COMPONENTS>.m_BitID) && ...);
 
             // Allocate the entity
             const int   EntityIndexInPool   = m_Pool.Append(1);
