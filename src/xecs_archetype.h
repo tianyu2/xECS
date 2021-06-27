@@ -68,8 +68,8 @@ namespace xecs::archetype
         < typename T_CALLBACK
         > requires
         ( xecs::tools::function_return_v<T_CALLBACK, void>
-   //         && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-   //         && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+            && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
         ) __inline
         xecs::component::entity CreateEntity            ( T_CALLBACK&& Function
                                                         ) noexcept;
@@ -86,9 +86,9 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( //xecs::tools::function_return_v<T_CALLBACK, void>
-            true && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-        //  && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::function_return_v<T_CALLBACK, void>
+            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+            && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
         ) __inline
         void                    CreateEntities          ( int           Count
                                                         , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}

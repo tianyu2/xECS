@@ -594,8 +594,8 @@ instance::CreateEntity
     < typename T_CALLBACK
     > requires
     ( xecs::tools::function_return_v<T_CALLBACK, void>
-  //      && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-  //      && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+        && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+        && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
     )    xecs::component::entity
 instance::CreateEntity
     ( T_CALLBACK&& Function 
@@ -629,9 +629,9 @@ instance::CreateEntity
     template
     < typename T_CALLBACK
     > requires
-    ( // xecs::tools::function_return_v<T_CALLBACK, void>
-      true  && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-    //    && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+    ( xecs::tools::function_return_v<T_CALLBACK, void>
+        && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+        && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
     )
     void
 instance::CreateEntities

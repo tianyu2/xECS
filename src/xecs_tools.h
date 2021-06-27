@@ -43,11 +43,14 @@ namespace xecs::tools
 
     template
     < typename... T_SHARE_COMPONENTS
-    > requires
-    ( false == xcore::types::tuple_has_duplicates_v< std::tuple<T_SHARE_COMPONENTS...>::args_tuple >
-    )
-    constexpr auto all_components_are_share_types_v
-        = ((xecs::component::type::info_v<T_SHARE_COMPONENTS>.m_TypeID == xecs::component::type::id::SHARE) && ...);
+    > constexpr
+    auto all_components_are_share_types_v = []
+    {
+        static_assert( false == xcore::types::tuple_has_duplicates_v< std::tuple<T_SHARE_COMPONENTS...>::args_tuple > );
+        static_assert( ((xecs::component::type::info_v<T_SHARE_COMPONENTS>.m_TypeID == xecs::component::type::id::SHARE) && ...) );
+        return true;
+    }();
+        
 
     //------------------------------------------------------------------------------
 
