@@ -40,6 +40,7 @@ namespace xecs::component
             struct key
             {
                 std::uint64_t       m_Value;
+                friend auto operator <=> ( const key&, const key& ) = default;
             };
             using compute_key_fn = key(const std::byte*) noexcept;
 
@@ -68,7 +69,7 @@ namespace xecs::component
             };
         }
         template< typename T_COMPONENT >
-        constexpr bool is_valid_v = details::is_valid<std::decay_t<T_COMPONENT>>::value;
+        constexpr bool is_valid_v = details::is_valid<xcore::types::decay_full_t<T_COMPONENT>>::value;
 
         //
         // TYPE INFO
@@ -92,6 +93,7 @@ namespace xecs::component
             destruct_fn*            m_pDestructFn;      // Destructor function pointer if required
             move_fn*                m_pMoveFn;          // Move function pointer if required
             compute_key_fn*         m_pComputeKeyFn;    // Computes the key from a share component
+            type::share::key        m_DefaultShareKey;  // Default value for this share component
             const char*             m_pName;            // Friendly Human readable string name for the component type
         };
 
@@ -113,11 +115,14 @@ namespace xecs::component
     //
     union entity final
     {
-        constexpr static auto typedef_v = xecs::component::type::data
+        constexpr static auto invalid_entity_v  = 0xffffffffffffffffu;
+        constexpr static auto typedef_v         = xecs::component::type::data
         {
             .m_pName = "Entity"
         };
 
+        // Validation allows us to know if a particular entity Unique ID is still valid
+        // Farther more it allow us to know if an entity has been deleted but not removed yet (Zombie)
         union validation final
         {
             std::uint32_t       m_Value;
@@ -131,7 +136,21 @@ namespace xecs::component
         };
         static_assert( sizeof(validation) == sizeof(std::uint32_t) );
 
-        std::uint64_t       m_Value{0xffffffffffffffffu};
+        // The actual global record of the entity is contain in this structure
+        // Which it means that for every entity in the game there is one of these
+        // Note that this record gets reclycle so knowing of an all entity ID is
+        // still valid can be done thought the m_Validation 
+        struct global_info final
+        {
+            xecs::archetype::instance*      m_pArchetype    {};
+            xecs::pool::instance*           m_pPool         {};
+            xecs::pool::index               m_PoolIndex     {-1};
+            validation                      m_Validation    {};
+        };
+
+        // This is the actual entity component data members. It boils down to an
+        // index to the global record as shown above and a validation.
+        std::uint64_t       m_Value{ invalid_entity_v };
         struct
         {
             std::uint32_t   m_GlobalIndex;      // Index of the entity in the global pool in the game_mgr
@@ -140,23 +159,68 @@ namespace xecs::component
 
         constexpr bool isZombie         ( void )                const noexcept { return m_Validation.m_bZombie; }
         constexpr bool operator ==      ( const entity& V )     const noexcept { return m_Value == V.m_Value;   }
-        constexpr bool isValid          ( void )                const noexcept { return m_Value != 0xffffffffffffffffu; }
+        constexpr bool isValid          ( void )                const noexcept { return m_Value != invalid_entity_v; }
     };
     static_assert(sizeof(entity) == sizeof(std::uint64_t));
+
+    //
+    // Reference Count Data Component
+    //
+    struct ref_count
+    {
+        constexpr static auto typedef_v = xecs::component::type::data
+        {
+            .m_pName = "Reference Count"
+        };
+
+        int m_Value{1};
+    };
 
     //
     // MGR
     //
     struct mgr final
     {
+        inline
+                                            mgr                     ( void 
+                                                                    ) noexcept;
         template
         < typename T_COMPONENT
         > requires
         ( xecs::component::type::is_valid_v<T_COMPONENT>
         )
-        void RegisterComponent          ( void
-                                        ) noexcept;
+        void                                RegisterComponent       ( void
+                                                                    ) noexcept;
+        inline
+        const entity::global_info&          getEntityDetails        ( xecs::component::entity Entity 
+                                                                    ) const noexcept;
+        inline
+        void                                DeleteGlobalEntity      ( std::uint32_t              GlobalIndex
+                                                                    , xecs::component::entity&   SwappedEntity 
+                                                                    ) noexcept;
+        inline
+        void                                DeleteGlobalEntity      ( std::uint32_t GlobalIndex
+                                                                    ) noexcept;
+        inline
+        void                                MovedGlobalEntity       ( xecs::pool::index         PoolIndex
+                                                                    , xecs::component::entity&  SwappedEntity
+                                                                    ) noexcept;
+        inline 
+        entity                              AllocNewEntity          ( pool::index                   PoolIndex
+                                                                    , xecs::archetype::instance&    Archetype
+                                                                    , xecs::pool::instance&         Pool 
+                                                                    ) noexcept;
 
-        inline static int m_UniqueID = 0;
+
+        inline static int                                   m_UniqueID  = 0;
+        std::unique_ptr<entity::global_info[]>              m_lEntities = std::make_unique<entity::global_info[]>(xecs::settings::max_entities_v);
+        int                                                 m_EmptyHead = 0;
     };
 }
+
+template<>
+struct std::hash< xecs::component::type::share::key >
+{
+    auto operator()(const typename xecs::component::type::share::key obj) const { return hash<std::uint64_t>()(obj.m_Value); }
+};
+

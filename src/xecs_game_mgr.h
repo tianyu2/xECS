@@ -2,22 +2,8 @@ namespace xecs::game_mgr
 {
     //---------------------------------------------------------------------------
 
-    struct entity_info final
-    {
-        xecs::archetype::instance*      m_pArchetype    {};
-        int                             m_PoolIndex     {-1};
-        component::entity::validation   m_Validation    {};
-    };
-
-    //---------------------------------------------------------------------------
-
     struct instance final
     {
-        struct events
-        {
-            xecs::event::instance<xecs::archetype::instance&>         m_OnNewArchetype;
-        };
-
                                             instance                ( const instance& 
                                                                     ) = delete;
         inline                              instance                ( void
@@ -43,13 +29,6 @@ namespace xecs::game_mgr
         void                                RegisterGlobalEvents    ( void 
                                                                     ) noexcept;
         inline
-        xecs::component::entity             AllocNewEntity          ( int                        PoolIndex
-                                                                    , xecs::archetype::instance& Archetype 
-                                                                    ) noexcept;
-        inline
-        const entity_info&                  getEntityDetails        ( xecs::component::entity Entity 
-                                                                    ) const noexcept;
-        inline
         void                                DeleteEntity            ( xecs::component::entity& Entity 
                                                                     ) noexcept;
         template
@@ -74,17 +53,6 @@ namespace xecs::game_mgr
                                             AddOrRemoveComponents   ( xecs::component::entity   Entity
                                                                     , T_FUNCTION&&              Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
-        inline
-        void                                DeleteGlobalEntity      ( std::uint32_t              GlobalIndex
-                                                                    , xecs::component::entity&   SwappedEntity 
-                                                                    ) noexcept;
-        inline
-        void                                DeleteGlobalEntity      ( std::uint32_t GlobalIndex
-                                                                    ) noexcept;
-        inline
-        void                                MovedGlobalEntity       ( std::uint32_t             PoolIndex
-                                                                    , xecs::component::entity&  SwappedEntity
-                                                                    ) noexcept;
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
@@ -92,7 +60,7 @@ namespace xecs::game_mgr
         ) __inline
         [[nodiscard]] bool                  findEntity              ( xecs::component::entity Entity
                                                                     , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
-                                                                    ) const noexcept;
+                                                                    ) noexcept;
         template
         < typename... T_COMPONENTS
         > [[nodiscard]] std::vector<archetype::instance*>
@@ -162,17 +130,14 @@ namespace xecs::game_mgr
         T_SYSTEM&                           getSystem               ( void
                                                                     ) noexcept;
 
-        using archetype_map = std::unordered_map<xecs::archetype::guid, xecs::archetype::instance* >;
+        // Given the sum of all { share component keys + may be the archetype guid for the scope }
+        using pool_map          = std::unordered_map<xecs::pool::type::guid, std::pair<xecs::archetype::instance*,xecs::pool::instance*>>;
 
-        events                                              m_Events            {};
         xecs::system::mgr                                   m_SystemMgr         {};
         xecs::event::mgr                                    m_EventMgr          {};
         xecs::component::mgr                                m_ComponentMgr      {};
-        archetype_map                                       m_ArchetypeMap      {};
-        std::vector<std::unique_ptr<archetype::instance>>   m_lArchetype        {};
-        std::vector<tools::bits>                            m_lArchetypeBits    {};
-        std::unique_ptr<entity_info[]>                      m_lEntities         = std::make_unique<entity_info[]>(xecs::settings::max_entities_v);
-        int                                                 m_EmptyHead         = 0;
+        xecs::archetype::mgr                                m_ArchetypeMgr      {*this};
+
         bool                                                m_isRunning         = false;
     };
 }

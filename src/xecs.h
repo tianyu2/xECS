@@ -35,6 +35,22 @@ namespace xecs::system
     struct instance;
 }
 
+namespace xecs::archetype
+{
+    struct instance;
+    struct mgr;
+    using guid = xcore::guid::unit<64, struct archetype_tag>;
+}
+
+namespace xecs::pool
+{
+    struct instance;
+    struct index
+    {
+        int     m_Value;
+    };
+}
+
 //--------------------------------------------------------------
 // FILES
 //--------------------------------------------------------------

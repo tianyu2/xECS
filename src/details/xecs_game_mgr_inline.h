@@ -4,17 +4,8 @@ namespace xecs::game_mgr
 
     instance::instance( void ) noexcept
     {
-        // Register the Entity
-        m_ComponentMgr.RegisterComponent<xecs::component::entity>();
-
         // Add the System Mgr to the On New Archetype Event
-        m_Events.m_OnNewArchetype.Register<&xecs::system::mgr::OnNewArchetype>(m_SystemMgr);
-
-        // Create a link list of empty entries
-        for( int i=0, end = xecs::settings::max_entities_v-2; i<end; ++i )
-        {
-            m_lEntities[i].m_PoolIndex = i+1;
-        }
+        m_ArchetypeMgr.m_Events.m_OnNewArchetype.Register<&xecs::system::mgr::OnNewArchetype>(m_SystemMgr);
     }
 
     //---------------------------------------------------------------------------
@@ -74,72 +65,14 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
-    xecs::component::entity instance::AllocNewEntity( int PoolIndex, xecs::archetype::instance& Archetype ) noexcept
-    {
-        assert(m_EmptyHead>=0);
-
-        auto  iEntityIndex  = m_EmptyHead;
-        auto& Entry         = m_lEntities[iEntityIndex];
-        m_EmptyHead = Entry.m_PoolIndex;
-
-        Entry.m_PoolIndex   = PoolIndex;
-        Entry.m_pArchetype  = &Archetype;
-        return
-        {
-            .m_GlobalIndex        = static_cast<std::uint32_t>(iEntityIndex)
-        ,   .m_Validation         = Entry.m_Validation
-        };
-    }
-
-    //---------------------------------------------------------------------------
-
-    const entity_info& instance::getEntityDetails( xecs::component::entity Entity ) const noexcept
-    {
-        auto& Entry = m_lEntities[Entity.m_GlobalIndex];
-        assert( Entry.m_Validation == Entity.m_Validation );
-        return Entry;
-    }
-
-    //---------------------------------------------------------------------------
-
     void instance::DeleteEntity( xecs::component::entity& Entity ) noexcept
     {
         assert(Entity.isZombie() == false);
-        auto& Info = getEntityDetails(Entity);
+        auto& Info = m_ComponentMgr.getEntityDetails(Entity);
         assert(Info.m_Validation == Entity.m_Validation);
         Info.m_pArchetype->DestroyEntity(Entity);
     }
 
-    //---------------------------------------------------------------------------
-
-    void instance::DeleteGlobalEntity( std::uint32_t GlobalIndex, xecs::component::entity& SwappedEntity ) noexcept
-    {
-        auto& Entry = m_lEntities[GlobalIndex];
-        m_lEntities[SwappedEntity.m_GlobalIndex].m_PoolIndex = Entry.m_PoolIndex;
-
-        Entry.m_Validation.m_Generation++;
-        Entry.m_Validation.m_bZombie = false;
-        Entry.m_PoolIndex            = m_EmptyHead;
-        m_EmptyHead = static_cast<int>(GlobalIndex);
-    }
-
-    //---------------------------------------------------------------------------
-
-    void instance::DeleteGlobalEntity(std::uint32_t GlobalIndex ) noexcept
-    {
-        auto& Entry = m_lEntities[GlobalIndex];
-        Entry.m_Validation.m_Generation++;
-        Entry.m_Validation.m_bZombie = false;
-        Entry.m_PoolIndex            = m_EmptyHead;
-        m_EmptyHead = static_cast<int>(GlobalIndex);
-    }
-
-    //---------------------------------------------------------------------------
-
-    void instance::MovedGlobalEntity(std::uint32_t PoolIndex, xecs::component::entity& SwappedEntity ) noexcept
-    {
-        m_lEntities[SwappedEntity.m_GlobalIndex].m_PoolIndex = PoolIndex;
-    }
 
     //---------------------------------------------------------------------------
 
@@ -147,12 +80,12 @@ namespace xecs::game_mgr
     std::vector<archetype::instance*> instance::Search( const xecs::query::instance& Query ) const noexcept
     {
         std::vector<archetype::instance*> ArchetypesFound;
-        for( auto& E : m_lArchetypeBits )
+        for( auto& E : m_ArchetypeMgr.m_lArchetypeBits )
         {
             if( Query.Compare(E) )
             {
-                const auto Index = static_cast<std::size_t>(&E - &m_lArchetypeBits[0]);
-                ArchetypesFound.push_back(m_lArchetype[Index].get());
+                const auto Index = static_cast<std::size_t>(&E - &m_ArchetypeMgr.m_lArchetypeBits[0]);
+                ArchetypesFound.push_back(m_ArchetypeMgr.m_lArchetype[Index].get());
             }
         }
 
@@ -176,24 +109,24 @@ namespace xecs::game_mgr
         assert( Query.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID) );
 
         // Return the archetype
-        if( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
+        if( auto I = m_ArchetypeMgr.m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMgr.m_ArchetypeMap.end() )
             return *I->second;
 
         //
         // Create Archetype...
         //
-        m_lArchetype.push_back      ( std::make_unique<archetype::instance>(*this) );
-        m_lArchetypeBits.push_back  ( Query );
+        m_ArchetypeMgr.m_lArchetype.push_back      ( std::make_shared<archetype::instance>(m_ArchetypeMgr) );
+        m_ArchetypeMgr.m_lArchetypeBits.push_back  ( Query );
 
-        auto& Archetype = *m_lArchetype.back();
+        auto& Archetype = *m_ArchetypeMgr.m_lArchetype.back();
         Archetype.Initialize(Types, Query);
 
-        m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
+        m_ArchetypeMgr.m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
 
         //
         // Notify anyone interested on the new Archetype
         //
-        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
+        m_ArchetypeMgr.m_Events.m_OnNewArchetype.NotifyAll(Archetype);
 
         return Archetype;
     }
@@ -202,7 +135,7 @@ namespace xecs::game_mgr
     inline
     archetype::instance* instance::findArchetype(xecs::archetype::guid ArchetypeGuid ) const noexcept
     {
-        if ( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
+        if ( auto I = m_ArchetypeMgr.m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMgr.m_ArchetypeMap.end() )
             return I->second;
         return nullptr;
     }
@@ -276,13 +209,25 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            auto&       Pool = pE->m_Pool;
-            auto        CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple> );
-            xecs::pool::access_guard Lk(Pool, pE->m_GameMgr);
-            for( int i=Pool.Size(); i; --i )
+            auto pFamily = &pE->m_DefaultPoolFamily;
+            int  iFamily = 0;
+
+            do
             {
-                archetype::details::CallFunction(Function, CachePointers);
-            }
+                for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
+                {
+                    auto        CachePointers = archetype::details::GetComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    xecs::pool::access_guard Lk( *pPool, pE->m_Mgr.m_GameMgr.m_ComponentMgr );
+                    for( int i = pPool->Size(); i; --i )
+                    {
+                        archetype::details::CallFunction(Function, CachePointers);
+                    }
+                }
+
+                if(iFamily == pE->m_VectorPool.size()) break;
+                pFamily = pE->m_VectorPool[iFamily++].get();
+
+            } while( true );
         }
     }
 
@@ -290,18 +235,18 @@ namespace xecs::game_mgr
 
     template< typename T_FUNCTION>
     requires( xcore::function::is_callable_v<T_FUNCTION> )
-    bool instance::findEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) const noexcept
+    bool instance::findEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
     {
         if( Entity.isZombie() ) return false;
-        auto& Entry = m_lEntities[Entity.m_GlobalIndex];
+        auto& Entry = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
         if( Entry.m_Validation == Entity.m_Validation )
         {
             if constexpr ( !std::is_same_v< T_FUNCTION, xecs::tools::empty_lambda> )
             {
-                xecs::pool::access_guard Lk(Entry.m_pArchetype->m_Pool, *this );
+                xecs::pool::access_guard Lk( *Entry.m_pPool, m_ComponentMgr );
                 [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
                 {
-                    Function( Entry.m_pArchetype->m_Pool.getComponent<std::remove_reference_t<T_COMPONENTS>>(Entry.m_PoolIndex) ...);
+                    Function(Entry.m_pPool->getComponent<std::remove_reference_t<T_COMPONENTS>>(Entry.m_PoolIndex) ...);
                 }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
             }
             return true;
@@ -324,7 +269,7 @@ namespace xecs::game_mgr
     ) noexcept
     {
         assert(Entity.isZombie() == false);
-        auto& Entry = getEntityDetails(Entity);
+        auto& Entry = m_ComponentMgr.getEntityDetails(Entity);
         auto  Bits  = Entry.m_pArchetype->m_ComponentBits;
         assert(Entry.m_Validation.m_bZombie == false);
 
@@ -340,13 +285,13 @@ namespace xecs::game_mgr
             assert(pE->m_BitID != 0);
             Bits.clearBit(pE->m_BitID);
         }
-        for( auto& E : m_lArchetypeBits )
+        for( auto& E : m_ArchetypeMgr.m_lArchetypeBits )
         {
             if( E.Equals(Bits) )
             {
-                const auto Index = static_cast<std::size_t>(&E - &m_lArchetypeBits[0]);
-                if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return m_lArchetype[Index]->MoveInEntity( Entity );
-                else                                                                  return m_lArchetype[Index]->MoveInEntity( Entity, Function );
+                const auto Index = static_cast<std::size_t>(&E - &m_ArchetypeMgr.m_lArchetypeBits[0]);
+                if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return m_ArchetypeMgr.m_lArchetype[Index]->MoveInEntity( Entity );
+                else                                                                  return m_ArchetypeMgr.m_lArchetype[Index]->MoveInEntity( Entity, Function );
             }
         }
 
@@ -354,7 +299,7 @@ namespace xecs::game_mgr
         int Count = 0;
 
         // Copy the existing ones
-        for( auto& pE : std::span{ Entry.m_pArchetype->m_InfoData.data(), Entry.m_pArchetype->m_nComponents } ) 
+        for( auto& pE : std::span{ Entry.m_pArchetype->m_InfoData.data(), (std::size_t)Entry.m_pArchetype->m_nDataComponents + (std::size_t)Entry.m_pArchetype->m_nShareComponents } )
             ComponentList[Count++] = pE;
 
         // Add
@@ -399,14 +344,14 @@ namespace xecs::game_mgr
         //
         // Create Archetype...
         //
-        m_lArchetype.push_back(std::make_unique<archetype::instance>(*this));
-        m_lArchetypeBits.push_back(Bits);
+        m_ArchetypeMgr.m_lArchetype.push_back(std::make_shared<archetype::instance>(m_ArchetypeMgr));
+        m_ArchetypeMgr.m_lArchetypeBits.push_back(Bits);
 
-        auto& Archetype = *m_lArchetype.back();
+        auto& Archetype = *m_ArchetypeMgr.m_lArchetype.back();
         Archetype.Initialize({ ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
 
         // Notify anyone intested
-        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
+        m_ArchetypeMgr.m_Events.m_OnNewArchetype.NotifyAll(Archetype);
 
         if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return Archetype.MoveInEntity(Entity);
         else                                                                  return Archetype.MoveInEntity(Entity, Function);

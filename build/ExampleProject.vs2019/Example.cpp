@@ -664,8 +664,10 @@ void InitializeGame( void ) noexcept
     //
     // Generate a few random ships
     //
+    static_assert( false == xcore::types::tuple_has_duplicates_v<std::tuple<position& , velocity& , timer& >>);
+
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >()
-        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer )
+        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer ) noexcept
         {
             Position.m_Value.m_X = std::rand() % s_Game.m_W;
             Position.m_Value.m_Y = std::rand() % s_Game.m_H;

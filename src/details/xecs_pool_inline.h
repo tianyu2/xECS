@@ -1,13 +1,30 @@
 namespace xecs::pool
 {
     //-------------------------------------------------------------------------------------
+    constexpr
+    family::guid family::ComputeGuid
+    ( const xecs::archetype::guid                           Guid
+    , std::span<const xecs::component::type::info* const>   Types
+    , std::span<const std::byte* const>                     Data 
+    ) noexcept
+    {
+        assert( Types.size() == Data.size() );
+        family::guid FinalGuid{ Guid.m_Value };
+        for( int i=0; i<Data.size(); i++ )
+        {
+            FinalGuid.m_Value += xecs::component::type::details::ComputeShareKey( Guid, *Types[i], Data[i] ).m_Value;
+        }
+        return FinalGuid;
+    }
+
+    //-------------------------------------------------------------------------------------
 
     instance::~instance(void) noexcept
     {
         if (m_pComponent[0])
         {
             Clear();
-            for (int i = 0; i < m_Infos.size(); ++i)
+            for (int i = 0, end = static_cast<int>(m_ComponentInfos.size()- m_ShareComponentCount); i < end; ++i)
             {
                 VirtualFree(m_pComponent[i], 0, MEM_RELEASE);
             }
@@ -25,15 +42,34 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
 
-    void instance::Initialize( std::span<const component::type::info* const > Span ) noexcept
+    void instance::Initialize
+    ( std::span<const component::type::info* const > Span
+    , std::span<const xecs::component::entity      > ShareComponents
+    ) noexcept
     {
-        m_Infos        = Span;
-        for( int i=0; i< m_Infos.size(); ++i )
+        m_ComponentInfos            = Span;
+        m_ShareComponentCount       = static_cast<std::uint8_t>(ShareComponents.size());
+
+        // Compute how many data components we are going to have
+        int EndDataIndex = static_cast<int>(m_ComponentInfos.size() - m_ShareComponentCount);
+
+        // There should be at least an entity data component
+        assert( EndDataIndex > 0);
+        assert( Span.size()  <= m_ComponentInfos.size() );
+
+        // Reserve virtual memory for our data components
+        for( int i=0; i<EndDataIndex; ++i )
         {
-            assert(m_Infos[i]->m_Size <= xecs::settings::virtual_page_size_v);
-            auto nPages     = getPageFromIndex( *m_Infos[i], xecs::settings::max_entity_count_per_pool_v ) + 1;
+            assert(m_ComponentInfos[i]->m_Size <= xecs::settings::virtual_page_size_v);
+            auto nPages     = getPageFromIndex( *m_ComponentInfos[i], xecs::settings::max_entity_count_per_pool_v ) + 1;
             m_pComponent[i] = reinterpret_cast<std::byte*>(VirtualAlloc(nullptr, nPages * xecs::settings::virtual_page_size_v, MEM_RESERVE, PAGE_NOACCESS));
             assert(m_pComponent[i]);
+        }
+
+        // Store where the share component entity as a pointer since both are 64bits
+        for( auto& E : ShareComponents )
+        {
+            m_pComponent[EndDataIndex++] = reinterpret_cast<std::byte*>(E.m_Value);
         }
     }
 
@@ -43,19 +79,26 @@ namespace xecs::pool
     {
         while(m_Size)
         {
-            Free( m_Size-1, true );
+            Free( {m_Size-1}, true );
         }
     }
 
     //-------------------------------------------------------------------------------------
+    constexpr
+    int instance::getFreeSpace( void ) const noexcept
+    {
+        return  xecs::settings::max_entity_count_per_pool_v - m_Size;
+    }
 
-    int instance::Append( int Count ) noexcept
+    //-------------------------------------------------------------------------------------
+
+    index instance::Append( int Count ) noexcept
     {
         assert( (Count + m_Size) <= xecs::settings::max_entity_count_per_pool_v );
 
-        for( int i = 0; i < m_Infos.size(); ++i )
+        for( int i = 0, end = static_cast<int>(m_ComponentInfos.size()- m_ShareComponentCount); i < end; ++i )
         {
-            const auto&   MyInfo  = *m_Infos[i];
+            const auto&   MyInfo  = *m_ComponentInfos[i];
             const auto    NexPage = getPageFromIndex(MyInfo, m_Size+Count);
 
             // Create pages when needed 
@@ -80,22 +123,22 @@ namespace xecs::pool
 
         auto Index = m_Size;
         m_Size += Count;
-        return Index;
+        return { Index };
     }
 
     //-------------------------------------------------------------------------------------
 
-    void instance::Free( int Index, bool bCallDestructors ) noexcept
+    void instance::Free( index Index, bool bCallDestructors ) noexcept
     {
-        assert(Index < m_Size );
-        assert(Index>=0);
+        assert(Index.m_Value < m_Size );
+        assert(Index.m_Value>=0);
         
         m_Size--;
-        if( Index == m_Size )
+        if( Index.m_Value == m_Size )
         {
-            for (int i = 0; i < m_Infos.size(); ++i)
+            for (int i = 0, end = static_cast<int>(m_ComponentInfos.size() - m_ShareComponentCount); i < end; ++i)
             {
-                const auto& MyInfo = *m_Infos[i];
+                const auto& MyInfo = *m_ComponentInfos[i];
                 auto        pData  = m_pComponent[i];
                 if (MyInfo.m_pDestructFn && bCallDestructors) MyInfo.m_pDestructFn( &pData[m_Size * MyInfo.m_Size] );
 
@@ -111,18 +154,18 @@ namespace xecs::pool
         }
         else
         {
-            for (int i = 0; i < m_Infos.size(); ++i)
+            for (int i = 0, end = static_cast<int>(m_ComponentInfos.size() - m_ShareComponentCount); i < end; ++i)
             {
-                const auto& MyInfo = *m_Infos[i];
+                const auto& MyInfo = *m_ComponentInfos[i];
                 auto        pData  = m_pComponent[i];
 
                 if ( MyInfo.m_pMoveFn )
                 {
-                    MyInfo.m_pMoveFn( &pData[Index * MyInfo.m_Size], &pData[m_Size * MyInfo.m_Size] );
+                    MyInfo.m_pMoveFn( &pData[Index.m_Value * MyInfo.m_Size], &pData[m_Size * MyInfo.m_Size] );
                 }
                 else
                 {
-                    memcpy(&pData[Index * MyInfo.m_Size], &pData[m_Size * MyInfo.m_Size], MyInfo.m_Size );
+                    memcpy(&pData[Index.m_Value * MyInfo.m_Size], &pData[m_Size * MyInfo.m_Size], MyInfo.m_Size );
                 }
 
                 // Free page if we cross over
@@ -149,13 +192,13 @@ namespace xecs::pool
     constexpr
     int instance::findIndexComponentFromGUIDInSequence
     (xecs::component::type::guid  SearchGuid
-    , int&                              Sequence 
+    , int&                        Sequence 
     ) const noexcept
     {
         const auto Backup = Sequence;
-        for( const auto end = static_cast<const int>(m_Infos.size()); Sequence < end; ++Sequence)
+        for( const auto end = static_cast<const int>(m_ComponentInfos.size()); Sequence < end; ++Sequence)
         {
-            const auto InfoGuid = m_Infos[Sequence]->m_Guid;
+            const auto InfoGuid = m_ComponentInfos[Sequence]->m_Guid;
             if (InfoGuid == SearchGuid) return Sequence++;
             [[unlikely]] if ( InfoGuid.m_Value > SearchGuid.m_Value) break;
         }
@@ -167,9 +210,9 @@ namespace xecs::pool
     constexpr
     int instance::findIndexComponentFromGUID( xecs::component::type::guid SearchGuid) const noexcept
     {
-        for( int i=0, end = static_cast<int>(m_Infos.size()); i<end; ++i )
+        for( int i=0, end = static_cast<int>(m_ComponentInfos.size()); i<end; ++i )
         {
-            const auto InfoGuid = m_Infos[i]->m_Guid;
+            const auto InfoGuid = m_ComponentInfos[i]->m_Guid;
             if(InfoGuid == SearchGuid) return i;
             [[unlikely]] if(InfoGuid.m_Value > SearchGuid.m_Value) return -1;
         }
@@ -183,13 +226,13 @@ namespace xecs::pool
     > requires
     ( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>>
     )
-    T_COMPONENT& instance::getComponent( const std::uint32_t EntityIndex ) const noexcept
+    T_COMPONENT& instance::getComponent( const index EntityIndex ) const noexcept
     {
         if constexpr( std::is_same_v<xecs::component::entity, T_COMPONENT>)
         {
             return *reinterpret_cast<T_COMPONENT*>
             (
-                &m_pComponent[0][ EntityIndex * sizeof(T_COMPONENT) ]
+                &m_pComponent[0][ EntityIndex.m_Value * sizeof(T_COMPONENT) ]
             );
         }
         else
@@ -197,7 +240,7 @@ namespace xecs::pool
             const auto iComponent = findIndexComponentFromGUID( xecs::component::type::info_v<T_COMPONENT>.m_Guid );
             return *reinterpret_cast<T_COMPONENT*>
             (
-                &m_pComponent[iComponent][ EntityIndex * sizeof(T_COMPONENT) ]
+                &m_pComponent[iComponent][ EntityIndex.m_Value * sizeof(T_COMPONENT) ]
             );
         }
     }
@@ -210,8 +253,8 @@ namespace xecs::pool
     ( std::is_same_v<T_COMPONENT, std::decay_t<T_COMPONENT>>
     )
     T_COMPONENT& instance::getComponentInSequence
-    ( std::uint32_t EntityIndex
-    , int&          Sequence
+    ( index     EntityIndex
+    , int&      Sequence
     ) const noexcept
     {
         if constexpr (std::is_same_v<xecs::component::entity, T_COMPONENT>)
@@ -220,7 +263,7 @@ namespace xecs::pool
             Sequence = 1;
             return *reinterpret_cast<T_COMPONENT*>
             (
-                &m_pComponent[0][EntityIndex * sizeof(T_COMPONENT)]
+                &m_pComponent[0][EntityIndex.m_Value * sizeof(T_COMPONENT)]
             );
         }
         else
@@ -228,33 +271,33 @@ namespace xecs::pool
             const auto iComponent = findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T_COMPONENT>.m_Guid, Sequence );
             return *reinterpret_cast<T_COMPONENT*>
             (
-                &m_pComponent[iComponent][ EntityIndex * sizeof(T_COMPONENT) ]
+                &m_pComponent[iComponent][ EntityIndex.m_Value * sizeof(T_COMPONENT) ]
             );
         }
     }
 
     //-------------------------------------------------------------------------------------
 
-    void instance::UpdateStructuralChanges( xecs::game_mgr::instance& GameMgr ) noexcept
+    void instance::UpdateStructuralChanges( xecs::component::mgr& ComponentMgr ) noexcept
     {
         //
         // Delete the regular entries
         //
         while( m_DeleteGlobalIndex != invalid_delete_global_index_v )
         {
-            auto&       Entry                   = GameMgr.m_lEntities[m_DeleteGlobalIndex];
-            auto&       PoolEntity              = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity)*Entry.m_PoolIndex]);
+            auto&       Entry                   = ComponentMgr.m_lEntities[m_DeleteGlobalIndex];
+            auto&       PoolEntity              = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][ sizeof(xecs::component::entity) * Entry.m_PoolIndex.m_Value ]);
             const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
             assert(PoolEntity.m_Validation.m_bZombie);
 
             Free( Entry.m_PoolIndex, true );
-            if (Entry.m_PoolIndex == m_Size )
+            if ( Entry.m_PoolIndex.m_Value == m_Size )
             {
-                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
+                ComponentMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
             }
             else
             {
-                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
+                ComponentMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
             }
 
             m_DeleteGlobalIndex = NextDeleteGlobalIndex;
@@ -267,10 +310,10 @@ namespace xecs::pool
         {
             auto&       PoolEntity            = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_DeleteMoveIndex]);
             const auto  NextDeleteGlobalIndex = PoolEntity.m_Validation.m_Generation;
-            Free( m_DeleteMoveIndex, false );
+            Free( {(int)m_DeleteMoveIndex}, false );
             if (m_DeleteMoveIndex != m_Size)
             {
-                GameMgr.MovedGlobalEntity( m_DeleteMoveIndex, PoolEntity );
+                ComponentMgr.MovedGlobalEntity( {(int)m_DeleteMoveIndex}, PoolEntity );
             }
 
             m_DeleteMoveIndex = NextDeleteGlobalIndex;
@@ -282,7 +325,7 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
     inline
-    void instance::Delete( int Index ) noexcept
+    void instance::Delete( index Index ) noexcept
     {
         auto& Entity = getComponent<xecs::component::entity>(Index);
         assert(Entity.m_Validation.m_bZombie);
@@ -292,59 +335,62 @@ namespace xecs::pool
 
     //--------------------------------------------------------------------------------------------
     constexpr
-    bool instance::isLastEntry( int Index ) const noexcept
+    bool instance::isLastEntry( index Index ) const noexcept
     {
-        return Index == m_Size - 1;
+        return Index.m_Value == m_Size - 1;
     }
 
     //--------------------------------------------------------------------------------------------
     inline
-    int instance::MoveInFromPool( int IndexToMove, pool::instance& FromPool ) noexcept
+    index instance::MoveInFromPool( index IndexToMove, pool::instance& FromPool ) noexcept
     {
-        const int iNewIndex = Append(1);
+        const auto iNewIndex = Append(1);
 
-        int iPoolFrom = 0;
-        int iPoolTo   = 0;
+        int         iPoolFrom       = 0;
+        int         iPoolTo         = 0;
+        const int   PoolFromCount   = static_cast<int>(FromPool.m_ComponentInfos.size()  - FromPool.m_ShareComponentCount);
+        const int   PoolToCount     = static_cast<int>(m_ComponentInfos.size()           - m_ShareComponentCount);
         while( true )
         {
-            if( FromPool.m_Infos[iPoolFrom] == m_Infos[iPoolTo] )
+            if( FromPool.m_ComponentInfos[iPoolFrom] == m_ComponentInfos[iPoolTo] )
             {
-                auto& Info = *FromPool.m_Infos[iPoolFrom];
+                auto& Info = *FromPool.m_ComponentInfos[iPoolFrom];
                 if( Info.m_pMoveFn )
                 {
                     Info.m_pMoveFn
                     (
-                        &m_pComponent[iPoolTo][Info.m_Size* iNewIndex]
-                    ,   &FromPool.m_pComponent[iPoolFrom][Info.m_Size* IndexToMove]
+                        &m_pComponent[iPoolTo][ Info.m_Size * iNewIndex.m_Value ]
+                    ,   &FromPool.m_pComponent[iPoolFrom][ Info.m_Size * IndexToMove.m_Value ]
                     );
                 }
                 else
                 {
                     std::memcpy
                     ( 
-                        &m_pComponent[iPoolTo][Info.m_Size * iNewIndex]
-                    ,   &FromPool.m_pComponent[iPoolFrom][Info.m_Size * IndexToMove]
+                        &m_pComponent[iPoolTo][ Info.m_Size * iNewIndex.m_Value ]
+                    ,   &FromPool.m_pComponent[iPoolFrom][ Info.m_Size * IndexToMove.m_Value ]
                     ,   Info.m_Size
                     );
                 }
                 iPoolFrom++;
                 iPoolTo++;
-                if (iPoolFrom >= FromPool.m_Infos.size() || iPoolTo >= m_Infos.size())
+                if ( iPoolFrom >= PoolFromCount || iPoolTo >= PoolToCount )
                     break;
             }
-            else if(FromPool.m_Infos[iPoolFrom]->m_Guid.m_Value < m_Infos[iPoolTo]->m_Guid.m_Value )
+            else if(FromPool.m_ComponentInfos[iPoolFrom]->m_Guid.m_Value < m_ComponentInfos[iPoolTo]->m_Guid.m_Value )
             {
-                auto& Info = *FromPool.m_Infos[iPoolFrom];
-                if( Info.m_pDestructFn ) Info.m_pDestructFn( &FromPool.m_pComponent[iPoolFrom][Info.m_Size * IndexToMove] );
+                auto& Info = *FromPool.m_ComponentInfos[iPoolFrom];
+                if( Info.m_pDestructFn ) Info.m_pDestructFn( &FromPool.m_pComponent[iPoolFrom][ Info.m_Size * IndexToMove.m_Value ] );
+
                 iPoolFrom++;
-                if (iPoolFrom >= FromPool.m_Infos.size())
+                if( iPoolFrom >= PoolFromCount )
                     break;
             }
             else
             {
                 // This is already constructed so there is nothing for me to do
                 iPoolTo++;
-                if (iPoolTo >= m_Infos.size())
+                if( iPoolTo >= PoolToCount )
                     break;
             }
         }
@@ -352,12 +398,11 @@ namespace xecs::pool
         //
         // Destruct any pending component
         //
-        while (iPoolFrom < FromPool.m_Infos.size())
+        while (iPoolFrom < PoolFromCount)
         {
-            auto& Info = *FromPool.m_Infos[iPoolFrom];
-            if (Info.m_pDestructFn) Info.m_pDestructFn(&FromPool.m_pComponent[iPoolFrom][Info.m_Size * IndexToMove]);
+            auto& Info = *FromPool.m_ComponentInfos[iPoolFrom];
+            if (Info.m_pDestructFn) Info.m_pDestructFn(&FromPool.m_pComponent[iPoolFrom][ Info.m_Size * IndexToMove.m_Value ]);
             iPoolFrom++;
-            if (iPoolFrom >= FromPool.m_Infos.size()) break;
         }
 
         //
@@ -367,7 +412,7 @@ namespace xecs::pool
             auto& Entity = FromPool.getComponent<xecs::component::entity>(IndexToMove);
             Entity.m_Validation.m_bZombie    = true;
             Entity.m_Validation.m_Generation = FromPool.m_DeleteMoveIndex;
-            FromPool.m_DeleteMoveIndex       = IndexToMove;
+            FromPool.m_DeleteMoveIndex       = IndexToMove.m_Value;
         }
 
         return iNewIndex;
