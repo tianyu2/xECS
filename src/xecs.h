@@ -48,6 +48,7 @@ namespace xecs::pool
     struct index
     {
         int     m_Value;
+        friend auto operator <=> (const index&, const index&) = default;
     };
 }
 
