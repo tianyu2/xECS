@@ -13,7 +13,7 @@ namespace xecs::archetype
         //-------------------------------------------------------------------------------------------------
 
         template< typename... T_FUNCTION_ARGS >
-        requires( true||((std::is_reference_v<T_FUNCTION_ARGS>) && ... ) )
+        requires( ((std::is_reference_v<T_FUNCTION_ARGS>) && ... ) )
         constexpr __inline
         auto GetComponentPointerArray
         ( const xecs::pool::instance&             Pool
@@ -43,11 +43,11 @@ namespace xecs::archetype
         //-------------------------------------------------------------------------------------------------
 
         template< typename... T_FUNCTION_ARGS >
-        requires( !((std::is_reference_v<T_FUNCTION_ARGS>) && ...) )
+        requires( ((std::is_pointer_v<T_FUNCTION_ARGS>) || ...) )
         constexpr __inline
         auto GetComponentPointerArray
         ( const xecs::pool::instance&             Pool
-        , const int                               StartingPoolIndex
+        , const pool::index                       StartingPoolIndex
         , std::tuple<T_FUNCTION_ARGS... >* 
         ) noexcept
         {
@@ -64,9 +64,9 @@ namespace xecs::archetype
                 {
                     const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T>.m_Guid, Sequence);
                     if constexpr (std::is_pointer_v<T>)
-                        return (I < 0) ? nullptr : &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex];
+                        return (I < 0) ? nullptr : &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex.m_Value];
                     else
-                        return &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex];
+                        return &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex.m_Value];
                 }(xcore::types::make_null_tuple_v<T_SORTED_COMPONENT>))
                 , ... );
 

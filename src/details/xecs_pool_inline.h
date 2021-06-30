@@ -99,11 +99,12 @@ namespace xecs::pool
         for( int i = 0, end = static_cast<int>(m_ComponentInfos.size()- m_ShareComponentCount); i < end; ++i )
         {
             const auto&   MyInfo  = *m_ComponentInfos[i];
-            const auto    NexPage = getPageFromIndex(MyInfo, m_Size+Count);
+            auto          NexPage = getPageFromIndex(MyInfo, m_Size+Count);
 
             // Create pages when needed 
-            if( auto Cur = getPageFromIndex(MyInfo, m_Size); Cur != NexPage )
+            if( auto Cur = getPageFromIndex(MyInfo, m_Size); m_Size == 0 || Cur != NexPage )
             {
+                if( m_Size == 0 ) Cur = -1;
                 auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * (Cur+1);
                 auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, (NexPage - Cur) * xecs::settings::virtual_page_size_v, MEM_COMMIT, PAGE_READWRITE));
                 assert(p == pNewPagePtr);
