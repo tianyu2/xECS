@@ -62,6 +62,7 @@ namespace xecs::component
                                      <
                                         ( std::is_same_v< const data, decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= data::max_size_v )
                                      || ( std::is_same_v< const tag,  decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= tag::max_size_v  )
+                                     || ( std::is_same_v< const share,decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= share::max_size_v  )
                                      , std::true_type
                                      , std::false_type
                                      >;
@@ -83,18 +84,18 @@ namespace xecs::component
             using move_fn           = void(std::byte* Dst, std::byte* Src ) noexcept;
             using compute_key_fn    = share::compute_key_fn;
 
-            type::guid              m_Guid;             // Unique Identifier for the component type
-            mutable std::uint16_t   m_BitID;            // Which bit was allocated for this type at run time
-            std::uint16_t           m_Size;             // Size of the component in bytes
-            type::id                m_TypeID;           // Simple enumeration that tells what type of component is this
-            bool                    m_bGlobalScoped:1   // If the component is a share, it indicates if it should be factor to a globally scope or to an archetype scope
-            ,                       m_bKeyCanFilter:1;  // If the component is a share, it indicates if the query can filter by its key
-            construct_fn*           m_pConstructFn;     // Constructor function pointer if required
-            destruct_fn*            m_pDestructFn;      // Destructor function pointer if required
-            move_fn*                m_pMoveFn;          // Move function pointer if required
-            compute_key_fn*         m_pComputeKeyFn;    // Computes the key from a share component
-            type::share::key        m_DefaultShareKey;  // Default value for this share component
-            const char*             m_pName;            // Friendly Human readable string name for the component type
+            type::guid                  m_Guid;             // Unique Identifier for the component type
+            mutable std::uint16_t       m_BitID;            // Which bit was allocated for this type at run time
+            std::uint16_t               m_Size;             // Size of the component in bytes
+            type::id                    m_TypeID;           // Simple enumeration that tells what type of component is this
+            bool                        m_bGlobalScoped:1   // If the component is a share, it indicates if it should be factor to a globally scope or to an archetype scope
+            ,                           m_bKeyCanFilter:1;  // If the component is a share, it indicates if the query can filter by its key
+            construct_fn*               m_pConstructFn;     // Constructor function pointer if required
+            destruct_fn*                m_pDestructFn;      // Destructor function pointer if required
+            move_fn*                    m_pMoveFn;          // Move function pointer if required
+            compute_key_fn*             m_pComputeKeyFn;    // Computes the key from a share component
+            mutable type::share::key    m_DefaultShareKey;  // Default value for this share component
+            const char*                 m_pName;            // Friendly Human readable string name for the component type
         };
 
         namespace details

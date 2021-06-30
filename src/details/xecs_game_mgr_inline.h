@@ -119,7 +119,7 @@ namespace xecs::game_mgr
         m_ArchetypeMgr.m_lArchetypeBits.push_back  ( Query );
 
         auto& Archetype = *m_ArchetypeMgr.m_lArchetype.back();
-        Archetype.Initialize(Types, Query);
+        Archetype.Initialize(Types, Query, false);
 
         m_ArchetypeMgr.m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
 
@@ -341,7 +341,7 @@ namespace xecs::game_mgr
         m_ArchetypeMgr.m_lArchetypeBits.push_back(Bits);
 
         auto& Archetype = *m_ArchetypeMgr.m_lArchetype.back();
-        Archetype.Initialize({ ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
+        Archetype.Initialize({ ComponentList.data(), static_cast<std::size_t>(Count) }, Bits, false );
 
         // Notify anyone intested
         m_ArchetypeMgr.m_Events.m_OnNewArchetype.NotifyAll(Archetype);

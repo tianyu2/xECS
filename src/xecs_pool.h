@@ -39,6 +39,7 @@ namespace xecs::pool
         constexpr
         int             Size                                ( void 
                                                             ) const noexcept;
+/*
         constexpr
         int             findIndexComponentFromGUID          ( xecs::component::type::guid Guid
                                                             ) const noexcept;
@@ -46,6 +47,15 @@ namespace xecs::pool
         int             findIndexComponentFromGUIDInSequence( xecs::component::type::guid Guid
                                                             , int&                        Sequence 
                                                             ) const noexcept;
+*/
+        constexpr
+        int             findIndexComponentFromInfo          ( const xecs::component::type::info&
+                                                            ) const noexcept;
+        constexpr
+        int             findIndexComponentFromInfoInSequence( const xecs::component::type::info&
+                                                            , int&                        Sequence 
+                                                            ) const noexcept;
+
         inline
         void            UpdateStructuralChanges             ( xecs::component::mgr& ComponentMgr
                                                             ) noexcept;

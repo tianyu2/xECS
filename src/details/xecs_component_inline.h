@@ -42,7 +42,7 @@ namespace xecs::component
                                             if constexpr (T_COMPONENT::typedef_v.id_v != type::id::SHARE) return nullptr;
                                             else if constexpr(T_COMPONENT::typedef_v.m_ComputeKeyFn)
                                             {
-                                                return [](std::byte* p) constexpr noexcept
+                                                return [](const std::byte* p) constexpr noexcept -> type::share::key
                                                 {
                                                     constexpr auto Guid = std::is_same_v<xecs::component::entity, T_COMPONENT>
                                                         ? type::guid{ nullptr }
@@ -54,31 +54,11 @@ namespace xecs::component
                                                                 + Guid.m_Value };
                                                 };
                                             }
-                                            else return [](std::byte* p) constexpr noexcept -> type::share::key
+                                            else return [](const std::byte* p) constexpr noexcept -> type::share::key
                                             {
                                                 constexpr auto Guid = type::guid{ __FUNCSIG__ };
                                                 return { xcore::crc<64>{}.FromBytes( {p,sizeof(T_COMPONENT)}, Guid.m_Value ).m_Value };
                                             };
-                                      }()
-            ,   .m_DefaultShareKey  = []() consteval noexcept->type::share::key
-                                      {
-                                            if constexpr (T_COMPONENT::typedef_v.id_v != type::id::SHARE) return {0};
-                                            else if constexpr(T_COMPONENT::typedef_v.m_ComputeKeyFn)
-                                            {
-                                                constexpr auto Guid = std::is_same_v<xecs::component::entity, T_COMPONENT>
-                                                    ? type::guid{ nullptr }
-                                                    : T_COMPONENT::typedef_v.m_Guid.m_Value
-                                                    ? T_COMPONENT::typedef_v.m_Guid
-                                                    : type::guid{ __FUNCSIG__ };
-                                                T_COMPONENT X;
-                                                return { T_COMPONENT::typedef_v.m_ComputeKeyFn(&X).m_Value + Guid.m_Value };
-                                            }
-                                            else 
-                                            {
-                                                constexpr auto Guid = type::guid{ __FUNCSIG__ };
-                                                T_COMPONENT X;
-                                                return { xcore::crc<64>{}.FromBytes( {&X,sizeof(X)}, Guid.m_Value ).m_Value };
-                                            }
                                       }()
             ,   .m_pName            = T_COMPONENT::typedef_v.m_pName
                                         ? T_COMPONENT::typedef_v.m_pName
@@ -113,8 +93,11 @@ namespace xecs::component
         constexpr __inline
         bool CompareTypeInfos( const xecs::component::type::info* pA, const xecs::component::type::info* pB ) noexcept
         {
-            if ((int)pA->m_TypeID < (int)pB->m_TypeID) return true;
-            return pA->m_Guid < pB->m_Guid;
+            if ((int)pA->m_TypeID == (int)pB->m_TypeID)
+            {
+                return pA->m_Guid < pB->m_Guid;
+            }
+            return (int)pA->m_TypeID < (int)pB->m_TypeID;
         }
 
         //------------------------------------------------------------------------------------------------------
@@ -156,6 +139,7 @@ namespace xecs::component
     {
         // Register the Entity
         RegisterComponent<xecs::component::entity>();
+        RegisterComponent<xecs::component::ref_count>();
 
         // Create a link list of empty entries
         for (int i = 0, end = xecs::settings::max_entities_v - 2; i < end; ++i)
@@ -171,7 +155,15 @@ namespace xecs::component
     void mgr::RegisterComponent(void) noexcept
     {
         if (component::type::info_v<T_COMPONENT>.m_BitID == type::info::invalid_bit_id_v)
+        {
             component::type::info_v<T_COMPONENT>.m_BitID = m_UniqueID++;
+
+            if constexpr (component::type::info_v<T_COMPONENT>.m_TypeID == xecs::component::type::id::SHARE)
+            {
+                T_COMPONENT X{};
+                component::type::info_v<T_COMPONENT>.m_DefaultShareKey = component::type::info_v<T_COMPONENT>.m_pComputeKeyFn(reinterpret_cast<const std::byte*>(&X));
+            }
+        }
     }
 
     //---------------------------------------------------------------------------

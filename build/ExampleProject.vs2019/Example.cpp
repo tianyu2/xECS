@@ -63,144 +63,40 @@ struct bullet
     xecs::component::entity m_ShipOwner;
 };
 
+struct grid_cell
+{
+    constexpr static auto typedef_v = xecs::component::type::share
+    {
+        .m_pName = "Grid Cell"
+    };
+    int m_X;
+    int m_Y;
+};
+
 using bullet_tuple = std::tuple<position, velocity, timer, bullet>;
 
 //---------------------------------------------------------------------------------------
 // TOOLS
 //---------------------------------------------------------------------------------------
 
-struct grid
+namespace grid
 {
-    struct info
-    {
-        xecs::component::entity m_Entity;
-        xcore::vector2          m_Pos;
-        bool                    m_isBullet;
-    };
+    constexpr static int cell_width_v               = 30;
+    constexpr static int cell_height_v              = 30;
+    constexpr static int max_resolution_width_v     = 1280;
+    constexpr static int max_resolution_height_v    = 1024;
+    constexpr static int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
+    constexpr static int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
 
-    struct cell
-    {
-        std::vector<info> m_EntityList;
-    };
-
-    constexpr static int cell_width_v  = 30;
-    constexpr static int cell_height_v = 30;
-
-    void Initialize()
-    {
-        m_CellXCount = s_Game.m_W / cell_width_v  + 1;
-        m_CellYCount = s_Game.m_H / cell_height_v + 1;
-        m_CellCount  = m_CellXCount * m_CellYCount;
-        m_Cells = std::make_unique<cell[]>(m_CellCount);
-    }
-
-    void Clear()
-    {
-        for (auto& E : std::span{ m_Cells.get(), (std::size_t)m_CellCount }) 
-            E.m_EntityList.clear();
-    }
-
-    std::tuple<int,int> ComputeFromWorldToGrid( xcore::vector2 Position ) noexcept
+    constexpr
+    grid_cell ComputeGridCellFromWorldPosition( xcore::vector2 Position) noexcept
     {
         return
-        { static_cast<int>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  (float)m_CellXCount-1)))
-        , static_cast<int>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, (float)m_CellYCount-1)))
+        { static_cast<int>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  (float)cell_x_count - 1)))
+        , static_cast<int>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, (float)cell_y_count - 1)))
         };
     }
-
-    void Insert( xecs::component::entity Entity, xcore::vector2 Position, bool isBullet ) noexcept
-    {
-        const auto[X,Y] = ComputeFromWorldToGrid(Position);
-        const int Index = X + Y * m_CellXCount;
-        assert(Index>=0);
-        assert(Index < m_CellCount );
-        assert(Entity.isZombie() == false);
-        m_Cells[Index].m_EntityList.push_back( info
-        {
-            .m_Entity   = Entity
-        ,   .m_Pos      = Position
-        ,   .m_isBullet = isBullet
-        });
-    }
-
-    std::tuple<int,int> findEntity(xecs::component::entity Entity, xcore::vector2 Position )
-    {
-        const auto [X, Y] = ComputeFromWorldToGrid(Position);
-        const int Index = X + Y * m_CellXCount;
-        assert(Index >= 0);
-        assert(Index < m_CellCount);
-        auto& Cell = m_Cells[Index].m_EntityList;
-        for (int i = 0; i < Cell.size(); ++i)
-        {
-            auto& Entry = Cell[i];
-            if (Entry.m_Entity.m_GlobalIndex == Entity.m_GlobalIndex)
-            {
-                return {Index, i};
-            }
-        }
-        return { Index,-1};
-    }
-
-    void RemoveEntity( xecs::component::entity Entity, xcore::vector2 Position )
-    {
-        auto [Index,i] = findEntity(Entity, Position);
-        assert(i>=0);
-        auto& Cell = m_Cells[Index].m_EntityList;
-        Cell[i] = Cell.back();
-        Cell.pop_back();
-    }
-
-    void DrawGrid()
-    {
-        glBegin(GL_LINES);
-        glColor3f(0.5, 0.5, 0.5);
-
-        for(int y = 0; y<=m_CellYCount; ++y  )
-        {
-            glVertex2i( 0, y* cell_height_v);
-            glVertex2i(m_CellXCount* cell_width_v, y* cell_height_v);
-        }
-
-        for (int x = 0; x <= m_CellXCount; x ++ )
-        {
-            glVertex2i(x* cell_width_v, 0);
-            glVertex2i(x* cell_width_v, m_CellYCount * cell_height_v);
-        }
-
-        glEnd();
-    }
-
-    template<typename T_FUNCTION>
-    void Search( xcore::vector2 Position, T_FUNCTION&& Function ) noexcept
-    {
-        const auto [X, Y] = ComputeFromWorldToGrid(Position);
-        for (int y = std::max(0, Y - 1), endY = std::min(Y + 1,  m_CellYCount); y < endY; ++y)
-            for (int x = std::max(0,X-1), endX = std::min(X + 1, m_CellXCount); x < endX; ++x)
-            {
-                int Index  = x + y * m_CellXCount;
-                assert(Index< m_CellCount);
-                assert(Index>=0);
-                auto& Cell = m_Cells[Index].m_EntityList;
-                for( int i=0; i< Cell.size(); ++i)
-                {
-                    auto& Entry = Cell[i];
-                    bool  Break = Function(Entry);
-                    if( Entry.m_Entity.isZombie() )
-                    {
-                        Entry = Cell.back();
-                        Cell.pop_back();
-                        --i;
-                    }
-                    if( Break ) return;
-                }
-            }
-    }
-
-    std::unique_ptr<cell[]> m_Cells{};
-    int                     m_CellXCount;
-    int                     m_CellYCount;
-    int                     m_CellCount;
-};
+}
 
 //---------------------------------------------------------------------------------------
 // SYSTEMS
@@ -212,19 +108,6 @@ struct update_movement : xecs::system::instance
     {
         .m_pName = "update_movement"
     };
-
-    grid            m_Grid;
-
-    void OnGameStart()
-    {
-        m_Grid.Initialize();
-    }
-
-    void OnFrameStart()
-    {
-        m_Grid.Clear();
-        m_Grid.DrawGrid();
-    }
 
     void operator()( entity* pEntity, position& Position, velocity& Velocity, bullet* pBullet ) noexcept
     {
@@ -252,10 +135,30 @@ struct update_movement : xecs::system::instance
             Position.m_Value.m_Y = s_Game.m_H - 1;
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
-
-        m_Grid.Insert( *pEntity, Position.m_Value, !!pBullet );
     }
 };
+
+//---------------------------------------------------------------------------------------
+/*
+struct on_create_objects_add_share : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::notify_create
+    {
+        .m_pName = "on_create_objects_add_share"
+    };
+
+    using query = std::tuple
+    <
+        xecs::query::must<position>
+    ,   xecs::query::none_of<grid_cell>
+    >;
+
+    void operator()( entity& Entity, position& Position )
+    {
+        m_GameMgr.AddOrRemoveComponents<std::tuple<grid_cell>,std::tuple<>>( Entity, grid::ComputeGridCellFromWorldPosition(Position.m_Value) );
+    }
+};
+*/
 
 //---------------------------------------------------------------------------------------
 
@@ -285,19 +188,13 @@ struct bullet_logic : xecs::system::instance
         .m_pName = "bullet_logic"
     };
 
-    grid* m_pGrid{};
-
-    void OnGameStart()
-    {
-        m_pGrid = &m_GameMgr.getSystem<update_movement>().m_Grid;
-    }
-
     void operator()( entity& Entity, position& Position, bullet& Bullet ) const noexcept
     {
         // If I am dead because some other bullet killed me then there is nothing for me to do...
         if (Entity.isZombie()) return;
 
         // Check for collisions
+        /*
         m_pGrid->Search( Position.m_Value, [&]( auto& CellEntry ) -> bool
         {
             assert(CellEntry.m_Entity.isZombie() == false );
@@ -321,6 +218,7 @@ struct bullet_logic : xecs::system::instance
         });
 
         if(Entity.isZombie()) m_pGrid->RemoveEntity(Entity, Position.m_Value);
+        */
     }
 };
 
@@ -353,12 +251,10 @@ struct space_ship_logic : xecs::system::instance
         .m_pName = "space_ship_logic"
     };
 
-    grid*                       m_pGrid             {};
     xecs::archetype::instance*  m_pBulletArchetype  {};
 
     void OnGameStart()
     {
-        m_pGrid             = &m_GameMgr.getSystem<update_movement>().m_Grid;
         m_pBulletArchetype  = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
     }
 
@@ -369,6 +265,7 @@ struct space_ship_logic : xecs::system::instance
 
     void operator()( entity& Entity, position& Position ) const noexcept
     {
+        /*
         // Check for collisions
         m_pGrid->Search( Position.m_Value, [&]( auto& CellEntry ) -> bool
         {
@@ -408,6 +305,7 @@ struct space_ship_logic : xecs::system::instance
             }
             return false;
         });
+        */
     }
 };
 
@@ -565,6 +463,7 @@ void InitializeGame( void ) noexcept
     ,   velocity
     ,   timer
     ,   bullet
+    ,   grid_cell
     >();
 
     //
@@ -573,10 +472,10 @@ void InitializeGame( void ) noexcept
 
     // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
-    <   update_timer            // Structural: Yes, RemoveComponent(Timer)
-    ,   update_movement         // Structural: No
+    < //  update_timer            // Structural: Yes, RemoveComponent(Timer)
+       update_movement         // Structural: No
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+//    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -594,13 +493,17 @@ void InitializeGame( void ) noexcept
     //
     // Generate a few random ships
     //
-    static_assert( false == xcore::types::tuple_has_duplicates_v<std::tuple<position& , velocity& , timer& >>);
+    for( int i=0; i<10000; i++ )
+    {
+        auto&   Archetype   = s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>();
+        auto    Pos         = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
+                                            , static_cast<float>(std::rand() % s_Game.m_H)
+                                            };
+        auto&   PoolFamily  = Archetype.getOrCreatePoolFamily( grid::ComputeGridCellFromWorldPosition(Pos) );
 
-    s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer >()
-        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer ) noexcept
+        Archetype.CreateEntity( PoolFamily, [&]( position& Position, velocity& Velocity, timer& Timer ) noexcept
         {
-            Position.m_Value.m_X = std::rand() % s_Game.m_W;
-            Position.m_Value.m_Y = std::rand() % s_Game.m_H;
+            Position.m_Value     = Pos;
 
             Velocity.m_Value.m_X = (std::rand() / (float)RAND_MAX) - 0.5f;
             Velocity.m_Value.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
@@ -608,6 +511,8 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
         });
+
+    }
 }
 
 //---------------------------------------------------------------------------------------

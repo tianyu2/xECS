@@ -30,7 +30,8 @@ namespace xecs::archetype
         
         inline
         void                    Initialize              ( std::span<const xecs::component::type::info* const> Infos
-                                                        , const tools::bits&                                  Bits 
+                                                        , const tools::bits&                                  Bits
+                                                        , bool                                                bTreatShareComponentsAsData
                                                         ) noexcept;
 
         template
@@ -41,7 +42,7 @@ namespace xecs::archetype
         xecs::pool::family&     getOrCreatePoolFamily   ( T_SHARE_COMPONENTS&&... Components
                                                         ) noexcept;
         inline
-        xecs::pool::family&     getOrCreatePoolFamily   ( std::span< const xecs::component::type::info* const>  TypeInfos
+        xecs::pool::family&     getOrCreatePoolFamily2   ( std::span< const xecs::component::type::info* const>  TypeInfos
                                                         , std::span< std::byte* >                               MoveData
                                                         ) noexcept;
 

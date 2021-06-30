@@ -191,6 +191,36 @@ namespace xecs::pool
     //-------------------------------------------------------------------------------------
 
     constexpr
+    int instance::findIndexComponentFromInfoInSequence
+    ( const xecs::component::type::info& SearchInfo
+    , int&                               Sequence
+    ) const noexcept
+    {
+        const auto Backup = Sequence;
+        for( const auto end = static_cast<const int>(m_ComponentInfos.size()); Sequence < end; ++Sequence)
+        {
+            if (&SearchInfo == m_ComponentInfos[Sequence]) return Sequence++;
+            [[unlikely]] if ( xecs::component::type::details::CompareTypeInfos(&SearchInfo, m_ComponentInfos[Sequence])) break;
+        }
+        Sequence = Backup;
+        return -1;
+    }
+
+    //-------------------------------------------------------------------------------------
+    constexpr
+    int instance::findIndexComponentFromInfo( const xecs::component::type::info& SearchInfo ) const noexcept
+    {
+        for( int i=0, end = static_cast<int>(m_ComponentInfos.size()); i<end; ++i )
+        {
+            if( &SearchInfo == m_ComponentInfos[i] ) return i;
+            [[unlikely]] if(xecs::component::type::details::CompareTypeInfos(&SearchInfo, m_ComponentInfos[i] )) return -1;
+        }
+        return -1;
+    }
+
+    //-------------------------------------------------------------------------------------
+/*
+    constexpr
     int instance::findIndexComponentFromGUIDInSequence
     (xecs::component::type::guid  SearchGuid
     , int&                        Sequence 
@@ -219,7 +249,7 @@ namespace xecs::pool
         }
         return -1;
     }
-
+*/
     //-------------------------------------------------------------------------------------
 
     template
@@ -238,7 +268,7 @@ namespace xecs::pool
         }
         else
         {
-            const auto iComponent = findIndexComponentFromGUID( xecs::component::type::info_v<T_COMPONENT>.m_Guid );
+            const auto iComponent = findIndexComponentFromInfo( xecs::component::type::info_v<T_COMPONENT> );
             return *reinterpret_cast<T_COMPONENT*>
             (
                 &m_pComponent[iComponent][ EntityIndex.m_Value * sizeof(T_COMPONENT) ]

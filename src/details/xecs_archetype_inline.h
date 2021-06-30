@@ -21,7 +21,7 @@ namespace xecs::archetype
         , std::tuple<T_FUNCTION_ARGS... >* 
         ) noexcept
         {
-            assert( ((Pool.findIndexComponentFromGUID(xecs::component::type::info_v<T_FUNCTION_ARGS>.m_Guid) >= 0 ) && ... ) );
+            assert( ((Pool.findIndexComponentFromInfo(xecs::component::type::info_v<T_FUNCTION_ARGS>) >= 0 ) && ... ) );
 
             using function_args = std::tuple< T_FUNCTION_ARGS... >;
             using sorted_tuple  = xecs::component::type::details::sort_tuple_t< function_args >;
@@ -31,7 +31,7 @@ namespace xecs::archetype
             {
                 int Sequence = 0;
                 ((CachePointers[xcore::types::tuple_t2i_v< T_SORTED_COMPONENT, function_args >] = 
-                  &Pool.m_pComponent[Pool.findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T_SORTED_COMPONENT>.m_Guid, Sequence)]
+                  &Pool.m_pComponent[Pool.findIndexComponentFromInfoInSequence(xecs::component::type::info_v<T_SORTED_COMPONENT>, Sequence)]
                         [sizeof(std::remove_reference_t<T_SORTED_COMPONENT>) * StartingPoolIndex.m_Value ])
                 , ... );
 
@@ -62,7 +62,7 @@ namespace xecs::archetype
                 int Sequence = 0;
                 ((CachePointers[xcore::types::tuple_t2i_v< T_SORTED_COMPONENT, function_args >] = [&]<typename T>(std::tuple<T>*) constexpr noexcept 
                 {
-                    const auto I = Pool.findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T>.m_Guid, Sequence);
+                    const auto I = Pool.findIndexComponentFromInfoInSequence(xecs::component::type::info_v<T>, Sequence);
                     if constexpr (std::is_pointer_v<T>)
                         return (I < 0) ? nullptr : &Pool.m_pComponent[I][sizeof(std::decay_t<T>) * StartingPoolIndex.m_Value];
                     else
@@ -181,7 +181,8 @@ namespace xecs::archetype
 
     void instance::Initialize
     ( std::span<const xecs::component::type::info* const>   Infos
-    , const tools::bits&                                    Bits 
+    , const tools::bits&                                    Bits
+    , bool                                                  bTreatShareComponentsAsData
     ) noexcept
     {
         // Deep copy the infos just in case the user gave us data driven infos
@@ -204,7 +205,7 @@ namespace xecs::archetype
         {
             std::sort
             ( m_InfoData.begin()
-            , m_InfoData.begin() + Infos.size()
+            , m_InfoData.begin() + (Infos.size() - 1)
             , xecs::component::type::details::CompareTypeInfos
             );
         }
@@ -235,6 +236,7 @@ namespace xecs::archetype
         //
         // We can initialize our default pool
         //
+        if( bTreatShareComponentsAsData ) m_nShareComponents = 0;
         if( m_nShareComponents == 0 ) 
         {
             m_DefaultPoolFamily.m_DefaultPool.Initialize( { m_InfoData.data(), Infos.size() }, {} );
@@ -245,7 +247,7 @@ namespace xecs::archetype
     }
 
     //--------------------------------------------------------------------------------------------
-    xecs::pool::family& instance::getOrCreatePoolFamily
+    xecs::pool::family& instance::getOrCreatePoolFamily2
     ( std::span< const xecs::component::type::info* const>  TypeInfos
     , std::span< std::byte* >                               MoveData
     ) noexcept
@@ -307,7 +309,7 @@ namespace xecs::archetype
         //
         // Make sure that all the pools for our share components are cached
         //
-        if (m_ShareArchetypesArray[0].get())
+        if (nullptr == m_ShareArchetypesArray[0].get())
         {
             for (int i = 0; i < m_nShareComponents; ++i)
             {
@@ -425,24 +427,24 @@ namespace xecs::archetype
     > requires
     ( xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
     )
-    xecs::pool::family& instance::getOrCreatePoolFamily
+xecs::pool::family& instance::getOrCreatePoolFamily
     ( T_SHARE_COMPONENTS&&... Components
     ) noexcept
     {
-        static_assert( std::is_same_v<xcore::types::decay_full_t<T_SHARE_COMPONENTS>, T_SHARE_COMPONENTS> );
+        static_assert( ((std::is_same_v<xcore::types::decay_full_t<T_SHARE_COMPONENTS>, T_SHARE_COMPONENTS>) && ...) );
         using the_tuple    = std::tuple<T_SHARE_COMPONENTS* ... >;
         using sorted_tuple = xecs::component::type::details::template sort_tuple_t< the_tuple >;
-        constexpr static auto Infos = []<typename... T>() constexpr
+
+        constexpr static auto Infos = []<typename... T>(std::tuple<T...>*) constexpr
         {
             return std::array{ &xecs::component::type::info_v<T> ... };
         }( xcore::types::null_tuple_v<sorted_tuple>);
         
         the_tuple TupleComponents { &Components... };
 
-        return getOrCreatePoolFamily
-        ( Infos
-        , std::array{ static_cast<std::byte*>(std::get< xcore::types::tuple_t2i_v< T_SHARE_COMPONENTS*, sorted_tuple> >(TupleComponents)) ... }
-        );
+        auto Args = std::array{ reinterpret_cast<std::byte*>(std::get< xcore::types::tuple_t2i_v< T_SHARE_COMPONENTS*, sorted_tuple> >(TupleComponents)) ... };
+
+        return getOrCreatePoolFamily2( Infos, Args );
     }
 
     //--------------------------------------------------------------------------------------------
@@ -565,7 +567,7 @@ instance::CreateEntity
             for( int i=0, j=0; i<Infos.size(); i++ )
             {
                 auto&   Info    = *Infos[i];
-                auto    iType   = Pool.findIndexComponentFromGUID(Info.m_Guid);
+                auto    iType   = Pool.findIndexComponentFromInfo(Info);
                 assert(iType>=0);
 
                 if( Info.m_pMoveFn )
@@ -592,7 +594,9 @@ instance::CreateEntity
     , std::span< std::byte* >                               MoveData
     ) noexcept
     {
-        assert( m_nShareComponents == 0 );
+        // TODO: In order for the system to work we need to call this function for share-components that is why MoveData.size()==1 is there
+        // However this is a hack and probably another function like this should be created just for the system.
+        assert( m_nShareComponents == 0 || MoveData.size() == 1 );
         return CreateEntity( m_DefaultPoolFamily, Infos, MoveData);
     }
 
@@ -662,6 +666,40 @@ instance::CreateEntities
             );
             xecs::archetype::details::CallFunction( Function, CachedPointers );
         });
+    }
+
+    //--------------------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLBACK
+    > requires
+    ( xecs::tools::function_return_v<T_CALLBACK, void>
+        && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+        && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+    )
+xecs::component::entity instance::CreateEntity
+    ( xecs::pool::family&   PoolFamily
+    , T_CALLBACK&&          Function
+    ) noexcept
+    {
+        using func_traits = xcore::function::traits<T_CALLBACK>;
+        xecs::component::entity TheEntity;
+
+        CreateEntity( PoolFamily, 1, [&]( xecs::component::entity& Entity, int )
+        {
+            if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) return;
+
+            TheEntity = Entity;
+            auto& Details        = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
+            auto  CachedPointers = xecs::archetype::details::GetComponentPointerArray
+            ( *Details.m_pPool
+            ,  Details.m_PoolIndex
+            ,  xcore::types::null_tuple_v<func_traits::args_tuple> 
+            );
+            xecs::archetype::details::CallFunction( Function, CachedPointers );
+        });
+
+        return TheEntity;
     }
 
     //--------------------------------------------------------------------------------------------
@@ -890,7 +928,7 @@ mgr::getOrCreateArchetype
         m_lArchetypeBits.push_back  ( Query );
 
         auto& Archetype = *m_lArchetype.back();
-        Archetype.Initialize(Types, Query);
+        Archetype.Initialize(Types, Query, true);
 
         m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
 
