@@ -101,9 +101,11 @@ namespace xecs::pool
 
         using share_key_array = std::array<xecs::component::type::share::key, xecs::settings::max_components_per_entity_v >;
 
-        guid                m_Guid          {};
-        instance            m_DefaultPool   {};
-        share_key_array     m_ShareKeyArray {};
+        guid                                m_Guid          {};
+        instance                            m_DefaultPool   {};
+        share_key_array                     m_ShareKeyArray {};
+        std::unique_ptr<xecs::pool::family> m_Next          {};
+        xecs::pool::family*                 m_pPrev         {};
     };
 
     //------------------------------------------------------------------------------

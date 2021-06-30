@@ -394,8 +394,16 @@ namespace xecs::archetype
         }
         else
         {
-            m_VectorPool.emplace_back(std::make_unique<xecs::pool::family>());
-            pPoolFamily = m_VectorPool.back().get();
+            auto NewFamily = std::make_unique<xecs::pool::family>();
+            pPoolFamily    = NewFamily.get();
+
+            if( m_DefaultPoolFamily.m_Next.get() )
+            {
+                m_DefaultPoolFamily.m_Next->m_pPrev = pPoolFamily;
+                NewFamily->m_Next = std::move(m_DefaultPoolFamily.m_Next);
+            }
+
+            m_DefaultPoolFamily.m_Next = std::move(NewFamily);
         }
         m_Mgr.m_PoolFamily.emplace(FamilyGuid, pPoolFamily);
 

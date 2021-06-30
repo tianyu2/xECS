@@ -131,7 +131,6 @@ namespace xecs::archetype
 
         using info_array             = std::array<const xecs::component::type::info*,           xecs::settings::max_components_per_entity_v >;
         using share_archetypes_array = std::array<std::shared_ptr<xecs::archetype::instance>,   xecs::settings::max_components_per_entity_v >;
-        using vector_pool_family     = std::vector<std::unique_ptr<xecs::pool::family>>;
 
         xecs::archetype::mgr&               m_Mgr;
         guid                                m_Guid                      {};
@@ -140,8 +139,7 @@ namespace xecs::archetype
         std::uint8_t                        m_nShareComponents          {};
         events                              m_Events                    {};
         pool::family                        m_DefaultPoolFamily         {};
-        vector_pool_family                  m_VectorPool                {};
-        info_array                          m_InfoData                  {}; // reanme to InfoArray
+        info_array                          m_InfoData                  {}; // rename to InfoArray
         share_archetypes_array              m_ShareArchetypesArray      {};
     };
 

@@ -209,10 +209,7 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            auto pFamily = &pE->m_DefaultPoolFamily;
-            int  iFamily = 0;
-
-            do
+            for( auto pFamily = &pE->m_DefaultPoolFamily; pFamily; pFamily = pFamily->m_Next.get() )
             {
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {
@@ -223,11 +220,7 @@ namespace xecs::game_mgr
                         archetype::details::CallFunction(Function, CachePointers);
                     }
                 }
-
-                if(iFamily == pE->m_VectorPool.size()) break;
-                pFamily = pE->m_VectorPool[iFamily++].get();
-
-            } while( true );
+            }
         }
     }
 
