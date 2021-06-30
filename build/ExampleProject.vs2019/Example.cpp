@@ -203,18 +203,6 @@ struct grid
 };
 
 //---------------------------------------------------------------------------------------
-// GLOBAL EVENTS
-//---------------------------------------------------------------------------------------
-
-struct sound : xecs::event::instance<const char*>
-{
-    constexpr static auto typedef_v = xecs::event::type::global
-    {
-        .m_pName = "sound"
-    };
-};
-
-//---------------------------------------------------------------------------------------
 // SYSTEMS
 //---------------------------------------------------------------------------------------
 
@@ -525,7 +513,6 @@ struct on_destroy_count_dead_ships : xecs::system::instance
 
     void operator()( timer* pTimer ) noexcept
     {
-        m_GameMgr.SendGlobalEvent<sound>( "Boom.wav" );
         if(pTimer) s_Game.m_nEntityWaitingDead++;
         else       s_Game.m_nEntityThinkingDead++;
     }
@@ -540,60 +527,12 @@ struct page_flip : xecs::system::instance
         .m_pName = "page_flip"
     };
 
-    // xCore provides a convinient way to create unique types out of objects 
-    using event_pre_page_flip  = xcore::types::make_unique< xecs::event::instance<int>, struct pre_page_flip>;
-    using event_post_page_flip = xcore::types::make_unique< xecs::event::instance<>, struct post_page_flip>;
-
-    // The name of this type is require (and overrides/shadows the base type), itself should also be a tuple
-    // that contains all the system events. Each even within this group should be a unique type or else
-    // the message system will have a problem identifying which one you are talking about.
-    using events = std::tuple   
-    <
-        event_pre_page_flip
-    ,   event_post_page_flip
-    >;
-
     __inline
     void OnUpdate( void ) noexcept
     {
-        SendEventFrom<event_pre_page_flip>(this, 42);
-
         glFlush();
         glutSwapBuffers();
         glClear(GL_COLOR_BUFFER_BIT);
-
-        SendEventFrom<event_post_page_flip>(this);
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
-struct play_sound : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::global_event<sound>
-    {
-        .m_pName = "play_sound"
-    };
-
-    void OnEvent( const char* Sound )
-    {
-        // TODO: Play the sound every time I get a message
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
-struct print_deaths_on_page_flip : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::system_event<page_flip, page_flip::event_pre_page_flip >
-    {
-        .m_pName = "print_deaths_on_page_flip"
-    };
-
-    void OnEvent( int )
-    {
-        GlutPrint(0, 0, "Thinking Dead: %d", s_Game.m_nEntityThinkingDead);
-        GlutPrint(0, 1, "Waiting Dead:  %d", s_Game.m_nEntityWaitingDead);
     }
 };
 
@@ -629,13 +568,6 @@ void InitializeGame( void ) noexcept
     >();
 
     //
-    // Register Global Events (These should always be before the systems as well)
-    //
-    s_Game.m_GameMgr->RegisterGlobalEvents
-    <   sound
-    >();
-
-    //
     // Register Systems
     //
 
@@ -657,8 +589,6 @@ void InitializeGame( void ) noexcept
     s_Game.m_GameMgr->RegisterSystems
     <   on_destroy_count_dead_ships     // Structural: No
     ,   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets entities when timer is removed)
-    ,   play_sound                      // Structural: No
-    ,   print_deaths_on_page_flip       // Structural: No
     >();
 
     //
