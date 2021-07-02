@@ -398,13 +398,13 @@ struct space_ship_logic : xecs::system::instance
                 {
                     Timer.m_Value = 8;
                 });
+
                 // After moving the entity all access to its components via the function existing parameters is consider a bug
                 // Since the entity has moved to a different archetype
                 assert( Entity.isZombie() );
 
                 // Hopefully there is not system that intersects me and kills me
                 assert( !NewEntity.isZombie() );
-
 
                 m_pBulletArchetype->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
                     {
@@ -542,7 +542,7 @@ struct page_flip : xecs::system::instance
 
     // xCore provides a convinient way to create unique types out of objects 
     using event_pre_page_flip  = xcore::types::make_unique< xecs::event::instance<int>, struct pre_page_flip>;
-    using event_post_page_flip = xcore::types::make_unique< xecs::event::instance<>, struct post_page_flip>;
+    using event_post_page_flip = xcore::types::make_unique< xecs::event::instance<>,    struct post_page_flip>;
 
     // The name of this type is require (and overrides/shadows the base type), itself should also be a tuple
     // that contains all the system events. Each even within this group should be a unique type or else
