@@ -23,7 +23,7 @@ static struct game
 // COMPONENTS
 //---------------------------------------------------------------------------------------
 
-struct position 
+struct position
 {
     constexpr static auto typedef_v = xecs::component::type::data
     {
@@ -194,7 +194,7 @@ struct space_ship_logic : xecs::system::instance
             constexpr auto min_distance_v = 30;
             if( DistanceSquare < min_distance_v*min_distance_v )
             {
-                auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
+                auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer ) constexpr noexcept
                 {
                     Timer.m_Value = 8;
                 });
@@ -309,7 +309,7 @@ void InitializeGame( void ) noexcept
     >();
 
     s_Game.m_GameMgr->RegisterSystems
-    <   update_timer            // Structural: Yes, AddOrRemoveComponent(timer), User defined... (Destroy Bullets)
+    <   update_timer            // Structural: Yes, RemoveComponent(timer), User defined... (Destroy Bullets)
     ,   update_movement         // Structural: No
     ,   space_ship_logic        // Structural: Yes, AddOrRemoveComponent(timer), Create(Bullets)
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)

@@ -305,6 +305,7 @@ namespace xecs::archetype
         using func_traits = xcore::function::traits<T_CALLBACK>;
         static_assert( []<typename...T>(std::tuple<T...>*){ return (std::is_reference_v<T> && ...); }(xcore::types::null_tuple_v<func_traits::args_tuple>)
         , "This function requires only references in the user function");
+
         const int EntityIndexInPool = m_Pool.Append(Count);
 
         // Allocate the entity
@@ -399,8 +400,6 @@ namespace xecs::archetype
     {
         auto&      GlobalEntity = m_GameMgr.m_lEntities[Entity.m_GlobalIndex];
         const auto NewPoolIndex = m_Pool.MoveInFromPool(GlobalEntity.m_PoolIndex, GlobalEntity.m_pArchetype->m_Pool);
-
-//        GlobalEntity.m_pArchetype->m_Pool.MoveDelete(GlobalEntity.m_PoolIndex);
 
         GlobalEntity.m_pArchetype = this;
         GlobalEntity.m_PoolIndex  = NewPoolIndex;

@@ -301,12 +301,17 @@ namespace xecs::game_mgr
             assert( pE->m_BitID !=0 );
             Bits.setBit( pE->m_BitID );
         }
+
         for( auto& pE : Sub ) 
         {
             // Cant remove the entity
             assert(pE->m_BitID != 0);
             Bits.clearBit(pE->m_BitID);
         }
+
+        //
+        // Search for any archetype that has the bits that we want
+        //
         for( auto& E : m_lArchetypeBits )
         {
             if( E.Equals(Bits) )
@@ -317,6 +322,9 @@ namespace xecs::game_mgr
             }
         }
 
+        //
+        // Create Archetype
+        //
         std::array<const xecs::component::info*, xecs::settings::max_components_per_entity_v > ComponentList;
         int Count = 0;
 
