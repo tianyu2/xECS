@@ -61,6 +61,7 @@ namespace xecs::pool
             // Create pages when needed 
             if( auto Cur = getPageFromIndex(MyInfo, m_Size); Cur != NexPage )
             {
+                if(m_Size==0) Cur =-1;
                 auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * (Cur+1);
                 auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, (NexPage - Cur) * xecs::settings::virtual_page_size_v, MEM_COMMIT, PAGE_READWRITE));
                 assert(p == pNewPagePtr);
