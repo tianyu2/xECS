@@ -37,7 +37,7 @@ namespace xecs::archetype
         template
         < typename...T_SHARE_COMPONENTS
         > requires
-        ( xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
+        ( xecs::tools::assert_all_components_are_share_types_v<T_SHARE_COMPONENTS...>
         ) __inline
         xecs::pool::family&     getOrCreatePoolFamily   ( T_SHARE_COMPONENTS&&... Components
                                                         ) noexcept;
@@ -49,7 +49,7 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::function_return_v<T_CALLBACK, void>
+        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) 
         void                    CreateEntity            ( xecs::pool::family&                                   PoolFamily
                                                         , int                                                   Count
@@ -68,18 +68,18 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK
         > requires
-        ( xecs::tools::function_return_v<T_CALLBACK, void>
-            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
+            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
         ) __inline
         xecs::component::entity CreateEntity            ( T_CALLBACK&& Function
                                                         ) noexcept;
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::function_return_v<T_CALLBACK, void>
-            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
+            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
         ) __inline
         xecs::component::entity CreateEntity            ( xecs::pool::family&   PoolFamily
                                                         , T_CALLBACK&&          Function = xecs::tools::empty_lambda{}
@@ -87,9 +87,9 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::function_return_v<T_CALLBACK, void>
-            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
+            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
         ) __inline
         void                    CreateEntities          ( int           Count
                                                         , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
@@ -97,9 +97,9 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::function_return_v<T_CALLBACK, void>
-            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
+            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
+            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
         ) __inline
         void                    CreateEntities          ( int                   Count
                                                         , xecs::pool::family    PoolFamily
@@ -111,9 +111,9 @@ namespace xecs::archetype
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::function_return_v<T_FUNCTION, void>
-            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_FUNCTION>
-            && xecs::tools::function_args_have_only_non_const_references_v<T_FUNCTION>
+        ( xecs::tools::assert_function_return_v<T_FUNCTION, void>
+            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
+            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
                                 MoveInEntity            ( xecs::component::entity&  Entity
                                                         , xecs::pool::family&       PoolFamily
@@ -122,9 +122,9 @@ namespace xecs::archetype
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::function_return_v<T_FUNCTION, void>
-            && xecs::tools::function_args_have_no_share_or_tag_components_v<T_FUNCTION>
-            && xecs::tools::function_args_have_only_non_const_references_v<T_FUNCTION>
+        ( xecs::tools::assert_function_return_v<T_FUNCTION, void>
+            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
+            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
                                 MoveInEntity            ( xecs::component::entity&  Entity
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 

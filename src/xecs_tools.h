@@ -16,8 +16,21 @@ namespace xecs::tools
 
     template
     < typename T_CALLABLE
+    , typename T_RETURN_TYPE
     > constexpr
-    auto function_args_have_no_share_or_tag_components_v = []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
+    auto assert_function_return_v = []() constexpr noexcept
+    {
+        static_assert(xcore::function::is_callable_v<T_CALLABLE>);
+        static_assert(std::is_same_v<typename xcore::function::traits<T_CALLABLE>::return_type, T_RETURN_TYPE>);
+        return true;
+    }();
+
+    //------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLABLE
+    > constexpr
+    auto assert_function_args_have_no_share_or_tag_components_v = []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
     {
         static_assert( xcore::function::is_callable_v<T_CALLABLE> );
         static_assert( false == xcore::types::tuple_has_duplicates_v< xcore::function::traits<T_CALLABLE>::args_tuple > );
@@ -31,7 +44,7 @@ namespace xecs::tools
     template
     < typename T_CALLABLE
     > constexpr
-    auto function_args_have_only_non_const_references_v = []<typename...T_ARGS>( std::tuple<T_ARGS...>*) constexpr noexcept
+    auto assert_function_args_have_only_non_const_references_v = []<typename...T_ARGS>( std::tuple<T_ARGS...>*) constexpr noexcept
     {
         static_assert( xcore::function::is_callable_v<T_CALLABLE> );
         static_assert( false == xcore::types::tuple_has_duplicates_v< xcore::function::traits<T_CALLABLE>::args_tuple >);
@@ -44,14 +57,13 @@ namespace xecs::tools
     template
     < typename... T_SHARE_COMPONENTS
     > constexpr
-    auto all_components_are_share_types_v = []() constexpr noexcept
+    auto assert_all_components_are_share_types_v = []() constexpr noexcept
     {
         static_assert( false == xcore::types::tuple_has_duplicates_v< std::tuple<T_SHARE_COMPONENTS...> > );
         static_assert( ((xecs::component::type::info_v<T_SHARE_COMPONENTS>.m_TypeID == xecs::component::type::id::SHARE) && ...) );
         return true;
     }();
         
-
     //------------------------------------------------------------------------------
 
     namespace details
