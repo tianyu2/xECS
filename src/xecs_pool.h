@@ -58,12 +58,14 @@ namespace xecs::pool
         T_COMPONENT&    getComponentInSequence              ( std::uint32_t EntityIndex
                                                             , int&          Sequence
                                                             ) const noexcept;
+
+    private:
         inline
-        void            Free                                ( int   Index
+        bool            Free                                ( int   Index
                                                             , bool  bCallDestructors
                                                             ) noexcept;
 
-
+    public:
         std::span<const component::type::info* const >                      m_Infos             {};
         int                                                                 m_CurrentCount      {};
         int                                                                 m_Size              {};
