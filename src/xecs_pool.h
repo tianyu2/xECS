@@ -80,10 +80,12 @@ namespace xecs::pool
         T_COMPONENT&    getComponentInSequence              ( index         EntityIndex
                                                             , int&          Sequence
                                                             ) const noexcept;
+    private:
         inline
-        void            Free                                ( index Index
+        bool            Free                                ( index Index
                                                             , bool  bCallDestructors
                                                             ) noexcept;
+    public:
 
         std::span<const component::type::info* const >                      m_ComponentInfos        {};
         std::uint8_t                                                        m_ShareComponentCount   {};

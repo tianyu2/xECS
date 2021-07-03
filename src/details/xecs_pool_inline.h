@@ -37,7 +37,7 @@ namespace xecs::pool
     constexpr inline 
     int getPageFromIndex( const component::type::info& Info, int iEntity ) noexcept
     {
-        return ((iEntity * Info.m_Size)-1) / xecs::settings::virtual_page_size_v;
+        return ((iEntity * static_cast<int>(Info.m_Size))-1) / xecs::settings::virtual_page_size_v;
     }
 
     //-------------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ namespace xecs::pool
             // Create pages when needed 
             if( auto Cur = getPageFromIndex(MyInfo, m_Size); m_Size == 0 || Cur != NexPage )
             {
-                if( m_Size == 0 ) Cur = -1;
+                if( m_Size == 0 ) Cur--;
                 auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * (Cur+1);
                 auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, (NexPage - Cur) * xecs::settings::virtual_page_size_v, MEM_COMMIT, PAGE_READWRITE));
                 assert(p == pNewPagePtr);
@@ -129,33 +129,37 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
 
-    void instance::Free( index Index, bool bCallDestructors ) noexcept
+    bool instance::Free( index Index, bool bCallDestructors ) noexcept
     {
-        assert(Index.m_Value < m_Size );
         assert(Index.m_Value>=0);
-        
-        m_Size--;
-        if( Index.m_Value == m_Size )
-        {
-            for (int i = 0, end = static_cast<int>(m_ComponentInfos.size() - m_ShareComponentCount); i < end; ++i)
-            {
-                const auto& MyInfo = *m_ComponentInfos[i];
-                auto        pData  = m_pComponent[i];
-                if (MyInfo.m_pDestructFn && bCallDestructors) MyInfo.m_pDestructFn( &pData[m_Size * MyInfo.m_Size] );
 
-                // Free page if we cross over
-                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size+1);
-                if( getPageFromIndex(MyInfo, m_Size) != LastEntryPage )
+        // Subtract one to the total count if we can.
+        // If the last entry then happens to be a zombie then keep subtracting since these entries will get deleted later
+        // This should make things faster and allow for the moved entries to be deleted properly 
+        while(m_Size)
+        {
+            m_Size--;
+            if(reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false ) break;
+        }
+
+        // Check if we have any entry to move
+        if( Index.m_Value >= m_Size )
+        {
+            // We are not moving anything just just call destructors if we have to
+            if( bCallDestructors )
+            {
+                for (int i = 0; i < m_ComponentInfos.size(); ++i)
                 {
-                    auto pRaw = &pData[xecs::settings::virtual_page_size_v * LastEntryPage ];
-                    auto b    = VirtualFree(pRaw, xecs::settings::virtual_page_size_v, MEM_DECOMMIT);
-                    assert(b);
+                    const auto& MyInfo = *m_ComponentInfos[i];
+                    auto        pData = m_pComponent[i];
+                    if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index.m_Value * MyInfo.m_Size]);
                 }
             }
+            return false;
         }
         else
         {
-            for (int i = 0, end = static_cast<int>(m_ComponentInfos.size() - m_ShareComponentCount); i < end; ++i)
+            for (int i = 0; i < m_ComponentInfos.size(); ++i)
             {
                 const auto& MyInfo = *m_ComponentInfos[i];
                 auto        pData  = m_pComponent[i];
@@ -166,18 +170,11 @@ namespace xecs::pool
                 }
                 else
                 {
+                    if (bCallDestructors && MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index.m_Value * MyInfo.m_Size]);
                     memcpy(&pData[Index.m_Value * MyInfo.m_Size], &pData[m_Size * MyInfo.m_Size], MyInfo.m_Size );
                 }
-
-                // Free page if we cross over
-                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size+1);
-                if( getPageFromIndex(MyInfo, m_Size) != LastEntryPage )
-                {
-                    auto pRaw = &pData[xecs::settings::virtual_page_size_v * LastEntryPage ];
-                    auto b    = VirtualFree(pRaw, xecs::settings::virtual_page_size_v, MEM_DECOMMIT);
-                    assert(b);
-                }
             }
+            return true;
         }
     }
 
@@ -218,38 +215,6 @@ namespace xecs::pool
         return -1;
     }
 
-    //-------------------------------------------------------------------------------------
-/*
-    constexpr
-    int instance::findIndexComponentFromGUIDInSequence
-    (xecs::component::type::guid  SearchGuid
-    , int&                        Sequence 
-    ) const noexcept
-    {
-        const auto Backup = Sequence;
-        for( const auto end = static_cast<const int>(m_ComponentInfos.size()); Sequence < end; ++Sequence)
-        {
-            const auto InfoGuid = m_ComponentInfos[Sequence]->m_Guid;
-            if (InfoGuid == SearchGuid) return Sequence++;
-            [[unlikely]] if ( InfoGuid.m_Value > SearchGuid.m_Value) break;
-        }
-        Sequence = Backup;
-        return -1;
-    }
-
-    //-------------------------------------------------------------------------------------
-    constexpr
-    int instance::findIndexComponentFromGUID( xecs::component::type::guid SearchGuid) const noexcept
-    {
-        for( int i=0, end = static_cast<int>(m_ComponentInfos.size()); i<end; ++i )
-        {
-            const auto InfoGuid = m_ComponentInfos[i]->m_Guid;
-            if(InfoGuid == SearchGuid) return i;
-            [[unlikely]] if(InfoGuid.m_Value > SearchGuid.m_Value) return -1;
-        }
-        return -1;
-    }
-*/
     //-------------------------------------------------------------------------------------
 
     template
@@ -311,24 +276,25 @@ namespace xecs::pool
 
     void instance::UpdateStructuralChanges( xecs::component::mgr& ComponentMgr ) noexcept
     {
+        const auto OldSize = m_Size;
+
         //
         // Delete the regular entries
         //
         while( m_DeleteGlobalIndex != invalid_delete_global_index_v )
         {
             auto&       Entry                   = ComponentMgr.m_lEntities[m_DeleteGlobalIndex];
-            auto&       PoolEntity              = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][ sizeof(xecs::component::entity) * Entry.m_PoolIndex.m_Value ]);
+            auto&       PoolEntity              = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity)*Entry.m_PoolIndex.m_Value]);
             const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
             assert(PoolEntity.m_Validation.m_bZombie);
 
-            Free( Entry.m_PoolIndex, true );
-            if ( Entry.m_PoolIndex.m_Value == m_Size )
+            if( Free(Entry.m_PoolIndex, true) )
             {
-                ComponentMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
+                ComponentMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
             }
             else
             {
-                ComponentMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
+                ComponentMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
             }
 
             m_DeleteGlobalIndex = NextDeleteGlobalIndex;
@@ -341,13 +307,34 @@ namespace xecs::pool
         {
             auto&       PoolEntity            = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_DeleteMoveIndex]);
             const auto  NextDeleteGlobalIndex = PoolEntity.m_Validation.m_Generation;
-            Free( {(int)m_DeleteMoveIndex}, false );
-            if (m_DeleteMoveIndex != m_Size)
+            
+            if( Free({static_cast<int>(m_DeleteMoveIndex)}, false) )
             {
-                ComponentMgr.MovedGlobalEntity( {(int)m_DeleteMoveIndex}, PoolEntity );
+                ComponentMgr.MovedGlobalEntity({ static_cast<int>(m_DeleteMoveIndex) }, PoolEntity );
             }
 
             m_DeleteMoveIndex = NextDeleteGlobalIndex;
+        }
+
+        //
+        // Free pages that we are not using any more
+        //
+        if( m_Size < OldSize )
+        {
+            for (int i = 0; i < m_ComponentInfos.size(); ++i)
+            {
+                const auto& MyInfo          = *m_ComponentInfos[i];
+                const auto  LastEntryPage   = getPageFromIndex( MyInfo, OldSize );
+                if( auto Cur = getPageFromIndex(MyInfo, m_Size); Cur != LastEntryPage || m_Size == 0 )
+                {
+                    if( m_Size == 0 ) Cur--;
+                    auto pRaw   = &m_pComponent[i][xecs::settings::virtual_page_size_v * (Cur + 1) ];
+                    auto nPages = LastEntryPage - Cur;
+                    assert(nPages > 0);
+                    auto b      = VirtualFree(pRaw, xecs::settings::virtual_page_size_v * nPages, MEM_DECOMMIT);
+                    assert(b);
+                }
+            }
         }
 
         // Update the current count
