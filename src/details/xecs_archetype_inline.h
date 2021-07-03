@@ -641,9 +641,9 @@ instance::CreateEntity
     template
     < typename T_CALLBACK
     > requires
-    ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-        && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-        && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
+    ( false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+        && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+        && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
     )
     void
 instance::CreateEntities
@@ -666,6 +666,105 @@ instance::CreateEntities
             );
             xecs::archetype::details::CallFunction( Function, CachedPointers );
         });
+    }
+
+    //--------------------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLBACK
+    > requires
+    ( true == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+        && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+        && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
+    )
+    void
+instance::CreateEntities
+    ( const int         Count
+    , T_CALLBACK&&      Function 
+    ) noexcept
+    {
+        using func_traits = xcore::function::traits<T_CALLBACK>;
+        assert(xecs::tools::HaveAllComponents(m_ComponentBits, xcore::types::null_tuple_v<func_traits::args_tuple>));
+
+        using no_refs_tuple     = std::invoke_result_t
+        <   decltype([]<typename...T>( std::tuple<T...>* ) ->
+            std::tuple
+            <   std::remove_reference_t<T> ...
+            >{})
+        ,   typename func_traits::args_tuple*
+        >;
+
+        using share_only_tuple  = std::invoke_result_t
+        <
+            decltype
+            (   []<typename...T>(std::tuple<T...>*) ->
+                xcore::types::tuple_cat_t
+                < std::conditional_t
+                    < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::SHARE
+                    , std::tuple<std::remove_reference_t<T>>
+                    , std::tuple<>
+                    >
+                ...
+                > {}
+            )
+        ,   no_refs_tuple* 
+        >;
+        
+        using data_only_tuple = std::invoke_result_t
+        <   decltype
+            (   []<typename...T>(std::tuple<T...>*) ->
+                xcore::types::tuple_cat_t
+                < std::conditional_t
+                    < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::DATA
+                    , std::tuple<std::remove_reference_t<T>>
+                    , std::tuple<>
+                    >
+                ...
+                > {}
+            )
+        ,   no_refs_tuple* 
+        >;
+
+        using data_sorted_tuple = xecs::component::type::details::sort_tuple_t<data_only_tuple>;
+
+        static constexpr auto ShareTypeInfos = [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+        {
+            return std::array{ &xecs::component::type::info_v<T> ... };
+        }(xcore::types::null_tuple_v<share_only_tuple>);
+
+        const auto ComponentIndex = [&]< typename...T >(std::tuple<T...>*) constexpr noexcept
+        {
+            int Sequence = 0;
+            return std::array{ [&]<typename J>(J*){ while( m_InfoData[Sequence] != &xecs::component::type::info_v<J> ) Sequence++; return Sequence; }(reinterpret_cast<T*>(0)) ... };
+        }(xcore::types::null_tuple_v<data_sorted_tuple>);
+
+        assert( ComponentIndex[0] != -1 );
+
+        // Call the function with the tuple
+        for( int i=0; i<Count; i++ )
+        {
+            no_refs_tuple Components{};
+
+            [&]<typename...T>(std::tuple<T...>& Tuple ) constexpr noexcept
+            {
+                Function( std::get<T>(Tuple) ... );
+            }( Components );
+
+            auto       ShareData      = [&]<typename...T>(std::tuple<T...>*){ return std::array{ reinterpret_cast<std::byte*>( &std::get<T>(Components) ) ... }; }(xcore::types::null_tuple_v<share_only_tuple>);
+            auto&      Family         = getOrCreatePoolFamily2(ShareTypeInfos, ShareData);
+
+            instance::CreateEntity( Family, 1, [&](xecs::component::entity Entity, int) constexpr noexcept
+            {
+                auto& Details = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
+
+                // Move all the components
+                [&]< typename...T >( std::tuple<T...>* ) constexpr noexcept
+                {
+                    (( reinterpret_cast<T&>(Details.m_pPool->m_pComponent[ComponentIndex[xcore::types::tuple_t2i_v<T, data_sorted_tuple>]][Details.m_PoolIndex.m_Value * sizeof(T)])
+                        = std::move(std::get<T>(Components))), ... );
+                }(xcore::types::null_tuple_v<data_sorted_tuple>);
+            });
+        }
     }
 
     //--------------------------------------------------------------------------------------------

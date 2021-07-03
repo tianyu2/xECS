@@ -42,7 +42,7 @@ namespace xecs::archetype
         xecs::pool::family&     getOrCreatePoolFamily   ( T_SHARE_COMPONENTS&&... Components
                                                         ) noexcept;
         inline
-        xecs::pool::family&     getOrCreatePoolFamily2   ( std::span< const xecs::component::type::info* const>  TypeInfos
+        xecs::pool::family&     getOrCreatePoolFamily2  ( std::span< const xecs::component::type::info* const>  TypeInfos
                                                         , std::span< std::byte* >                               MoveData
                                                         ) noexcept;
 
@@ -87,13 +87,26 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+            && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+            && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
         ) __inline
         void                    CreateEntities          ( int           Count
                                                         , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
+
+        template
+        < typename T_CALLBACK = xecs::tools::empty_lambda
+        > requires
+        ( true == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+            && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+            && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
+        ) __inline
+        void                    CreateEntities          ( int           Count
+                                                        , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
+                                                        ) noexcept;
+
+
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires

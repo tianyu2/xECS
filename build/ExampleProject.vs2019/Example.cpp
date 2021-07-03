@@ -493,17 +493,14 @@ void InitializeGame( void ) noexcept
     //
     // Generate a few random ships
     //
-    for( int i=0; i<10000; i++ )
-    {
-        auto&   Archetype   = s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>();
-        auto    Pos         = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
-                                            , static_cast<float>(std::rand() % s_Game.m_H)
-                                            };
-        auto&   PoolFamily  = Archetype.getOrCreatePoolFamily( grid::ComputeGridCellFromWorldPosition(Pos) );
-
-        Archetype.CreateEntity( PoolFamily, [&]( position& Position, velocity& Velocity, timer& Timer ) noexcept
+    s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
+        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
-            Position.m_Value     = Pos;
+            Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
+                                                 , static_cast<float>(std::rand() % s_Game.m_H)
+                                                 };
+
+            Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
 
             Velocity.m_Value.m_X = (std::rand() / (float)RAND_MAX) - 0.5f;
             Velocity.m_Value.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
@@ -511,8 +508,6 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
         });
-
-    }
 }
 
 //---------------------------------------------------------------------------------------

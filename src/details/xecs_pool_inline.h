@@ -264,7 +264,7 @@ namespace xecs::pool
         }
         else
         {
-            const auto iComponent = findIndexComponentFromGUIDInSequence(xecs::component::type::info_v<T_COMPONENT>.m_Guid, Sequence );
+            const auto iComponent = findIndexComponentFromInfoInSequence(xecs::component::type::info_v<T_COMPONENT>, Sequence );
             return *reinterpret_cast<T_COMPONENT*>
             (
                 &m_pComponent[iComponent][ EntityIndex.m_Value * sizeof(T_COMPONENT) ]

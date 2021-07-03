@@ -9,8 +9,35 @@ namespace xecs::tools
     , typename T_RETURN_TYPE
     > requires
     ( xcore::function::is_callable_v<T_CALLABLE> 
-    )
-    constexpr auto function_return_v = std::is_same_v<typename xcore::function::traits<T_CALLABLE>::return_type, T_RETURN_TYPE>;
+    ) constexpr
+    auto function_return_v = std::is_same_v<typename xcore::function::traits<T_CALLABLE>::return_type, T_RETURN_TYPE>;
+
+    //------------------------------------------------------------------------------
+    template
+    < typename T_CALLABLE
+    > constexpr
+    auto assert_standard_setter_function_v = []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
+    {
+        static_assert( xcore::function::is_callable_v<T_CALLABLE>, "This is not a callable function");
+        static_assert( false == xcore::types::tuple_has_duplicates_v< std::tuple< xcore::types::decay_full_t<T_ARGS> ... > >, "Found duplicated types in the function which is not allowed");
+        static_assert( ((xecs::component::type::info_v<T_ARGS>.m_TypeID != xecs::component::type::id::TAG) && ...), "I found a tag in the parameter list of the function that is illegal");
+        static_assert( false == (( std::is_const_v<T_ARGS> ) || ...), "One of the arguments in the function is const. This is not allowed");
+        static_assert( (( std::is_reference_v<T_ARGS>) && ...), "All the parameters of a setter should be references, we found at least one that it was not");
+        return true;
+    }( xcore::types::null_tuple_v< typename xcore::function::template traits<T_CALLABLE>::args_tuple> );
+
+
+    //------------------------------------------------------------------------------
+    template
+    < typename T_CALLABLE
+    > constexpr
+    auto function_has_share_component_args_v = []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
+    {
+        static_assert( xcore::function::is_callable_v<T_CALLABLE>, "This is not a callable function");
+        static_assert( false == xcore::types::tuple_has_duplicates_v< std::tuple< xcore::types::decay_full_t<T_ARGS> ... > >, "Found duplicated types in the function which is not allowed");
+        static_assert( ((xecs::component::type::info_v<T_ARGS>.m_TypeID != xecs::component::type::id::TAG) && ...), "I found a tag in the parameter list of the function that is illegal" );
+        return ((xecs::component::type::info_v<T_ARGS>.m_TypeID == xecs::component::type::id::SHARE) || ...);
+    }( xcore::types::null_tuple_v< typename xcore::function::template traits<T_CALLABLE>::args_tuple> );
 
     //------------------------------------------------------------------------------
 
