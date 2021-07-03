@@ -20,7 +20,7 @@ namespace xecs::pool
     constexpr inline 
     int getPageFromIndex( const component::info& Info, int iEntity ) noexcept
     {
-        return ((iEntity * Info.m_Size)-1) / xecs::settings::virtual_page_size_v;
+        return ((iEntity * static_cast<int>(Info.m_Size))-1) / xecs::settings::virtual_page_size_v;
     }
 
     //-------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ namespace xecs::pool
             const auto    NexPage = getPageFromIndex(MyInfo, m_Size+Count);
 
             // Create pages when needed 
-            if( auto Cur = getPageFromIndex(MyInfo, m_Size); Cur != NexPage )
+            if( auto Cur = getPageFromIndex(MyInfo, m_Size); Cur != NexPage || m_Size == 0 )
             {
                 if(m_Size==0) Cur =-1;
                 auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * (Cur+1);
@@ -86,29 +86,33 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
 
-    void instance::Free( int Index, bool bCallDestructors ) noexcept
+    bool instance::Free( int Index, bool bCallDestructors ) noexcept
     {
-        assert(Index < m_Size );
         assert(Index>=0);
-        
-        m_Size--;
-        if( Index == m_Size )
-        {
-            for (int i = 0; i < m_Infos.size(); ++i)
-            {
-                const auto& MyInfo = *m_Infos[i];
-                auto        pData  = m_pComponent[i];
-                if (MyInfo.m_pDestructFn && bCallDestructors) MyInfo.m_pDestructFn( &pData[m_Size * MyInfo.m_Size] );
 
-                // Free page if we cross over
-                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size+1);
-                if( getPageFromIndex(MyInfo, m_Size) != LastEntryPage )
+        // Subtract one to the total count if we can.
+        // If the last entry then happens to be a zombie then keep subtracting since these entries will get deleted later
+        // This should make things faster and allow for the moved entries to be deleted properly 
+        while(m_Size)
+        {
+            m_Size--;
+            if(reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false ) break;
+        }
+
+        // Check if we have any entry to move
+        if( Index >= m_Size )
+        {
+            // We are not moving anything just just call destructors if we have to
+            if( bCallDestructors )
+            {
+                for (int i = 0; i < m_Infos.size(); ++i)
                 {
-                    auto pRaw = &pData[xecs::settings::virtual_page_size_v * LastEntryPage ];
-                    auto b    = VirtualFree(pRaw, xecs::settings::virtual_page_size_v, MEM_DECOMMIT);
-                    assert(b);
+                    const auto& MyInfo = *m_Infos[i];
+                    auto        pData = m_pComponent[i];
+                    if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index * MyInfo.m_Size]);
                 }
             }
+            return false;
         }
         else
         {
@@ -123,18 +127,11 @@ namespace xecs::pool
                 }
                 else
                 {
+                    if (bCallDestructors && MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index * MyInfo.m_Size]);
                     memcpy(&pData[Index * MyInfo.m_Size], &pData[m_Size * MyInfo.m_Size], MyInfo.m_Size );
                 }
-
-                // Free page if we cross over
-                const auto    LastEntryPage = getPageFromIndex(MyInfo, m_Size+1);
-                if( getPageFromIndex(MyInfo, m_Size) != LastEntryPage )
-                {
-                    auto pRaw = &pData[xecs::settings::virtual_page_size_v * LastEntryPage ];
-                    auto b    = VirtualFree(pRaw, xecs::settings::virtual_page_size_v, MEM_DECOMMIT);
-                    assert(b);
-                }
             }
+            return true;
         }
     }
 
@@ -238,6 +235,8 @@ namespace xecs::pool
 
     void instance::UpdateStructuralChanges( xecs::game_mgr::instance& GameMgr ) noexcept
     {
+        const auto OldSize = m_Size;
+
         //
         // Delete the regular entries
         //
@@ -248,14 +247,13 @@ namespace xecs::pool
             const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
             assert(PoolEntity.m_Validation.m_bZombie);
 
-            Free( Entry.m_PoolIndex, true );
-            if (Entry.m_PoolIndex == m_Size )
+            if( Free(Entry.m_PoolIndex, true) )
             {
-                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
+                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
             }
             else
             {
-                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex, PoolEntity);
+                GameMgr.DeleteGlobalEntity(m_DeleteGlobalIndex);
             }
 
             m_DeleteGlobalIndex = NextDeleteGlobalIndex;
@@ -268,13 +266,34 @@ namespace xecs::pool
         {
             auto&       PoolEntity            = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_DeleteMoveIndex]);
             const auto  NextDeleteGlobalIndex = PoolEntity.m_Validation.m_Generation;
-            Free( m_DeleteMoveIndex, false );
-            if (m_DeleteMoveIndex != m_Size)
+            
+            if( Free(m_DeleteMoveIndex, false) )
             {
                 GameMgr.MovedGlobalEntity( m_DeleteMoveIndex, PoolEntity );
             }
 
             m_DeleteMoveIndex = NextDeleteGlobalIndex;
+        }
+
+        //
+        // Free pages that we are not using any more
+        //
+        if( m_Size < OldSize )
+        {
+            for (int i = 0; i < m_Infos.size(); ++i)
+            {
+                const auto& MyInfo          = *m_Infos[i];
+                const auto  LastEntryPage   = getPageFromIndex( MyInfo, OldSize );
+                if( auto Cur = getPageFromIndex(MyInfo, m_Size); Cur != LastEntryPage || m_Size == 0 )
+                {
+                    if( m_Size == 0 ) Cur--;
+                    auto pRaw   = &m_pComponent[i][xecs::settings::virtual_page_size_v * (Cur + 1) ];
+                    auto nPages = LastEntryPage - Cur;
+                    assert(nPages > 0);
+                    auto b      = VirtualFree(pRaw, xecs::settings::virtual_page_size_v * nPages, MEM_DECOMMIT);
+                    assert(b);
+                }
+            }
         }
 
         // Update the current count
