@@ -101,6 +101,29 @@ namespace xecs::pool
     }
 
     //-------------------------------------------------------------------------------------
+
+    void family::MoveIn
+    ( xecs::component::mgr&     ComponentMgr
+    , xecs::pool::family&       FromFamily
+    , xecs::pool::instance&     FromPool
+    , xecs::pool::index         FromIndex
+    ) noexcept
+    {
+        AppendEntities(ComponentMgr, 1, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
+        {
+            auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
+            auto& Details = ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+
+            // Move the entity
+            ToPool.MoveInFromPool( ToIndex, FromIndex, FromPool );
+
+            // Update the global info
+            Details.m_pPool     = &ToPool;
+            Details.m_PoolIndex = ToIndex;
+        });
+    }
+
+    //-------------------------------------------------------------------------------------
     // POOL INSTANCE
     //-------------------------------------------------------------------------------------
 

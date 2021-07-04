@@ -171,14 +171,14 @@ namespace xecs::game_mgr
     ( xecs::tools::function_return_v<T_FUNCTION, bool >
         && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
     )
-    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
+    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) noexcept
     {
         using func_traits = xcore::function::traits<T_FUNCTION>;
         
         for( const auto& pE : List )
         {
             const auto& Pool = pE->m_Pool;
-            auto        CachePointers = archetype::details::GetComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple>);
+            auto        CachePointers = archetype::details::GetDataComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple>);
 
             bool bBreak = false;
             pE->AccessGuard([&]
@@ -203,7 +203,7 @@ namespace xecs::game_mgr
     ( xecs::tools::function_return_v<T_FUNCTION, void >
         && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
     )
-    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
+    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) noexcept
     {
         using func_traits = xcore::function::traits<T_FUNCTION>;
         
@@ -213,8 +213,8 @@ namespace xecs::game_mgr
             {
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {
-                    auto        CachePointers = archetype::details::GetComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
-                    xecs::pool::access_guard Lk( *pPool, pE->m_Mgr.m_GameMgr.m_ComponentMgr );
+                    xecs::pool::access_guard Lk(*pPool, m_ComponentMgr);
+                    auto        CachePointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
                     for( int i = pPool->Size(); i; --i )
                     {
                         archetype::details::CallFunction(Function, CachePointers);
@@ -231,21 +231,195 @@ namespace xecs::game_mgr
     ( xecs::tools::function_return_v<T_FUNCTION, void >
         && true == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
     )
-    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
+    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) noexcept
     {
-        using func_traits = xcore::function::traits<T_FUNCTION>;
+        using func_traits               = xcore::function::traits<T_FUNCTION>;
+        using share_only_tuple          = xecs::component::type::details::share_only_tuple_t<typename func_traits::args_tuple>;
+        using data_only_tuple           = xecs::component::type::details::data_only_tuple_t<typename func_traits::args_tuple>;
+        using share_sorted_tuple        = xcore::types::tuple_decay_full_t<xecs::component::type::details::sort_tuple_t<share_only_tuple>>;
+        using data_sorted_tuple         = xecs::component::type::details::sort_tuple_t<data_only_tuple>;
+
+        std::array<std::byte*,                        std::tuple_size_v<share_sorted_tuple> > SortedSharePointerArray   {};
+        std::array<xecs::component::type::share::key, std::tuple_size_v<share_sorted_tuple> > SortedShareKeyArray       {};
+        share_sorted_tuple                                                                    SortedShares              {};
         
+        const auto& SortedInfoArray = xecs::component::type::details::sorted_info_array_v<share_sorted_tuple>;
+
         for( const auto& pE : List )
         {
+            //
+            // Compute the index of the share component type in the family arrays
+            // If it can not find a type it set to -1
+            //
+            const auto ShareIndices = [&]<typename...T>( std::tuple<T...>* ) constexpr noexcept
+            {
+                const auto  ShareInfos  = std::span{ &pE->m_InfoData[pE->m_nDataComponents], static_cast<std::size_t>(pE->m_nShareComponents) };
+                int         Sequence    = 0;
+                return std::array
+                {
+                    [&]<typename J>(J*) constexpr noexcept -> int
+                    {
+                        int SubSequence = Sequence;
+                        while( SubSequence < ShareInfos.size() && pE->m_InfoData[SubSequence] != &xecs::component::type::info_v<J> ) SubSequence++;
+                        if(SubSequence == ShareInfos.size()) return -1;
+                        Sequence = SubSequence + 1;
+                        return SubSequence;
+                    }( reinterpret_cast<std::decay_t<T>*>(0) )
+                    ...
+                };
+            }( xcore::types::null_tuple_v<share_sorted_tuple> );
+
+            //
+            // Loop through each of the families
+            //
             for( auto pFamily = &pE->m_DefaultPoolFamily; pFamily; pFamily = pFamily->m_Next.get() )
             {
+                //
+                // Updates all the share pointers if need be
+                //
+                for( int i=0; i<SortedSharePointerArray.size(); ++i )
+                {
+                    if( ShareIndices[i] == -1 )
+                    {
+                        SortedSharePointerArray[i] = nullptr;
+                        // assert() that this share is a pointer
+                    }
+                    else
+                    {
+                        const auto& FamilyShareDetails = pFamily->m_ShareDetails[ShareIndices[i]];
+                        if( SortedShareKeyArray[i] != FamilyShareDetails.m_Key )
+                        {
+                            auto&       EntityDetails   = m_ComponentMgr.getEntityDetails(FamilyShareDetails.m_Entity);
+                            const auto  ComponentIndex  = EntityDetails.m_pPool->findIndexComponentFromInfo(*SortedInfoArray[i]);
+                            assert(-1 != ComponentIndex);
+
+                            // Back up the pointer to the data
+                            SortedSharePointerArray[i] = &EntityDetails.m_pPool->m_pComponent[ComponentIndex][EntityDetails.m_PoolIndex.m_Value];
+                            SortedShareKeyArray[i]     = FamilyShareDetails.m_Key;
+                        }
+                    }
+                }
+
+                //
+                // Copy the shares into a temporary memory
+                //
+                [&]<typename... T>(std::tuple<T...>*) constexpr noexcept
+                {
+                    (([&]<typename J>(J*) constexpr noexcept
+                    {
+                        const int Index = xcore::types::tuple_t2i_v<J, share_sorted_tuple>;
+                        if( SortedSharePointerArray[Index] )
+                            std::get<J>(SortedShares) = reinterpret_cast<J&>(*SortedSharePointerArray[Index]);
+                    }( reinterpret_cast<T*>(0) )), ... );
+                }(xcore::types::null_tuple_v<share_sorted_tuple>);
+
+
+                //
+                // Copy the shares into a temporary memory
+                //
+                const auto KeySumGuid = xecs::pool::family::guid
+                { [&]<typename... T>(std::tuple<T...>*) constexpr noexcept
+                    {
+                        return (([&]<typename J>(J*) constexpr noexcept
+                        {
+                            return pFamily->m_ShareDetails[ShareIndices[xcore::types::tuple_t2i_v<J, share_sorted_tuple>]].m_Key.m_Value;
+                        }(reinterpret_cast<T*>(0))) + ...);
+                    }(xcore::types::null_tuple_v<share_sorted_tuple>)
+                };
+
+                //
+                // Loop through each of the pools inside the families
+                //
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {
-                    auto        CachePointers = archetype::details::GetComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
-                    xecs::pool::access_guard Lk( *pPool, pE->m_Mgr.m_GameMgr.m_ComponentMgr );
-                    for( int i = pPool->Size(); i; --i )
+                    // If we don't have any entities here just move on
+                    int i = pPool->Size();
+                    if( i==0 ) continue;
+
+                    // Lock the pool and cache the data pointers
+                    xecs::pool::access_guard Lk(*pPool, m_ComponentMgr);
+                    auto        CacheDataPointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<data_only_tuple> );
+
+                    //
+                    // Loop for each entity in the pool
+                    //
+                    for( ; i; --i )
                     {
-                        archetype::details::CallFunction(Function, CachePointers);
+                        //
+                        // Call the user function
+                        //
+                        [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
+                        {
+                            static_assert(((std::is_reference_v<T>) && ...));
+                            Function
+                            (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
+                                {
+                                    if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE )
+                                    {
+                                        return std::get<xcore::types::decay_full_t<J>>(SortedShares);
+                                    }
+                                    else
+                                    {
+                                        return reinterpret_cast<J>(*CacheDataPointers[xcore::types::tuple_t2i_v<J, typename func_traits::args_tuple>]);
+                                    }
+                                    
+                                }( xcore::types::make_null_tuple_v<T> )
+                                ...
+                            );
+
+                        }(xcore::types::null_tuple_v<func_traits::args_tuple>);
+
+                        //
+                        // Did the user change any of the share components?
+                        // If so... we need to move this entity into another family
+                        //
+                        [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+                        {
+                            std::array<xecs::component::type::share::key, std::tuple_size_v<share_sorted_tuple> >   UpdatedKeyArray {};
+                            xecs::pool::family::guid                                                                NewKeySumGuid   {};
+
+                            // Compute the new Sum Guid which will allow us to detect if something has change
+                            (([&]<typename J>(J*) constexpr noexcept
+                            {
+                                const auto Index        = xcore::types::tuple_t2i_v<J, share_sorted_tuple>;
+                                UpdatedKeyArray[Index]  = xecs::component::type::ComputeShareKey(pE->m_Guid, xecs::component::type::info_v<J>, &std::get<J>(SortedShares));
+                                NewKeySumGuid.m_Value  += UpdatedKeyArray[Index].m_Value;
+
+                            }( reinterpret_cast<T*>(nullptr) )), ... );
+
+                            // Check if we need to change family
+                            if( NewKeySumGuid != KeySumGuid )
+                            {
+                                std::array<std::byte*,                        std::tuple_size_v<share_sorted_tuple> >   PointersToShares;
+                                std::array<xecs::component::entity,           std::tuple_size_v<share_sorted_tuple> >   EntityList;
+
+                                // Collect the rest of the data
+                                (([&]<typename J>(J*) constexpr noexcept
+                                {
+                                    const auto Index = xcore::types::tuple_t2i_v<J, share_sorted_tuple>;
+                                    PointersToShares[Index] = &std::get<J>(SortedShares);
+                                    EntityList[Index]       = (UpdatedKeyArray[Index] == SortedShareKeyArray[Index]) ? pFamily->m_ShareDetails[ShareIndices[Index]].m_Entity : xecs::component::entity{};
+
+                                }(reinterpret_cast<T*>(nullptr))), ...);
+
+                                auto& NewFamily = pE->getOrCreatePoolFamily
+                                ( *pFamily
+                                , ShareIndices
+                                , SortedInfoArray
+                                , PointersToShares
+                                , EntityList
+                                , UpdatedKeyArray
+                                );
+
+                                NewFamily.MoveIn( m_ComponentMgr, pFamily, pPool, {(pPool->Size() - i)} );
+                            }
+
+                        }(xcore::types::null_tuple_v<share_sorted_tuple>);
+
+                        //
+                        // Increment the pointers
+                        //
+                        ((CacheDataPointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
                     }
                 }
             }

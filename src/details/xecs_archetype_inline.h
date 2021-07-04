@@ -15,7 +15,7 @@ namespace xecs::archetype
         template< typename... T_FUNCTION_ARGS >
         requires( ((std::is_reference_v<T_FUNCTION_ARGS>) && ... ) )
         constexpr __inline
-        auto GetComponentPointerArray
+        auto GetDataComponentPointerArray
         ( const xecs::pool::instance&             Pool
         , const pool::index                       StartingPoolIndex
         , std::tuple<T_FUNCTION_ARGS... >* 
@@ -45,7 +45,7 @@ namespace xecs::archetype
         template< typename... T_FUNCTION_ARGS >
         requires( ((std::is_pointer_v<T_FUNCTION_ARGS>) || ...) )
         constexpr __inline
-        auto GetComponentPointerArray
+        auto GetDataComponentPointerArray
         ( const xecs::pool::instance&             Pool
         , const pool::index                       StartingPoolIndex
         , std::tuple<T_FUNCTION_ARGS... >* 
@@ -247,7 +247,8 @@ namespace xecs::archetype
     }
 
     //--------------------------------------------------------------------------------------------
-    xecs::pool::family& instance::getOrCreatePoolFamily2
+
+    xecs::pool::family& instance::getOrCreatePoolFamily
     ( std::span< const xecs::component::type::info* const>  TypeInfos
     , std::span< std::byte* >                               MoveData
     ) noexcept
@@ -422,10 +423,107 @@ namespace xecs::archetype
 
     //--------------------------------------------------------------------------------------------
 
+    xecs::pool::family& 
+instance::getOrCreatePoolFamily
+    ( xecs::pool::family&                                   FromFamily
+    , std::span<int>                                        IndexRemaps
+    , std::span< const xecs::component::type::info* const>  TypeInfos
+    , std::span< std::byte* >                               MoveData
+    , std::span< xecs::component::entity >                  EntitySpan
+    , std::span< xecs::component::type::share::key >        Keys
+    ) noexcept
+    {
+        assert(TypeInfos.size() == MoveData.size());
+        assert(TypeInfos.size() == EntitySpan.size());
+        assert(TypeInfos.size() == Keys.size());
+
+        //
+        // Lets compute the New Family GUID
+        //
+        xecs::pool::family::guid NewFamilyGuid{ m_Guid.m_Value };
+        for( int i=0, j=0, end = static_cast<int>(m_nShareComponents); i != end; i++ )
+        {
+            NewFamilyGuid.m_Value += (TypeInfos[j] == FromFamily.m_ShareInfos[i])
+            ? Keys[j++].m_Value
+            : FromFamily.m_ShareDetails[i].m_Key.m_Value;
+        }
+
+        //
+        // Try to find the new family
+        //
+        if (auto It = m_Mgr.m_PoolFamily.find(NewFamilyGuid); It != m_Mgr.m_PoolFamily.end())
+            return *It->second;
+
+        //
+        // Make sure all the shares Entities are created
+        //
+        std::array< xecs::component::entity,            xecs::settings::max_components_per_entity_v > FinalShareEntities;
+        std::array< xecs::component::type::share::key,  xecs::settings::max_components_per_entity_v > FinalShareKeys;
+
+        // Copy all the share entity keys... some of them may get replace later
+        for (int i = 0, end = static_cast<int>(Keys.size()); i != end; i++)
+        {
+            FinalShareEntities[i] = FromFamily.m_ShareDetails[i].m_Entity;
+            FinalShareKeys[i]     = FromFamily.m_ShareDetails[i].m_Key;
+        }
+        
+        // Create shares and make sure we set all the right entities into the final array
+        for( int i=0, end = static_cast<int>(Keys.size()); i != end; i++ )
+        {
+            if( Keys[i] != FromFamily.m_ShareDetails[ IndexRemaps[i] ].m_Key )
+            {
+                // Update the key
+                FinalShareKeys[ IndexRemaps[i] ] = Keys[i];
+
+                //
+                // Does this share component exists?
+                //
+                if (auto It = m_Mgr.m_ShareComponentEntityMap.find(Keys[i]); It == m_Mgr.m_ShareComponentEntityMap.end())
+                {
+                    xecs::component::entity Entity = m_ShareArchetypesArray[ IndexRemaps[i] ]->CreateEntity
+                    (  { TypeInfos[i], 1u }
+                     , { MoveData[i],  1u }
+                    );
+
+                    m_Mgr.m_ShareComponentEntityMap.emplace(Keys[i], Entity);
+                    FinalShareEntities[ IndexRemaps[i] ] = Entity;
+                }
+                else
+                {
+                    m_Mgr.m_GameMgr.findEntity( FinalShareEntities[ IndexRemaps[i] ], [](xecs::component::ref_count& RefCount)
+                    {
+                        RefCount.m_Value++;
+                    });
+                }
+            }
+        }
+
+        //
+        // Create new Pool Family
+        //
+        auto NewFamily = std::make_unique<xecs::pool::family>();
+        m_Mgr.m_PoolFamily.emplace( NewFamilyGuid, NewFamily.get() );
+
+        NewFamily->Initialize
+        ( NewFamilyGuid
+        , std::span{ FinalShareEntities.data(),             static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ FinalShareKeys.data(),                 static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ m_InfoData.data() + m_nDataComponents, static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ m_InfoData.data(),                     static_cast<std::size_t>(m_nDataComponents)  }
+        );
+
+        NewFamily->m_Next = std::move(m_PendingFamilies);
+        m_PendingFamilies = std::move(NewFamily);
+
+        return *m_PendingFamilies.get();
+    }
+
+    //--------------------------------------------------------------------------------------------
+
     template
     < typename...T_SHARE_COMPONENTS
     > requires
-    ( xecs::tools::assert_all_components_are_share_types_v<T_SHARE_COMPONENTS...>
+    ( xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
     )
 xecs::pool::family& instance::getOrCreatePoolFamily
     ( T_SHARE_COMPONENTS&&... Components
@@ -588,7 +686,7 @@ instance::CreateEntity
             else return [&](xecs::component::entity Entity, int) noexcept
             {
                 auto& Details        = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-                auto  CachedPointers = xecs::archetype::details::GetComponentPointerArray( *Details.m_pPool, Details.m_PoolIndex, xcore::types::null_tuple_v<func_traits::args_tuple>);
+                auto  CachedPointers = xecs::archetype::details::GetDataComponentPointerArray( *Details.m_pPool, Details.m_PoolIndex, xcore::types::null_tuple_v<func_traits::args_tuple>);
                 xecs::archetype::details::CallFunction( Function, CachedPointers );
 
                 TheEntity = Entity;
@@ -621,7 +719,7 @@ instance::CreateEntities
             if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) return;
 
             auto& Details        = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-            auto  CachedPointers = xecs::archetype::details::GetComponentPointerArray
+            auto  CachedPointers = xecs::archetype::details::GetDataComponentPointerArray
             ( *Details.m_pPool
             ,  Details.m_PoolIndex
             ,  xcore::types::null_tuple_v<func_traits::args_tuple> 
@@ -656,8 +754,8 @@ instance::CreateEntities
         ,   typename func_traits::args_tuple*
         >;
 
-        using share_only_tuple  = xecs::component::type::details::share_only_tuple_t<no_refs_tuple>;
-        using data_only_tuple   = xecs::component::type::details::data_only_tuple_t<no_refs_tuple>;
+        using share_only_tuple  = xcore::types::tuple_decay_full_t<xecs::component::type::details::share_only_tuple_t<no_refs_tuple>>;
+        using data_only_tuple   = xcore::types::tuple_decay_full_t<xecs::component::type::details::data_only_tuple_t<no_refs_tuple>>;
         using data_sorted_tuple = xecs::component::type::details::sort_tuple_t<data_only_tuple>;
 
         static constexpr auto ShareTypeInfos = [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
@@ -730,7 +828,7 @@ xecs::component::entity instance::CreateEntity
 
             TheEntity = Entity;
             auto& Details        = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-            auto  CachedPointers = xecs::archetype::details::GetComponentPointerArray
+            auto  CachedPointers = xecs::archetype::details::GetDataComponentPointerArray
             ( *Details.m_pPool
             ,  Details.m_PoolIndex
             ,  xcore::types::null_tuple_v<func_traits::args_tuple> 
@@ -863,7 +961,7 @@ instance::MoveInEntity
             }
             else
             {
-                auto CachedPointer = details::GetComponentPointerArray
+                auto CachedPointer = details::GetDataComponentPointerArray
                 ( Pool
                 , NewPoolIndex
                 , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>

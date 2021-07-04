@@ -37,15 +37,22 @@ namespace xecs::archetype
         template
         < typename...T_SHARE_COMPONENTS
         > requires
-        ( xecs::tools::assert_all_components_are_share_types_v<T_SHARE_COMPONENTS...>
+        ( xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
         ) __inline
         xecs::pool::family&     getOrCreatePoolFamily   ( T_SHARE_COMPONENTS&&... Components
                                                         ) noexcept;
         inline
-        xecs::pool::family&     getOrCreatePoolFamily2  ( std::span< const xecs::component::type::info* const>  TypeInfos
+        xecs::pool::family&     getOrCreatePoolFamily   ( std::span< const xecs::component::type::info* const>  TypeInfos
                                                         , std::span< std::byte* >                               MoveData
                                                         ) noexcept;
-
+        inline
+        xecs::pool::family&     getOrCreatePoolFamily   ( xecs::pool::family&                                   FromFamily
+                                                        , std::span<int>                                        IndexRemaps
+                                                        , std::span< const xecs::component::type::info* const>  TypeInfos
+                                                        , std::span< std::byte* >                               MoveData
+                                                        , std::span< xecs::component::entity >                  EntitySpan
+                                                        , std::span< xecs::component::type::share::key >        Keys
+                                                        ) noexcept;
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
@@ -153,6 +160,9 @@ namespace xecs::archetype
         std::uint8_t                        m_nShareComponents          {};
         events                              m_Events                    {};
         pool::family                        m_DefaultPoolFamily         {};
+        std::unique_ptr<xecs::pool::family> m_PendingFamilies           {}; // Families pending to be added into the DefaultPool link list of families
+                                                                            // They need to be kept separated because it is a Structural change
+                                                                            // Ones everyone is done accessing the archetype it will link up the pending families
         info_array                          m_InfoData                  {}; // rename to InfoArray
         share_archetypes_array              m_ShareArchetypesArray      {};
     };

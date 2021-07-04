@@ -103,7 +103,7 @@ namespace xecs::game_mgr
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
                                                                     , T_FUNCTION&&                                   Function 
-                                                                    ) const noexcept;
+                                                                    ) noexcept;
         template
         <   typename T_FUNCTION
         > requires
@@ -112,7 +112,7 @@ namespace xecs::game_mgr
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
                                                                     , T_FUNCTION&&                                   Function 
-                                                                    ) const noexcept;
+                                                                    ) noexcept;
         template
         < typename T_FUNCTION
         > requires
@@ -121,7 +121,7 @@ namespace xecs::game_mgr
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
                                                                     , T_FUNCTION&&                                   Function 
-                                                                    ) const noexcept;
+                                                                    ) noexcept;
         inline
         void                                Run                     ( void 
                                                                     ) noexcept;

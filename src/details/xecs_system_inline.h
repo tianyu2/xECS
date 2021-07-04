@@ -51,7 +51,7 @@ namespace xecs::system
                         auto& Entry         = T_USER_SYSTEM::m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
                         assert(Entry.m_pPool->m_ProcessReference > 0 );
                         {
-                            auto CachedArray = xecs::archetype::details::GetComponentPointerArray
+                            auto CachedArray = xecs::archetype::details::GetDataComponentPointerArray
                             ( *Entry.m_pPool
                             , Entry.m_PoolIndex
                             , xcore::types::null_tuple_v<function_args> 

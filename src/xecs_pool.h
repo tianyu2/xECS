@@ -114,6 +114,12 @@ namespace xecs::pool
         >
         void AppendEntities( int Count, xecs::component::mgr& ComponentMgr, T_FUNCTION&& Function ) noexcept;
 
+        void MoveIn( 
+            xecs::component::mgr&   ComponentMgr
+            , xecs::pool::family&   FromFamily
+            , xecs::pool::instance& FromPool
+            , xecs::pool::index     FromIndex ) noexcept;
+
         struct share_details
         {
             xecs::component::entity             m_Entity;
