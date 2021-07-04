@@ -239,7 +239,7 @@ namespace xecs::archetype
         if( bTreatShareComponentsAsData ) m_nShareComponents = 0;
         if( m_nShareComponents == 0 ) 
         {
-            m_DefaultPoolFamily.m_DefaultPool.Initialize( { m_InfoData.data(), Infos.size() }, {} );
+            m_DefaultPoolFamily.Initialize( pool::family::guid{42ull}, {}, {}, {}, { m_InfoData.data(), Infos.size() } );
         }
 
         m_ComponentBits = Bits;
@@ -409,12 +409,12 @@ namespace xecs::archetype
         }
         m_Mgr.m_PoolFamily.emplace(FamilyGuid, pPoolFamily);
 
-        pPoolFamily->m_Guid             = FamilyGuid;
-        std::memcpy( pPoolFamily->m_ShareKeyArray.data(), AllKeys.data(), sizeof(xecs::component::type::share::key) * m_nShareComponents );
-        pPoolFamily->m_DefaultPool.Initialize
-        (
-            std::span{ m_InfoData.data(),               static_cast<std::size_t>(m_nDataComponents + (int)m_nShareComponents) }
-        ,   std::span{ ShareComponentEntityRefs.data(), static_cast<std::size_t>(                         m_nShareComponents) }
+        pPoolFamily->Initialize
+        ( FamilyGuid
+        , std::span{ ShareComponentEntityRefs.data(),       static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ AllKeys.data(),                        static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ m_InfoData.data() + m_nDataComponents, static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ m_InfoData.data(),                     static_cast<std::size_t>(m_nDataComponents)  }
         );
 
         return *pPoolFamily;
@@ -463,89 +463,51 @@ instance::CreateEntity
         //
         // Allocate entity from one of the pools append pools if need it
         //
-        auto pPool = &PoolFamily.m_DefaultPool;
-        do
+        PoolFamily.AppendEntities(Count, m_Mgr.m_GameMgr.m_ComponentMgr, [&]( xecs::pool::instance& Pool, xecs::pool::index Index, int nAlloc) noexcept
         {
-            int FreeSpace = pPool->getFreeSpace();
-            if(FreeSpace > 0 )
+            //
+            // Connected with the global pool
+            //
+            if (m_Events.m_OnEntityCreated.m_Delegates.size())
             {
-                //
-                // Update the counts
-                //
-                const int nAlloc = std::min( Count, FreeSpace );
-                Count -= nAlloc;
-
-                //
-                // Allocate the entities
-                // 
-                pool::index Index = pPool->Append(nAlloc);
-
-                //
-                // Lock the pool
-                //
-                xecs::pool::access_guard Lk(*pPool, m_Mgr.m_GameMgr.m_ComponentMgr);
-
-                //
-                // Connected with the global pool
-                //
-                if (m_Events.m_OnEntityCreated.m_Delegates.size())
+                for (int i = 0; i < nAlloc; ++i)
                 {
-                    for (int i = 0; i < nAlloc; ++i)
-                    {
-                        xecs::pool::index NewIndex{ Index.m_Value + i };
+                    xecs::pool::index NewIndex{ Index.m_Value + i };
 
-                        //
-                        // Officially add an entity in to the world
-                        //
-                        auto& Entity = pPool->getComponent<xecs::component::entity>(NewIndex) = m_Mgr.m_GameMgr.m_ComponentMgr.AllocNewEntity(NewIndex, *this, *pPool);
+                    //
+                    // Officially add an entity in to the world
+                    //
+                    auto& Entity = Pool.getComponent<xecs::component::entity>(NewIndex) = m_Mgr.m_GameMgr.m_ComponentMgr.AllocNewEntity(NewIndex, *this, Pool);
 
-                        //
-                        // Call the user callback
-                        //
-                        if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) Function(Entity, nAlloc);
+                    //
+                    // Call the user callback
+                    //
+                    if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) Function(Entity, nAlloc);
 
-                        //
-                        // Notify anyone that cares
-                        //
-                        m_Events.m_OnEntityCreated.NotifyAll(Entity);
-                    }
+                    //
+                    // Notify anyone that cares
+                    //
+                    m_Events.m_OnEntityCreated.NotifyAll(Entity);
                 }
-                else
-                {
-                    for (int i = 0; i < nAlloc; ++i)
-                    {
-                        xecs::pool::index NewIndex{ Index.m_Value + i };
-
-                        //
-                        // Officially add an entity in to the world
-                        //
-                        auto& Entity = pPool->getComponent<xecs::component::entity>(NewIndex) = m_Mgr.m_GameMgr.m_ComponentMgr.AllocNewEntity(NewIndex, *this, *pPool);
-
-                        //
-                        // Call the user callback
-                        //
-                        if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) Function(Entity, nAlloc);
-                    }
-                }
-
-                if( Count == 0 ) return;
-            }
-
-            if (pPool->m_Next.get() == nullptr)
-            {
-                pPool->m_Next = std::make_unique<pool::instance>();
-                auto Span = pPool->m_ComponentInfos.subspan(pPool->m_ComponentInfos.size() - pPool->m_ShareComponentCount, pPool->m_ShareComponentCount);
-                pPool->m_Next->Initialize
-                (pPool->m_ComponentInfos
-                    , *reinterpret_cast<std::span<xecs::component::entity>*>(&Span)
-                );
             }
             else
             {
-                pPool = pPool->m_Next.get();
-            }
+                for (int i = 0; i < nAlloc; ++i)
+                {
+                    xecs::pool::index NewIndex{ Index.m_Value + i };
 
-        } while (true);
+                    //
+                    // Officially add an entity in to the world
+                    //
+                    auto& Entity = Pool.getComponent<xecs::component::entity>(NewIndex) = m_Mgr.m_GameMgr.m_ComponentMgr.AllocNewEntity(NewIndex, *this, Pool);
+
+                    //
+                    // Call the user callback
+                    //
+                    if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) Function(Entity, nAlloc);
+                }
+            }
+        });
     }
 
     //--------------------------------------------------------------------------------------------
@@ -562,7 +524,7 @@ instance::CreateEntity
         {
             auto& Details   = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails( Entity );
             auto& Pool      = *Details.m_pPool;
-            auto  InfosSpan = Pool.m_ComponentInfos.subspan( 0, Pool.m_ComponentInfos.size() - Pool.m_ShareComponentCount );
+            auto  InfosSpan = Pool.m_ComponentInfos;
 
             for( int i=0, j=0; i<Infos.size(); i++ )
             {
@@ -694,37 +656,8 @@ instance::CreateEntities
         ,   typename func_traits::args_tuple*
         >;
 
-        using share_only_tuple  = std::invoke_result_t
-        <
-            decltype
-            (   []<typename...T>(std::tuple<T...>*) ->
-                xcore::types::tuple_cat_t
-                < std::conditional_t
-                    < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::SHARE
-                    , std::tuple<std::remove_reference_t<T>>
-                    , std::tuple<>
-                    >
-                ...
-                > {}
-            )
-        ,   no_refs_tuple* 
-        >;
-        
-        using data_only_tuple = std::invoke_result_t
-        <   decltype
-            (   []<typename...T>(std::tuple<T...>*) ->
-                xcore::types::tuple_cat_t
-                < std::conditional_t
-                    < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::DATA
-                    , std::tuple<std::remove_reference_t<T>>
-                    , std::tuple<>
-                    >
-                ...
-                > {}
-            )
-        ,   no_refs_tuple* 
-        >;
-
+        using share_only_tuple  = xecs::component::type::details::share_only_tuple_t<no_refs_tuple>;
+        using data_only_tuple   = xecs::component::type::details::data_only_tuple_t<no_refs_tuple>;
         using data_sorted_tuple = xecs::component::type::details::sort_tuple_t<data_only_tuple>;
 
         static constexpr auto ShareTypeInfos = [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
@@ -735,7 +668,14 @@ instance::CreateEntities
         const auto ComponentIndex = [&]< typename...T >(std::tuple<T...>*) constexpr noexcept
         {
             int Sequence = 0;
-            return std::array{ [&]<typename J>(J*){ while( m_InfoData[Sequence] != &xecs::component::type::info_v<J> ) Sequence++; return Sequence; }(reinterpret_cast<T*>(0)) ... };
+            return std::array
+            { [&]<typename J>(J*) constexpr noexcept
+                {
+                    while( m_InfoData[Sequence] != &xecs::component::type::info_v<J> ) Sequence++;
+                    return Sequence;
+                }(reinterpret_cast<T*>(0))
+                ...
+            };
         }(xcore::types::null_tuple_v<data_sorted_tuple>);
 
         assert( ComponentIndex[0] != -1 );
@@ -895,82 +835,56 @@ instance::MoveInEntity
         auto&       FromPool      = *GlobalEntity.m_pPool;
 
         //
-        // Find a free pool
+        // Move entity
         //
-        auto pPool = &PoolFamily.m_DefaultPool;
-        do
+        xecs::component::entity NewEntity{ Entity };
+        PoolFamily.AppendEntities( 1, m_Mgr.m_GameMgr.m_ComponentMgr, [&]( xecs::pool::instance& Pool, xecs::pool::index Index, int ) noexcept
         {
-            int FreeSpace = pPool->getFreeSpace();
-            if(FreeSpace)
+            //
+            // Ok time to work
+            //
+            xecs::pool::access_guard Lk1(FromPool,  m_Mgr.m_GameMgr.m_ComponentMgr);
+
+            const auto  NewPoolIndex = Pool.MoveInFromPool( Index, GlobalEntity.m_PoolIndex, FromPool );
+
+            GlobalEntity.m_pArchetype = this;
+            GlobalEntity.m_PoolIndex  = NewPoolIndex;
+            GlobalEntity.m_pPool      = &Pool;
+
+            if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda> )
             {
-                break;
-            }
-            else if (pPool->m_Next.get() == nullptr)
-            {
-                pPool->m_Next = std::make_unique<pool::instance>();
-                auto Span = pPool->m_ComponentInfos.subspan(pPool->m_ComponentInfos.size() - pPool->m_ShareComponentCount, pPool->m_ShareComponentCount);
-                pPool->m_Next->Initialize
-                (pPool->m_ComponentInfos
-                    , *reinterpret_cast<std::span<xecs::component::entity>*>(&Span)
-                );
+                // Notify any that cares
+                if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
+                {
+                    auto& PoolEntity = Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                    m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
+                    if (GlobalEntity.m_Validation.m_bZombie) NewEntity = xecs::component::entity{ 0xffffffffffffffff };
+                }
             }
             else
             {
-                pPool = pPool->m_Next.get();
+                auto CachedPointer = details::GetComponentPointerArray
+                ( Pool
+                , NewPoolIndex
+                , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>
+                );
+
+                details::CallFunction
+                ( Function
+                , CachedPointer
+                );
+
+                // Notify any that cares
+                if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
+                {
+                    auto&   PoolEntity  = Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                    m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
+                    if (GlobalEntity.m_Validation.m_bZombie) NewEntity = xecs::component::entity{ 0xffffffffffffffff };
+                }
             }
+        });
 
-        } while(true);
-
-        //
-        // Ok time to work
-        //
-        xecs::pool::access_guard Lk1(FromPool,  m_Mgr.m_GameMgr.m_ComponentMgr);
-        xecs::pool::access_guard Lk2(*pPool,    m_Mgr.m_GameMgr.m_ComponentMgr);
-
-        const auto  NewPoolIndex = pPool->MoveInFromPool( GlobalEntity.m_PoolIndex, FromPool );
-
-        GlobalEntity.m_pArchetype = this;
-        GlobalEntity.m_PoolIndex  = NewPoolIndex;
-        GlobalEntity.m_pPool      = pPool;
-
-        if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda> )
-        {
-            // Notify any that cares
-            if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
-            {
-                bool isZombie = false;
-                auto& PoolEntity = pPool->getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
-                m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
-                if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
-                if (isZombie) return { 0xffffffffffffffff };
-            }
-        }
-        else
-        {
-            bool isZombie = false;
-            auto CachedPointer = details::GetComponentPointerArray
-            ( *pPool
-            , NewPoolIndex
-            , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>
-            );
-
-            details::CallFunction
-            ( Function
-            , CachedPointer
-            );
-
-            // Notify any that cares
-            if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
-            {
-                auto&   PoolEntity  = pPool->getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
-                m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
-                if (GlobalEntity.m_Validation.m_bZombie) isZombie = true;
-            }
-
-            if (isZombie) return { 0xffffffffffffffff };
-        }
-
-        return Entity;
+        return NewEntity;
     }
 
     //--------------------------------------------------------------------------------------------

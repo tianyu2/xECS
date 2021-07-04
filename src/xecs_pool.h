@@ -20,8 +20,7 @@ namespace xecs::pool
                        ~instance                            ( void 
                                                             ) noexcept;
         inline
-        void            Initialize                          ( std::span<const component::type::info* const > AllComponentsSpan
-                                                            , std::span<const xecs::component::entity      > ShareComponents
+        void            Initialize                          ( std::span<const component::type::info* const > DataComponentInfosSpan
                                                             ) noexcept;
         inline
         void            Clear                               ( void 
@@ -33,21 +32,13 @@ namespace xecs::pool
         void            Delete                              ( index Index
                                                             ) noexcept;
         inline
-        index           MoveInFromPool                      ( index             IndexToMove
-                                                            , pool::instance&   Pool
+        index           MoveInFromPool                      ( index             ToNewIndex
+                                                            , index             FromIndexToMove
+                                                            , pool::instance&   FromPool
                                                             ) noexcept;
         constexpr
         int             Size                                ( void 
                                                             ) const noexcept;
-/*
-        constexpr
-        int             findIndexComponentFromGUID          ( xecs::component::type::guid Guid
-                                                            ) const noexcept;
-        constexpr
-        int             findIndexComponentFromGUIDInSequence( xecs::component::type::guid Guid
-                                                            , int&                        Sequence 
-                                                            ) const noexcept;
-*/
         constexpr
         int             findIndexComponentFromInfo          ( const xecs::component::type::info&
                                                             ) const noexcept;
@@ -88,7 +79,6 @@ namespace xecs::pool
     public:
 
         std::span<const component::type::info* const >                      m_ComponentInfos        {};
-        std::uint8_t                                                        m_ShareComponentCount   {};
         int                                                                 m_CurrentCount          {};
         int                                                                 m_Size                  {};
         std::uint32_t                                                       m_DeleteGlobalIndex     { invalid_delete_global_index_v };
@@ -111,13 +101,33 @@ namespace xecs::pool
                                 , std::span<const std::byte* const>                     Data
                                 ) noexcept;
 
-        using share_key_array = std::array<xecs::component::type::share::key, xecs::settings::max_components_per_entity_v >;
+        void Initialize
+        ( guid                                              Guid
+        , std::span<xecs::component::entity>                ShareEntityList
+        , std::span<xecs::component::type::share::key>      ShareKeyList
+        , std::span<const xecs::component::type::info*>     ShareInfoList
+        , std::span<const xecs::component::type::info*>     DataInfoList
+        ) noexcept;
 
-        guid                                m_Guid          {};
-        instance                            m_DefaultPool   {};
-        share_key_array                     m_ShareKeyArray {};
-        std::unique_ptr<xecs::pool::family> m_Next          {};
-        xecs::pool::family*                 m_pPrev         {};
+        template
+        < typename T_FUNCTION
+        >
+        void AppendEntities( int Count, xecs::component::mgr& ComponentMgr, T_FUNCTION&& Function ) noexcept;
+
+        struct share_details
+        {
+            xecs::component::entity             m_Entity;
+            xecs::component::type::share::key   m_Key;
+        };
+
+        using share_details_array = std::array<share_details, xecs::settings::max_components_per_entity_v>;
+
+        guid                                            m_Guid              {};
+        instance                                        m_DefaultPool       {};
+        std::span<const xecs::component::type::info*>   m_ShareInfos        {};
+        std::unique_ptr<xecs::pool::family>             m_Next              {};
+        xecs::pool::family*                             m_pPrev             {};
+        share_details_array                             m_ShareDetails      {};
     };
 
     //------------------------------------------------------------------------------

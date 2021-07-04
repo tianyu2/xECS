@@ -168,8 +168,8 @@ namespace xecs::game_mgr
     template
     <   typename T_FUNCTION
     > requires
-    (   xcore::function::is_callable_v<T_FUNCTION> 
-    &&  std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
+    ( xecs::tools::function_return_v<T_FUNCTION, bool >
+        && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
     )
     void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
     {
@@ -200,8 +200,36 @@ namespace xecs::game_mgr
     template
     < typename T_FUNCTION
     > requires
-    ( xcore::function::is_callable_v<T_FUNCTION>
-    && std::is_same_v< void, typename xcore::function::traits<T_FUNCTION>::return_type >
+    ( xecs::tools::function_return_v<T_FUNCTION, void >
+        && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
+    )
+    void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
+    {
+        using func_traits = xcore::function::traits<T_FUNCTION>;
+        
+        for( const auto& pE : List )
+        {
+            for( auto pFamily = &pE->m_DefaultPoolFamily; pFamily; pFamily = pFamily->m_Next.get() )
+            {
+                for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
+                {
+                    auto        CachePointers = archetype::details::GetComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    xecs::pool::access_guard Lk( *pPool, pE->m_Mgr.m_GameMgr.m_ComponentMgr );
+                    for( int i = pPool->Size(); i; --i )
+                    {
+                        archetype::details::CallFunction(Function, CachePointers);
+                    }
+                }
+            }
+        }
+    }
+
+    //---------------------------------------------------------------------------
+    template
+    < typename T_FUNCTION
+    > requires
+    ( xecs::tools::function_return_v<T_FUNCTION, void >
+        && true == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
     )
     void instance::Foreach( const std::vector<xecs::archetype::instance*>& List, T_FUNCTION&& Function ) const noexcept
     {

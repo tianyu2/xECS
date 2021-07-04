@@ -127,6 +127,41 @@ namespace xecs::component
             ,   std::tuple<T_TUPLES_OR_COMPONENTS>
             > ...
         >;
+
+        template< typename T_TUPLE >
+        using share_only_tuple_t = std::invoke_result_t
+        <
+            decltype
+            (   []<typename...T>(std::tuple<T...>*) ->
+                xcore::types::tuple_cat_t
+                < std::conditional_t
+                    < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::SHARE
+                    , std::tuple<std::remove_reference_t<T>>
+                    , std::tuple<>
+                    >
+                ...
+                > {}
+            )
+        , T_TUPLE*
+        >;
+
+        template< typename T_TUPLE >
+        using data_only_tuple_t = std::invoke_result_t
+        <   decltype
+            (   []<typename...T>(std::tuple<T...>*) ->
+                xcore::types::tuple_cat_t
+                < std::conditional_t
+                    < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::DATA
+                    , std::tuple<std::remove_reference_t<T>>
+                    , std::tuple<>
+                    >
+                ...
+                > {}
+            )
+        ,   T_TUPLE*
+        >;
+
+
     }
 
     //------------------------------------------------------------------------------

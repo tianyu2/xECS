@@ -109,7 +109,7 @@ struct update_movement : xecs::system::instance
         .m_pName = "update_movement"
     };
 
-    void operator()( entity* pEntity, position& Position, velocity& Velocity, bullet* pBullet ) noexcept
+    void operator()( position& Position, velocity& Velocity, grid_cell& GridCell ) noexcept
     {
         Position.m_Value += Velocity.m_Value;
 
@@ -135,6 +135,8 @@ struct update_movement : xecs::system::instance
             Position.m_Value.m_Y = s_Game.m_H - 1;
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
+
+        GridCell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
     }
 };
 

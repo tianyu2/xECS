@@ -98,8 +98,17 @@ namespace xecs::game_mgr
         template
         <   typename T_FUNCTION
         > requires
-        (   xcore::function::is_callable_v<T_FUNCTION> 
-        &&  std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
+        ( xecs::tools::function_return_v<T_FUNCTION, bool >
+            && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
+        ) __inline
+        void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
+                                                                    , T_FUNCTION&&                                   Function 
+                                                                    ) const noexcept;
+        template
+        <   typename T_FUNCTION
+        > requires
+        ( xecs::tools::function_return_v<T_FUNCTION, void >
+            && true == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
                                                                     , T_FUNCTION&&                                   Function 
@@ -107,8 +116,8 @@ namespace xecs::game_mgr
         template
         < typename T_FUNCTION
         > requires
-        ( xcore::function::is_callable_v<T_FUNCTION>
-        && std::is_same_v< void, typename xcore::function::traits<T_FUNCTION>::return_type >
+        ( xecs::tools::function_return_v<T_FUNCTION, void >
+            && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
         ) __inline
         void                                Foreach                 ( const std::vector<xecs::archetype::instance*>& List
                                                                     , T_FUNCTION&&                                   Function 
