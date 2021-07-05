@@ -151,6 +151,10 @@ namespace xecs::archetype
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
                                                         ) noexcept;
 
+        __inline
+        void                    UpdateStructuralChanges ( void
+                                                        ) noexcept;
+
         using info_array             = std::array<const xecs::component::type::info*,           xecs::settings::max_components_per_entity_v >;
         using share_archetypes_array = std::array<std::shared_ptr<xecs::archetype::instance>,   xecs::settings::max_components_per_entity_v >;
 
@@ -164,7 +168,9 @@ namespace xecs::archetype
         std::unique_ptr<xecs::pool::family> m_PendingFamilies           {}; // Families pending to be added into the DefaultPool link list of families
                                                                             // They need to be kept separated because it is a Structural change
                                                                             // Ones everyone is done accessing the archetype it will link up the pending families
+        xecs::pool::family*                 m_pLastPendingFamilies      {};
         info_array                          m_InfoData                  {}; // rename to InfoArray
+        instance*                           m_pPendingStructuralChanges {};
         share_archetypes_array              m_ShareArchetypesArray      {};
     };
 
@@ -183,13 +189,23 @@ namespace xecs::archetype
         inline
         std::shared_ptr<archetype::instance>    getOrCreateArchetype        ( std::span<const component::type::info* const> Types
                                                                             ) noexcept;
-
-
+        inline
+        void                                    UpdateStructuralChanges     ( void 
+                                                                            ) noexcept;
+        inline
+        void                                    AddToStructutalPendingList  ( instance& Archetype
+                                                                            ) noexcept;
+        inline
+        void                                    AddToStructutalPendingList  ( pool::instance& Pool
+                                                                            ) noexcept;
 
         // Pool family is all the share components of a certain type with a certain value plus the archetype guid
         using pool_family_map               = std::unordered_map<xecs::pool::family::guid,          xecs::pool::family*         >;
         using archetype_map                 = std::unordered_map<xecs::archetype::guid,             xecs::archetype::instance*  >;
         using share_component_entity_map    = std::unordered_map<xecs::component::type::share::key, xecs::component::entity     >;
+
+        template< typename T >
+        inline static const auto end_structural_changes_v = reinterpret_cast<T*>(~static_cast<std::size_t>(0));
 
         xecs::game_mgr::instance&                           m_GameMgr;
         events                                              m_Events                    {};
@@ -198,5 +214,7 @@ namespace xecs::archetype
         std::vector<std::shared_ptr<archetype::instance>>   m_lArchetype                {};
         std::vector<tools::bits>                            m_lArchetypeBits            {};
         pool_family_map                                     m_PoolFamily                {};
+        instance*                                           m_pArchetypeStrututalPending{ end_structural_changes_v<instance> };
+        pool::instance*                                     m_pPoolStructuralPending    { end_structural_changes_v<pool::instance> };
     };
 }

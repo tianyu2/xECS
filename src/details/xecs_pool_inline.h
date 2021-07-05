@@ -52,7 +52,7 @@ namespace xecs::pool
     template
     < typename T_FUNCTION
     >
-    void family::AppendEntities( int Count, xecs::component::mgr& ComponentMgr, T_FUNCTION&& Function ) noexcept
+    void family::AppendEntities( int Count, xecs::archetype::mgr& ArchetypeMgr, T_FUNCTION&& Function ) noexcept
     {
         auto pPool = &m_DefaultPool;
         do
@@ -74,8 +74,8 @@ namespace xecs::pool
                 //
                 // Lock the pool
                 //
-                xecs::pool::access_guard Lk( *pPool, ComponentMgr );
-
+                ArchetypeMgr.AddToStructutalPendingList(*pPool);
+                
                 //
                 // Call the user's function
                 //
@@ -103,16 +103,17 @@ namespace xecs::pool
     //-------------------------------------------------------------------------------------
 
     void family::MoveIn
-    ( xecs::component::mgr&     ComponentMgr
+    ( xecs::game_mgr::instance& GameMgr
     , xecs::pool::family&       FromFamily
     , xecs::pool::instance&     FromPool
     , xecs::pool::index         FromIndex
     ) noexcept
     {
-        FromFamily.AppendEntities( 1, ComponentMgr, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
+        GameMgr.m_ArchetypeMgr.AddToStructutalPendingList(FromPool);
+        FromFamily.AppendEntities( 1, GameMgr.m_ArchetypeMgr, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
         {
             auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
-            auto& Details = ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+            auto& Details = GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
 
             // Move the entity
             ToPool.MoveInFromPool( ToIndex, FromIndex, FromPool );

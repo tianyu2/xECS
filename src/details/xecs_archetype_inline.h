@@ -562,7 +562,7 @@ instance::CreateEntity
         //
         // Allocate entity from one of the pools append pools if need it
         //
-        PoolFamily.AppendEntities(Count, m_Mgr.m_GameMgr.m_ComponentMgr, [&]( xecs::pool::instance& Pool, xecs::pool::index Index, int nAlloc) noexcept
+        PoolFamily.AppendEntities(Count, m_Mgr.m_GameMgr.m_ArchetypeMgr, [&]( xecs::pool::instance& Pool, xecs::pool::index Index, int nAlloc) noexcept
         {
             //
             // Connected with the global pool
@@ -862,9 +862,9 @@ xecs::component::entity instance::CreateEntity
             return;
 
         //
-        // Lock the pool
+        // Add pull to the pending list
         //
-        xecs::pool::access_guard Lk( *GlobalEntry.m_pPool, m_Mgr.m_GameMgr.m_ComponentMgr );
+        m_Mgr.AddToStructutalPendingList( *GlobalEntry.m_pPool );
 
         //
         // Notify any one that cares
@@ -914,10 +914,7 @@ instance::MoveInEntity
             auto& FromArchetype = *GlobalEntity.m_pArchetype;
             if( FromArchetype.m_Events.m_OnEntityMovedOut.m_Delegates.size() )
             {
-                auto& Pool = *GlobalEntity.m_pPool;
-
-                xecs::pool::access_guard Lk(Pool, m_Mgr.m_GameMgr.m_ComponentMgr );
-
+                auto& Pool       = *GlobalEntity.m_pPool;
                 auto& PoolEntity = Pool.getComponent<xecs::component::entity>( GlobalEntity.m_PoolIndex );
                 m_Events.m_OnEntityMovedOut.NotifyAll(PoolEntity);
                 Entity = PoolEntity;
@@ -937,13 +934,12 @@ instance::MoveInEntity
         // Move entity
         //
         xecs::component::entity NewEntity{ Entity };
-        PoolFamily.AppendEntities( 1, m_Mgr.m_GameMgr.m_ComponentMgr, [&]( xecs::pool::instance& Pool, xecs::pool::index Index, int ) noexcept
+        PoolFamily.AppendEntities( 1, m_Mgr, [&]( xecs::pool::instance& Pool, xecs::pool::index Index, int ) noexcept
         {
             //
             // Ok time to work
             //
-            xecs::pool::access_guard Lk1(FromPool,  m_Mgr.m_GameMgr.m_ComponentMgr);
-
+            m_Mgr.AddToStructutalPendingList(FromPool);
             const auto  NewPoolIndex = Pool.MoveInFromPool( Index, GlobalEntity.m_PoolIndex, FromPool );
 
             GlobalEntity.m_pArchetype = this;
@@ -999,6 +995,14 @@ instance::MoveInEntity
         return MoveInEntity(Entity, m_DefaultPoolFamily, std::forward<T_FUNCTION&&>(Function) );
     }
 
+    //--------------------------------------------------------------------------------------------
+
+    void instance::UpdateStructuralChanges( void ) noexcept
+    {
+        if(m_DefaultPoolFamily.m_Next.get()) m_pLastPendingFamilies->m_Next = std::move(m_DefaultPoolFamily.m_Next);
+        m_DefaultPoolFamily.m_Next = std::move(m_PendingFamilies);
+    }
+
     //-------------------------------------------------------------------------------------
     // ARCHETYPE MANAGER
     //-------------------------------------------------------------------------------------
@@ -1050,5 +1054,56 @@ mgr::getOrCreateArchetype
         m_Events.m_OnNewArchetype.NotifyAll(Archetype);
 
         return m_lArchetype.back();
+    }
+
+    //-------------------------------------------------------------------------------------
+
+    void mgr::UpdateStructuralChanges( void ) noexcept
+    {
+        //
+        // Update all the pools
+        //
+        for (auto p = m_pPoolStructuralPending; p != end_structural_changes_v<xecs::pool::instance>; )
+        {
+            auto pNext = p->m_pPendingStructuralChanges;
+            p->UpdateStructuralChanges(m_GameMgr.m_ComponentMgr);
+            p->m_pPendingStructuralChanges = nullptr;
+            p = pNext;
+        }
+        m_pPoolStructuralPending = end_structural_changes_v<xecs::pool::instance>;
+
+        //
+        // Update all the archetypes
+        //
+        for( auto p = m_pArchetypeStrututalPending; p != end_structural_changes_v<xecs::archetype::instance>; )
+        {
+            auto pNext = p->m_pPendingStructuralChanges;
+            p->UpdateStructuralChanges();
+            p->m_pPendingStructuralChanges = nullptr;
+            p = pNext;
+        }
+        m_pArchetypeStrututalPending = end_structural_changes_v<xecs::archetype::instance>;
+    }
+
+    //-------------------------------------------------------------------------------------
+
+    void mgr::AddToStructutalPendingList( instance& Archetype ) noexcept
+    {
+        if( nullptr == Archetype.m_pPendingStructuralChanges )
+        {
+            Archetype.m_pPendingStructuralChanges = m_pArchetypeStrututalPending;
+            m_pArchetypeStrututalPending = &Archetype;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------
+
+    void mgr::AddToStructutalPendingList( pool::instance& Pool ) noexcept
+    {
+        if( nullptr == Pool.m_pPendingStructuralChanges )
+        {
+            Pool.m_pPendingStructuralChanges = m_pPoolStructuralPending;
+            m_pPoolStructuralPending = &Pool;
+        }
     }
 }

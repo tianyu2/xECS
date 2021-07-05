@@ -213,7 +213,6 @@ namespace xecs::game_mgr
             {
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {
-                    xecs::pool::access_guard Lk(*pPool, m_ComponentMgr);
                     auto        CachePointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
                     for( int i = pPool->Size(); i; --i )
                     {
@@ -353,7 +352,6 @@ namespace xecs::game_mgr
                         continue;
 
                     // Lock the pool and cache the data pointers
-                    xecs::pool::access_guard Lk(*pPool, m_ComponentMgr);
                     auto        CacheDataPointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<data_only_tuple> );
 
                     //
@@ -431,7 +429,7 @@ namespace xecs::game_mgr
                                 , UpdatedKeyArray
                                 );
 
-                                NewFamily.MoveIn( m_ComponentMgr, *pFamily, *pPool, {(pPool->Size() - i)} );
+                                NewFamily.MoveIn( *this, *pFamily, *pPool, {(pPool->Size() - i)} );
                             }
 
                             //
@@ -458,7 +456,6 @@ namespace xecs::game_mgr
         {
             if constexpr ( !std::is_same_v< T_FUNCTION, xecs::tools::empty_lambda> )
             {
-                xecs::pool::access_guard Lk( *Entry.m_pPool, m_ComponentMgr );
                 [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
                 {
                     Function(Entry.m_pPool->getComponent<std::remove_reference_t<T_COMPONENTS>>(Entry.m_PoolIndex) ...);
@@ -610,6 +607,7 @@ namespace xecs::game_mgr
         if( m_isRunning == false )
         {
             m_isRunning = true;
+            m_ArchetypeMgr.UpdateStructuralChanges();
             m_SystemMgr.m_Events.m_OnGameStart.NotifyAll();
         }
 

@@ -78,14 +78,14 @@ namespace xecs::pool
                                                             ) noexcept;
     public:
 
-        std::span<const component::type::info* const >                      m_ComponentInfos        {};
-        int                                                                 m_CurrentCount          {};
-        int                                                                 m_Size                  {};
-        std::uint32_t                                                       m_DeleteGlobalIndex     { invalid_delete_global_index_v };
-        std::uint32_t                                                       m_DeleteMoveIndex       { invalid_delete_global_index_v };
-        std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent            {};
-        std::int8_t                                                         m_ProcessReference      {};
-        std::unique_ptr<instance>                                           m_Next                  {};
+        std::span<const component::type::info* const >                      m_ComponentInfos            {};
+        int                                                                 m_CurrentCount              {};
+        int                                                                 m_Size                      {};
+        std::uint32_t                                                       m_DeleteGlobalIndex         { invalid_delete_global_index_v };
+        std::uint32_t                                                       m_DeleteMoveIndex           { invalid_delete_global_index_v };
+        std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent                {};
+        instance*                                                           m_pPendingStructuralChanges { nullptr };
+        std::unique_ptr<instance>                                           m_Next                      {};
     };
 
     //------------------------------------------------------------------------------
@@ -112,13 +112,13 @@ namespace xecs::pool
         template
         < typename T_FUNCTION
         >
-        void AppendEntities( int Count, xecs::component::mgr& ComponentMgr, T_FUNCTION&& Function ) noexcept;
+        void AppendEntities( int Count, xecs::archetype::mgr& ArchetypeMgr, T_FUNCTION&& Function ) noexcept;
 
         void MoveIn( 
-            xecs::component::mgr&   ComponentMgr
-            , xecs::pool::family&   FromFamily
-            , xecs::pool::instance& FromPool
-            , xecs::pool::index     FromIndex ) noexcept;
+              xecs::game_mgr::instance& GameMgr
+            , xecs::pool::family&       FromFamily
+            , xecs::pool::instance&     FromPool
+            , xecs::pool::index         FromIndex ) noexcept;
 
         struct share_details
         {
@@ -134,28 +134,5 @@ namespace xecs::pool
         std::unique_ptr<xecs::pool::family>             m_Next              {};
         xecs::pool::family*                             m_pPrev             {};
         share_details_array                             m_ShareDetails      {};
-    };
-
-    //------------------------------------------------------------------------------
-    // ACCESS GUARD FOR POOLS INSTANCES
-    //------------------------------------------------------------------------------
-    struct access_guard
-    {
-        access_guard() = delete;
-        access_guard( instance& Instance, xecs::component::mgr& ComponentMgr)
-            : m_Instance{ Instance }
-            , m_ComponentMgr{ ComponentMgr }
-        {
-            ++m_Instance.m_ProcessReference;
-        }
-
-        ~access_guard()
-        {
-            if( --m_Instance.m_ProcessReference == 0 )
-                m_Instance.UpdateStructuralChanges(m_ComponentMgr);
-        }
-
-        instance&               m_Instance;
-        xecs::component::mgr&   m_ComponentMgr;
     };
 }

@@ -17,6 +17,9 @@ namespace xecs::system
             __inline
             void Run( void ) noexcept
             {
+                //
+                // Call the user OnUpdate or process directly
+                //
                 if constexpr ( T_USER_SYSTEM::typedef_v.id_v == xecs::system::type::id::UPDATE )
                 {
                     XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
@@ -32,6 +35,19 @@ namespace xecs::system
                         ,   *this
                         );
                     }
+                }
+
+                //
+                // Ask the game to update all the pending structural changes
+                //
+                T_USER_SYSTEM::m_GameMgr.m_ArchetypeMgr.UpdateStructuralChanges();
+
+                //
+                // Check to see if the user would like to be notified 
+                //
+                if constexpr ( &T_USER_SYSTEM::OnPostStructuralChanges != &instance::OnPostStructuralChanges )
+                {
+                    T_USER_SYSTEM::OnPostStructuralChanges();
                 }
             }
 
@@ -49,7 +65,6 @@ namespace xecs::system
                     {
                         using function_args = xcore::function::traits<compleated<T_USER_SYSTEM>>::args_tuple;
                         auto& Entry         = T_USER_SYSTEM::m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-                        assert(Entry.m_pPool->m_ProcessReference > 0 );
                         {
                             auto CachedArray = xecs::archetype::details::GetDataComponentPointerArray
                             ( *Entry.m_pPool
