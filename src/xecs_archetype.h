@@ -37,7 +37,8 @@ namespace xecs::archetype
         template
         < typename...T_SHARE_COMPONENTS
         > requires
-        ( xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
+        ( ((xecs::component::type::is_valid_v<T_SHARE_COMPONENTS>) && ...)
+            && xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
         ) __inline
         xecs::pool::family&     getOrCreatePoolFamily   ( T_SHARE_COMPONENTS&&... Components
                                                         ) noexcept;
@@ -47,11 +48,11 @@ namespace xecs::archetype
                                                         ) noexcept;
         inline
         xecs::pool::family&     getOrCreatePoolFamily   ( xecs::pool::family&                                   FromFamily
-                                                        , std::span<int>                                        IndexRemaps
+                                                        , std::span<const int>                                  IndexRemaps
                                                         , std::span< const xecs::component::type::info* const>  TypeInfos
                                                         , std::span< std::byte* >                               MoveData
-                                                        , std::span< xecs::component::entity >                  EntitySpan
-                                                        , std::span< xecs::component::type::share::key >        Keys
+                                                        , std::span< const xecs::component::entity >            EntitySpan
+                                                        , std::span< const xecs::component::type::share::key >  Keys
                                                         ) noexcept;
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda

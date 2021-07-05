@@ -382,7 +382,11 @@ namespace xecs::game_mgr
                             (([&]<typename J>(J*) constexpr noexcept
                             {
                                 const auto Index        = xcore::types::tuple_t2i_v<J, share_sorted_tuple>;
-                                UpdatedKeyArray[Index]  = xecs::component::type::ComputeShareKey(pE->m_Guid, xecs::component::type::info_v<J>, &std::get<J>(SortedShares));
+                                UpdatedKeyArray[Index]  = xecs::component::type::details::ComputeShareKey
+                                                          ( pE->m_Guid
+                                                          , xecs::component::type::info_v<J>
+                                                          , reinterpret_cast<const std::byte*>(&std::get<J>(SortedShares))
+                                                          );
                                 NewKeySumGuid.m_Value  += UpdatedKeyArray[Index].m_Value;
 
                             }( reinterpret_cast<T*>(nullptr) )), ... );
@@ -397,7 +401,7 @@ namespace xecs::game_mgr
                                 (([&]<typename J>(J*) constexpr noexcept
                                 {
                                     const auto Index = xcore::types::tuple_t2i_v<J, share_sorted_tuple>;
-                                    PointersToShares[Index] = &std::get<J>(SortedShares);
+                                    PointersToShares[Index] = reinterpret_cast<std::byte*>(&std::get<J>(SortedShares));
                                     EntityList[Index]       = (UpdatedKeyArray[Index] == SortedShareKeyArray[Index]) ? pFamily->m_ShareDetails[ShareIndices[Index]].m_Entity : xecs::component::entity{};
 
                                 }(reinterpret_cast<T*>(nullptr))), ...);
@@ -411,15 +415,15 @@ namespace xecs::game_mgr
                                 , UpdatedKeyArray
                                 );
 
-                                NewFamily.MoveIn( m_ComponentMgr, pFamily, pPool, {(pPool->Size() - i)} );
+                                NewFamily.MoveIn( m_ComponentMgr, *pFamily, *pPool, {(pPool->Size() - i)} );
                             }
 
-                        }(xcore::types::null_tuple_v<share_sorted_tuple>);
+                            //
+                            // Increment the pointers
+                            //
+                            ((CacheDataPointers[xcore::types::tuple_t2i_v<T, share_sorted_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
 
-                        //
-                        // Increment the pointers
-                        //
-                        ((CacheDataPointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
+                        }(xcore::types::null_tuple_v<share_sorted_tuple>);
                     }
                 }
             }

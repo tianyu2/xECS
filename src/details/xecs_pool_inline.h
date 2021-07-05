@@ -109,7 +109,7 @@ namespace xecs::pool
     , xecs::pool::index         FromIndex
     ) noexcept
     {
-        AppendEntities(ComponentMgr, 1, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
+        FromFamily.AppendEntities( 1, ComponentMgr, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
         {
             auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
             auto& Details = ComponentMgr.m_lEntities[Entity.m_GlobalIndex];

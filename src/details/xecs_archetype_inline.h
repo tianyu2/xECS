@@ -426,11 +426,11 @@ namespace xecs::archetype
     xecs::pool::family& 
 instance::getOrCreatePoolFamily
     ( xecs::pool::family&                                   FromFamily
-    , std::span<int>                                        IndexRemaps
+    , std::span< const int >                                IndexRemaps
     , std::span< const xecs::component::type::info* const>  TypeInfos
     , std::span< std::byte* >                               MoveData
-    , std::span< xecs::component::entity >                  EntitySpan
-    , std::span< xecs::component::type::share::key >        Keys
+    , std::span< const xecs::component::entity >            EntitySpan
+    , std::span< const xecs::component::type::share::key >  Keys
     ) noexcept
     {
         assert(TypeInfos.size() == MoveData.size());
@@ -481,8 +481,8 @@ instance::getOrCreatePoolFamily
                 if (auto It = m_Mgr.m_ShareComponentEntityMap.find(Keys[i]); It == m_Mgr.m_ShareComponentEntityMap.end())
                 {
                     xecs::component::entity Entity = m_ShareArchetypesArray[ IndexRemaps[i] ]->CreateEntity
-                    (  { TypeInfos[i], 1u }
-                     , { MoveData[i],  1u }
+                    (  { &TypeInfos[i], 1u }
+                     , { &MoveData[i],  1u }
                     );
 
                     m_Mgr.m_ShareComponentEntityMap.emplace(Keys[i], Entity);
@@ -523,7 +523,8 @@ instance::getOrCreatePoolFamily
     template
     < typename...T_SHARE_COMPONENTS
     > requires
-    ( xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
+    ( ((xecs::component::type::is_valid_v<T_SHARE_COMPONENTS>) && ...)
+        && xecs::tools::all_components_are_share_types_v<T_SHARE_COMPONENTS...>
     )
 xecs::pool::family& instance::getOrCreatePoolFamily
     ( T_SHARE_COMPONENTS&&... Components
@@ -789,7 +790,7 @@ instance::CreateEntities
             }( Components );
 
             auto       ShareData      = [&]<typename...T>(std::tuple<T...>*){ return std::array{ reinterpret_cast<std::byte*>( &std::get<T>(Components) ) ... }; }(xcore::types::null_tuple_v<share_only_tuple>);
-            auto&      Family         = getOrCreatePoolFamily2(ShareTypeInfos, ShareData);
+            auto&      Family         = getOrCreatePoolFamily(ShareTypeInfos, ShareData);
 
             instance::CreateEntity( Family, 1, [&](xecs::component::entity Entity, int) constexpr noexcept
             {
