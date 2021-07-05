@@ -260,7 +260,7 @@ namespace xecs::game_mgr
                     [&]<typename J>(J*) constexpr noexcept -> int
                     {
                         int SubSequence = Sequence;
-                        while( SubSequence < ShareInfos.size() && pE->m_InfoData[SubSequence] != &xecs::component::type::info_v<J> ) SubSequence++;
+                        while( SubSequence < ShareInfos.size() && ShareInfos[SubSequence] != &xecs::component::type::info_v<J> ) SubSequence++;
                         if(SubSequence == ShareInfos.size()) return -1;
                         Sequence = SubSequence + 1;
                         return SubSequence;
@@ -279,6 +279,20 @@ namespace xecs::game_mgr
                 //
                 for( int i=0; i<SortedSharePointerArray.size(); ++i )
                 {
+                    assert( ShareIndices[i] != -1 );
+                    const auto& FamilyShareDetails = pFamily->m_ShareDetails[ShareIndices[i]];
+                    if( SortedShareKeyArray[i] != FamilyShareDetails.m_Key )
+                    {
+                        auto&       EntityDetails   = m_ComponentMgr.getEntityDetails(FamilyShareDetails.m_Entity);
+                        const auto  ComponentIndex  = EntityDetails.m_pPool->findIndexComponentFromInfo(*SortedInfoArray[i]);
+                        assert(-1 != ComponentIndex);
+
+                        // Back up the pointer to the data
+                        SortedSharePointerArray[i] = &EntityDetails.m_pPool->m_pComponent[ComponentIndex][EntityDetails.m_PoolIndex.m_Value];
+                        SortedShareKeyArray[i]     = FamilyShareDetails.m_Key;
+                    }
+
+                    /*
                     if( ShareIndices[i] == -1 )
                     {
                         SortedSharePointerArray[i] = nullptr;
@@ -298,6 +312,7 @@ namespace xecs::game_mgr
                             SortedShareKeyArray[i]     = FamilyShareDetails.m_Key;
                         }
                     }
+                    */
                 }
 
                 //
@@ -334,7 +349,8 @@ namespace xecs::game_mgr
                 {
                     // If we don't have any entities here just move on
                     int i = pPool->Size();
-                    if( i==0 ) continue;
+                    if( i==0 ) 
+                        continue;
 
                     // Lock the pool and cache the data pointers
                     xecs::pool::access_guard Lk(*pPool, m_ComponentMgr);
