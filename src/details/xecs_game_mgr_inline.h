@@ -398,24 +398,33 @@ namespace xecs::game_mgr
 
                                 }(reinterpret_cast<T*>(nullptr))), ...);
 
-                                auto& NewFamily = pE->getOrCreatePoolFamily
+                                //
+                                // Get the new family and move the entity there
+                                //
+                                pE->getOrCreatePoolFamily
                                 ( *pFamily
                                 , ShareIndices
                                 , SortedInfoArray
                                 , PointersToShares
                                 , EntityList
                                 , UpdatedKeyArray
+                                ).MoveIn
+                                ( *this
+                                , *pFamily
+                                , *pPool
+                                , {(pPool->Size() - i)} 
                                 );
-
-                                NewFamily.MoveIn( *this, *pFamily, *pPool, {(pPool->Size() - i)} );
                             }
 
-                            //
-                            // Increment the pointers
-                            //
-                            ((CacheDataPointers[xcore::types::tuple_t2i_v<T, share_sorted_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
-
                         }(xcore::types::null_tuple_v<share_sorted_tuple>);
+
+                        //
+                        // Increment the pointers
+                        //
+                        [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+                        {
+                            ((CacheDataPointers[xcore::types::tuple_t2i_v<T, data_only_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
+                        }(xcore::types::null_tuple_v<data_only_tuple>);
                     }
                 }
             }

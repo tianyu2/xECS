@@ -109,7 +109,7 @@ struct update_movement : xecs::system::instance
         .m_pName = "update_movement"
     };
 
-    void operator()( position& Position, velocity& Velocity, grid_cell& GridCell ) noexcept
+    void operator()( position& Position, velocity& Velocity, grid_cell& GridCell) noexcept
     {
         Position.m_Value += Velocity.m_Value;
 
@@ -136,7 +136,7 @@ struct update_movement : xecs::system::instance
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
 
-        GridCell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
+        //GridCell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
     }
 };
 
@@ -496,7 +496,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 1, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
