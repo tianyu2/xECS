@@ -514,6 +514,9 @@ instance::getOrCreatePoolFamily
 
         NewFamily->m_Next = std::move(m_PendingFamilies);
         m_PendingFamilies = std::move(NewFamily);
+        if( nullptr == m_pLastPendingFamilies) m_pLastPendingFamilies = m_PendingFamilies.get();
+
+        m_Mgr.AddToStructutalPendingList(*this);
 
         return *m_PendingFamilies.get();
     }
@@ -1001,6 +1004,7 @@ instance::MoveInEntity
     {
         if(m_DefaultPoolFamily.m_Next.get()) m_pLastPendingFamilies->m_Next = std::move(m_DefaultPoolFamily.m_Next);
         m_DefaultPoolFamily.m_Next = std::move(m_PendingFamilies);
+        m_pLastPendingFamilies = nullptr;
     }
 
     //-------------------------------------------------------------------------------------

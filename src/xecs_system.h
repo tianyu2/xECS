@@ -130,10 +130,10 @@ namespace xecs::system
         void                    OnGameStart             ( void ) noexcept {} // All Systems:    When the game starts or when it becomes unpaused
         void                    OnFrameStart            ( void ) noexcept {} // All Systems:    At the begging of a frame
         void                    OnUpdate                ( void ) noexcept {} // Update Systems: If you want full control of the query
-        void                    OnPostStructuralChanges ( void ) noexcept {} // Update Systems: After the Structural changes has taken place (applyes only to )
-        void                    OnFrameEnd              ( void ) noexcept {} // All Systems:    Begining of every frame
+        void                    OnPostStructuralChanges ( void ) noexcept {} // Update Systems: After the Structural changes has taken place (applies only to )
+        void                    OnFrameEnd              ( void ) noexcept {} // All Systems:    Beginning of every frame
         void                    OnGameEnd               ( void ) noexcept {} // All Systems:    When the game is done
-        void                    OnDestroy               ( void ) noexcept {} // All Systems:    Before destorying the system
+        void                    OnDestroy               ( void ) noexcept {} // All Systems:    Before destroying the system
         void                    OnGamePause             ( void ) noexcept {} // All Systems:    When the game is paused 
      // void                    OnEvent                 ( ...  ) noexcept {} // Event System:   User overrides to receive the event message
         void                    OnNotify                ( xecs::component::entity& Entity ) noexcept {} // Notify Systems: Advance control 

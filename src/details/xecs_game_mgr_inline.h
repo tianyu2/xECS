@@ -290,28 +290,6 @@ namespace xecs::game_mgr
                         SortedSharePointerArray[i] = &EntityDetails.m_pPool->m_pComponent[ComponentIndex][EntityDetails.m_PoolIndex.m_Value];
                         SortedShareKeyArray[i]     = FamilyShareDetails.m_Key;
                     }
-
-                    /*
-                    if( ShareIndices[i] == -1 )
-                    {
-                        SortedSharePointerArray[i] = nullptr;
-                        // assert() that this share is a pointer
-                    }
-                    else
-                    {
-                        const auto& FamilyShareDetails = pFamily->m_ShareDetails[ShareIndices[i]];
-                        if( SortedShareKeyArray[i] != FamilyShareDetails.m_Key )
-                        {
-                            auto&       EntityDetails   = m_ComponentMgr.getEntityDetails(FamilyShareDetails.m_Entity);
-                            const auto  ComponentIndex  = EntityDetails.m_pPool->findIndexComponentFromInfo(*SortedInfoArray[i]);
-                            assert(-1 != ComponentIndex);
-
-                            // Back up the pointer to the data
-                            SortedSharePointerArray[i] = &EntityDetails.m_pPool->m_pComponent[ComponentIndex][EntityDetails.m_PoolIndex.m_Value];
-                            SortedShareKeyArray[i]     = FamilyShareDetails.m_Key;
-                        }
-                    }
-                    */
                 }
 
                 //
@@ -352,7 +330,7 @@ namespace xecs::game_mgr
                         continue;
 
                     // Lock the pool and cache the data pointers
-                    auto        CacheDataPointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<data_only_tuple> );
+                    auto CacheDataPointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<data_only_tuple> );
 
                     //
                     // Loop for each entity in the pool
