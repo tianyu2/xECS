@@ -15,6 +15,8 @@ namespace xecs::system
         ,   NOTIFY_COMPONENT_CHANGE
         ,   NOTIFY_COMPONENT_ADDED
         ,   NOTIFY_COMPONENT_REMOVE
+        ,   POOL_FAMILY_CREATE
+        ,   POOL_FAMILY_DESTROY
         ,   GLOBAL_EVENT
         ,   SYSTEM_EVENT
         };
@@ -66,6 +68,22 @@ namespace xecs::system
             const char*                  m_pName            = "Unnamed Component Change System";
             guid                         m_Guid             {};
       const xecs::component::type::info* m_pComponentInfo   {};
+        };
+
+        struct pool_family_create
+        {
+            static constexpr auto       id_v                = id::POOL_FAMILY_CREATE;
+            static constexpr auto       is_notifier_v       = false;
+            const char*                 m_pName             = "Unnamed Pool Family Create System";
+            guid                        m_Guid              {};
+        };
+
+        struct pool_family_destroy
+        {
+            static constexpr auto       id_v                = id::POOL_FAMILY_DESTROY;
+            static constexpr auto       is_notifier_v       = false;
+            const char*                 m_pName             = "Unnamed Pool Family Create System";
+            guid                        m_Guid              {};
         };
 
         template< typename T_EVENT >
@@ -122,27 +140,28 @@ namespace xecs::system
     //-----------------------------------------------------------------
     struct overrides
     {
+        using                   entity      = xecs::component::entity;
         using                   query       = std::tuple<>;
         using                   events      = std::tuple<>;
         constexpr static auto   typedef_v   = type::update{};
 
-        void                    OnCreate                ( void ) noexcept {} // All Systems:    When the system is created
-        void                    OnGameStart             ( void ) noexcept {} // All Systems:    When the game starts or when it becomes unpaused
-        void                    OnFrameStart            ( void ) noexcept {} // All Systems:    At the begging of a frame
-        void                    OnUpdate                ( void ) noexcept {} // Update Systems: If you want full control of the query
-        void                    OnPostStructuralChanges ( void ) noexcept {} // Update Systems: After the Structural changes has taken place (applies only to )
-        void                    OnFrameEnd              ( void ) noexcept {} // All Systems:    Beginning of every frame
-        void                    OnGameEnd               ( void ) noexcept {} // All Systems:    When the game is done
-        void                    OnDestroy               ( void ) noexcept {} // All Systems:    Before destroying the system
-        void                    OnGamePause             ( void ) noexcept {} // All Systems:    When the game is paused 
-     // void                    OnEvent                 ( ...  ) noexcept {} // Event System:   User overrides to receive the event message
-        void                    OnNotify                ( xecs::component::entity& Entity ) noexcept {} // Notify Systems: Advance control 
+        void    OnCreate                ( void )                noexcept {} // All Systems:         When the system is created
+        void    OnGameStart             ( void )                noexcept {} // All Systems:         When the game starts or when it becomes unpaused
+        void    OnFrameStart            ( void )                noexcept {} // All Systems:         At the begging of a frame
+        void    OnUpdate                ( void )                noexcept {} // Update Systems:      If you want full control of the query
+        void    OnPostStructuralChanges ( void )                noexcept {} // Update Systems:      After the Structural changes has taken place (applies only to )
+        void    OnFrameEnd              ( void )                noexcept {} // All Systems:         Beginning of every frame
+        void    OnGameEnd               ( void )                noexcept {} // All Systems:         When the game is done
+        void    OnDestroy               ( void )                noexcept {} // All Systems:         Before destroying the system
+        void    OnGamePause             ( void )                noexcept {} // All Systems:         When the game is paused 
+        void    OnEvent                 ( ...  )                noexcept {} // Event System:        User overrides to receive the event message
+        void    OnNotify                ( entity& Entity )      noexcept {} // Notify Systems:      Advance control
+        void    OnPoolFamily            ( archetype::instance&              // Pool Family System:  Gets notified when a pool is created or destroy
+                                        , pool::family&       ) noexcept {}
     };
 
     struct instance : overrides
     {
-        using entity = xecs::component::entity;
-
                     instance            ( const instance&
                                         ) noexcept = delete;
 

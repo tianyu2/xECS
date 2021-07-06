@@ -88,6 +88,54 @@ namespace grid
     constexpr static int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
     constexpr static int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
 
+    using instance = std::array<std::array<std::vector<std::pair<xecs::archetype::instance*,xecs::pool::family*>>,cell_x_count>,cell_y_count>;
+
+    //---------------------------------------------------------------------------------------
+
+    template<typename T_FUNCTION>
+    constexpr __inline
+    bool Foreach( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    {
+        using func1_arg_tuple = typename xcore::function::traits<T_FUNCTION>::args_tuple;
+        for( auto& Pair : Grid[Y][X] )
+        {
+            if( Query.Compare(Pair.first->m_ComponentBits) == false )
+                continue;
+
+            for( auto p = &Pair.second->m_DefaultPool; p ; p = p->m_Next.get() )
+            {
+                int i = p->Size();
+                if( i == 0 ) continue;
+                for( auto CachePtrs = xecs::archetype::details::GetDataComponentPointerArray(*p, { 0 }, xcore::types::null_tuple_v<func1_arg_tuple>); i; --i )
+                {
+                    if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
+                        if( xecs::archetype::details::CallFunction( std::forward<T_FUNCTION&&>(Function), CachePtrs ) ) return true;
+                    else
+                        xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs);
+                }
+            }
+        }
+        return false;
+    }
+
+    //---------------------------------------------------------------------------------------
+
+    template<typename T_FUNCTION>
+    constexpr __inline
+    bool Search( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    {
+        const auto XStart = std::max(0, X - 1);
+        const auto XEnd   = std::min(cell_y_count - 1, X + 1);
+        for( int y = std::max(0,Y-1), end_y = std::min(cell_y_count-1, Y+1); y != end_y; ++y )
+            for (int x = XStart; x != XEnd; ++x)
+            {
+                if( Foreach( Grid, x,y, Query, std::forward<T_FUNCTION&&>(Function) ) ) return true;
+            }
+        return false;
+    }
+
+    //---------------------------------------------------------------------------------------
+
     constexpr
     grid_cell ComputeGridCellFromWorldPosition( xcore::vector2 Position) noexcept
     {
@@ -136,31 +184,33 @@ struct update_movement : xecs::system::instance
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
 
-        //GridCell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
+        GridCell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
     }
 };
 
 //---------------------------------------------------------------------------------------
-/*
-struct on_create_objects_add_share : xecs::system::instance
+
+struct grid_system_pool_family_create : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::notify_create
+    constexpr static auto typedef_v = xecs::system::type::pool_family_create
     {
-        .m_pName = "on_create_objects_add_share"
+        .m_pName = "grid_system_pool_family_create"
     };
 
     using query = std::tuple
     <
-        xecs::query::must<position>
-    ,   xecs::query::none_of<grid_cell>
+        xecs::query::must<position, grid_cell>
     >;
 
-    void operator()( entity& Entity, position& Position )
+    std::shared_ptr<grid::instance> m_Grid = std::make_shared<grid::instance>();
+
+    void OnPoolFamily( xecs::archetype::instance& Archetype, xecs::pool::family& PoolFamily ) noexcept
     {
-        m_GameMgr.AddOrRemoveComponents<std::tuple<grid_cell>,std::tuple<>>( Entity, grid::ComputeGridCellFromWorldPosition(Position.m_Value) );
+        assert(PoolFamily.m_ShareInfos.size() == 1);
+        auto& Cell = Archetype.getShareComponent<grid_cell>(PoolFamily);
+        (*m_Grid)[Cell.m_Y][Cell.m_X].push_back( { &Archetype, &PoolFamily } );
     }
 };
-*/
 
 //---------------------------------------------------------------------------------------
 
@@ -190,37 +240,52 @@ struct bullet_logic : xecs::system::instance
         .m_pName = "bullet_logic"
     };
 
-    void operator()( entity& Entity, position& Position, bullet& Bullet ) const noexcept
+    grid::instance* m_pGrid;
+
+    void OnGameStart()
     {
-        // If I am dead because some other bullet killed me then there is nothing for me to do...
-        if (Entity.isZombie()) return;
+        m_pGrid = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
+    }
 
-        // Check for collisions
-        /*
-        m_pGrid->Search( Position.m_Value, [&]( auto& CellEntry ) -> bool
+    void OnUpdate() noexcept
+    {
+        xecs::query::instance QueryBullets;
+        xecs::query::instance QueryAny;
+
+        QueryBullets.m_Must.AddFromComponents<bullet>();
+        QueryAny.m_Must.AddFromComponents<position>();
+
+        for( int Y=0; Y<grid::cell_y_count; ++Y )
+        for( int X=0; X<grid::cell_x_count; ++X )
         {
-            assert(CellEntry.m_Entity.isZombie() == false );
-
-            // Our we checking against my self?
-            if ( Entity == CellEntry.m_Entity ) return false;
-
-            // Are we colliding with our own ship?
-            // If so lets just continue
-            if( Bullet.m_ShipOwner.m_Value == CellEntry.m_Entity.m_Value ) return false;
-
-            constexpr auto distance_v = 3;
-            if ((CellEntry.m_Pos - Position.m_Value).getLengthSquared() < distance_v * distance_v)
+            grid::Foreach( *m_pGrid, X, Y, QueryBullets, [&]( entity& Entity, position& Position, bullet& Bullet ) constexpr noexcept
             {
-                m_GameMgr.DeleteEntity(Entity);
-                m_GameMgr.DeleteEntity(CellEntry.m_Entity);
-                return true;
-            }
+                // If I am dead because some other bullet killed me then there is nothing for me to do...
+                if (Entity.isZombie()) return;
 
-            return false;
-        });
+                grid::Search( *m_pGrid, X, Y, QueryAny, [&]( entity& E, position& Pos )  constexpr noexcept
+                {
+                    assert( E.isZombie() == false );
 
-        if(Entity.isZombie()) m_pGrid->RemoveEntity(Entity, Position.m_Value);
-        */
+                    // Our we checking against my self?
+                    if ( Entity == E ) return false;
+
+                    // Are we colliding with our own ship?
+                    // If so lets just continue
+                    if( Bullet.m_ShipOwner == E ) return false;
+
+                    constexpr auto distance_v = 3;
+                    if ((Pos.m_Value - Position.m_Value).getLengthSquared() < distance_v * distance_v)
+                    {
+                        m_GameMgr.DeleteEntity(Entity);
+                        m_GameMgr.DeleteEntity(E);
+                        return true;
+                    }
+
+                    return false;
+                });
+            });
+        }
     }
 };
 
@@ -254,60 +319,73 @@ struct space_ship_logic : xecs::system::instance
     };
 
     xecs::archetype::instance*  m_pBulletArchetype  {};
+    grid::instance*             m_pGrid             {};
 
     void OnGameStart()
     {
         m_pBulletArchetype  = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
+        m_pGrid             = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
-    using query = std::tuple
-    <
-        xecs::query::none_of<bullet, timer>
-    >;
-
-    void operator()( entity& Entity, position& Position ) const noexcept
+    void OnUpdate() noexcept
     {
-        /*
-        // Check for collisions
-        m_pGrid->Search( Position.m_Value, [&]( auto& CellEntry ) -> bool
+        xecs::query::instance QueryThinkingShipsOnly;
+        xecs::query::instance QueryAnyShips;
+
+        QueryThinkingShipsOnly.m_Must.AddFromComponents<position>();
+        QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<bullet>();
+        QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<timer>();
+
+        QueryAnyShips.m_Must.AddFromComponents<position>();
+        QueryAnyShips.m_NoneOf.AddFromComponents<bullet>();
+
+        for( int Y=0; Y<grid::cell_y_count; ++Y )
+        for( int X=0; X<grid::cell_x_count; ++X )
         {
-            // Don't shoot myself, or try to shoot another bullet
-            if ( Entity == CellEntry.m_Entity || CellEntry.m_isBullet ) return false;
-
-            auto        Direction        = CellEntry.m_Pos - Position.m_Value;
-            const auto  DistanceSquare   = Direction.getLengthSquared();
-
-            // Shoot a bullet if close enough
-            constexpr auto min_distance_v = 60;
-            if( DistanceSquare < min_distance_v*min_distance_v )
+            grid::Foreach( *m_pGrid, X, Y, QueryThinkingShipsOnly, [&]( entity& Entity, position& Position, bullet& Bullet ) constexpr noexcept
             {
-                auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
+                grid::Search( *m_pGrid, X, Y, QueryAnyShips, [&]( entity& E, position& Pos ) constexpr noexcept
                 {
-                    Timer.m_Value = 8;
-                });
-                // After moving the entity all access to its components via the function existing parameters is consider a bug
-                // Since the entity has moved to a different archetype
-                assert( Entity.isZombie() );
+                    // Don't shoot myself, or try to shoot another bullet
+                    if ( Entity == E ) return false;
 
-                // Hopefully there is not system that intersects me and kills me
-                assert( !NewEntity.isZombie() );
+                    auto        Direction        = Pos.m_Value - Position.m_Value;
+                    const auto  DistanceSquare   = Direction.getLengthSquared();
 
-
-                m_pBulletArchetype->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
+                    // Shoot a bullet if close enough
+                    constexpr auto min_distance_v = 60;
+                    if( DistanceSquare < min_distance_v*min_distance_v )
                     {
-                        Direction  /= std::sqrt(DistanceSquare);
-                        Vel.m_Value = Direction * 2.0f;
-                        Pos.m_Value = Position.m_Value + Vel.m_Value;
+                        auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
+                        {
+                            Timer.m_Value = 8;
+                        });
 
-                        Bullet.m_ShipOwner = NewEntity;
+                        // After moving the entity all access to its components via the function existing parameters is consider a bug
+                        // Since the entity has moved to a different archetype
+                        assert( Entity.isZombie() );
 
-                        Timer.m_Value      = 10;
-                    });
-                return true;
-            }
-            return false;
-        });
-        */
+                        // Hopefully there is not system that intersects me and kills me
+                        assert( !NewEntity.isZombie() );
+
+                        m_pBulletArchetype->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
+                        {
+                            Direction  /= std::sqrt(DistanceSquare);
+                            Vel.m_Value = Direction * 2.0f;
+                            Pos.m_Value = Position.m_Value + Vel.m_Value;
+
+                            Bullet.m_ShipOwner = NewEntity;
+
+                            Timer.m_Value      = 10;
+                        });
+
+                        return true;
+                    }
+
+                    return false;
+                });
+            });
+        }
     }
 };
 

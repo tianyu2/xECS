@@ -104,5 +104,35 @@ namespace xecs::query
         , ...
         );
     }
+
+    /*
+    //---------------------------------------------------------------------------
+    template
+    < typename... T_SHARE_COMPONENTS
+    > requires
+    ( xecs::tools::assert_all_components_are_share_types_v<T_SHARE_COMPONENTS>
+    )
+    instance& instance::AddFilter( T_SHARE_COMPONENTS&&... ShareComponents ) noexcept
+    {
+        ((AddFilter(xecs::component::type::info_v<T_SHARE_COMPONENTS>
+                  , xecs::component::type::info_v<T_SHARE_COMPONENTS>.m_pComputeKeyFn(reinterpret_cast<std::byte*>(&ShareComponents)))
+         ), ... );
+        return *this;
+    }
+
+    //---------------------------------------------------------------------------
+    inline
+    instance& instance::AddFilter ( const xecs::component::type::info& ComponentTypeInfo
+                                  , xecs::component::type::share::key  PartialKey
+                                  ) noexcept
+    {
+        assert(m_nShareFilters < max_share_component_to_filter_v);
+
+        m_Must.setBit(ComponentTypeInfo.m_BitID);
+        m_ShareFilterTypes[m_nShareFilters]         = &ComponentTypeInfo;
+        m_ShareFilterPartialKeys[m_nShareFilters]   = PartialKey;
+        m_nShareFilters++;
+    }
+    */
 }
     

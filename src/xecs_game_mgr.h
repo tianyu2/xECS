@@ -66,6 +66,12 @@ namespace xecs::game_mgr
         > [[nodiscard]] std::vector<archetype::instance*>
                                             Search                  ( const xecs::query::instance& Query
                                                                     ) const noexcept;
+        template
+        < typename... T_COMPONENTS
+        > [[nodiscard]] std::vector<archetype::instance*>
+                                            Search                  ( const xecs::query::instance&          Query
+                                                                    , std::span<xecs::query::share_filter>  ShareFilters
+                                                                    ) const noexcept;
         inline
         [[nodiscard]] archetype::instance*  findArchetype           ( xecs::archetype::guid Guid 
                                                                     ) const noexcept;

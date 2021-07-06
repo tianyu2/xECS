@@ -20,6 +20,8 @@ namespace xecs::archetype
             xecs::event::instance<xecs::component::entity&>      m_OnEntityDestroyed;
             xecs::event::instance<xecs::component::entity&>      m_OnEntityMovedIn;
             xecs::event::instance<xecs::component::entity&>      m_OnEntityMovedOut;
+            xecs::event::instance<instance&, pool::family&>      m_OnPoolFamilyCreated;
+            xecs::event::instance<instance&, pool::family&>      m_OnPoolFamilyDestroy;
             std::array<xecs::event::instance<xecs::component::entity&>, xecs::settings::max_components_per_entity_v> m_OnComponentUpdated;
         };
 
@@ -33,7 +35,9 @@ namespace xecs::archetype
                                                         , const tools::bits&                                  Bits
                                                         , bool                                                bTreatShareComponentsAsData
                                                         ) noexcept;
-
+        template< typename T >
+        T&                      getShareComponent       ( xecs::pool::family& Family 
+                                                        ) noexcept;
         template
         < typename...T_SHARE_COMPONENTS
         > requires

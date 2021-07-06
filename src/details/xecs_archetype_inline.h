@@ -422,6 +422,24 @@ namespace xecs::archetype
     }
 
     //--------------------------------------------------------------------------------------------
+    template< typename T >
+    T& instance::getShareComponent( xecs::pool::family& Family ) noexcept
+    {
+        assert( m_nShareComponents == Family.m_ShareInfos.size() );
+        for( int i=0, end = m_nShareComponents; i!=end; ++i )
+        {
+            if( Family.m_ShareInfos[i] == &xecs::component::type::info_v<T> )
+            {
+                const auto& ShareDetails = Family.m_ShareDetails[i];
+                const auto& GlobalEntity = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(ShareDetails.m_Entity);
+                return GlobalEntity.m_pPool->getComponent<T>(GlobalEntity.m_PoolIndex);
+            }
+        }
+        assert(false);
+        return getShareComponent<T>(Family); //m_DefaultPoolFamily.m_DefaultPool.getComponent<T>({0});
+    }
+
+    //--------------------------------------------------------------------------------------------
 
     xecs::pool::family& 
 instance::getOrCreatePoolFamily
