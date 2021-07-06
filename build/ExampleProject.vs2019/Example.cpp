@@ -136,7 +136,7 @@ namespace grid
 
     //---------------------------------------------------------------------------------------
 
-    constexpr
+    constexpr __inline
     grid_cell ComputeGridCellFromWorldPosition( xcore::vector2 Position) noexcept
     {
         return
@@ -333,8 +333,7 @@ struct space_ship_logic : xecs::system::instance
         xecs::query::instance QueryAnyShips;
 
         QueryThinkingShipsOnly.m_Must.AddFromComponents<position>();
-        QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<bullet>();
-        QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<timer>();
+        QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<bullet, timer>();
 
         QueryAnyShips.m_Must.AddFromComponents<position>();
         QueryAnyShips.m_NoneOf.AddFromComponents<bullet>();
@@ -516,18 +515,6 @@ struct page_flip : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-struct example
-{
-    constexpr static auto typedef_v = xecs::component::type::share
-    {
-        .m_pName        = "Example of a share component"
-    };
-
-    int m_Int;
-};
-
-//---------------------------------------------------------------------------------------
-
 void InitializeGame( void ) noexcept
 {
     //
@@ -552,10 +539,10 @@ void InitializeGame( void ) noexcept
 
     // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
-    < //  update_timer            // Structural: Yes, RemoveComponent(Timer)
-       update_movement         // Structural: No
-    ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-//    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+    <  update_timer            // Structural: Yes, RemoveComponent(Timer)
+    ,   update_movement         // Structural: No
+ //   ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
+    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -568,6 +555,7 @@ void InitializeGame( void ) noexcept
     s_Game.m_GameMgr->RegisterSystems
     <   on_destroy_count_dead_ships     // Structural: No
     ,   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets entities when timer is removed)
+    ,   grid_system_pool_family_create  // Structutal: No
     >();
 
     //

@@ -88,7 +88,7 @@ namespace xecs::system
         {
             return type::info
             {
-                .m_Guid                 = T_SYSTEM::typedef_v.m_Guid.m_Value
+                .m_Guid                 = T_SYSTEM::typedef_v.m_Guid.isValid()
                                              ? T_SYSTEM::typedef_v.m_Guid
                                              : type::guid{ __FUNCSIG__ }
             ,   .m_NotifierRegistration = (T_SYSTEM::typedef_v.id_v == type::id::UPDATE)
@@ -97,7 +97,7 @@ namespace xecs::system
                                             , xecs::system::instance&           System 
                                             ) noexcept
                                             {
-                                               using real_system = xecs::system::details::compleated<T_SYSTEM>;
+                                                using real_system = xecs::system::details::compleated<T_SYSTEM>;
                                                 if constexpr ( T_SYSTEM::typedef_v.is_notifier_v == false )
                                                 {
                                                     // NOTHING TO DO...
@@ -118,7 +118,15 @@ namespace xecs::system
                                                 {
                                                     Archetype.m_Events.m_OnEntityMovedOut.Register<&real_system::Notify>(static_cast<real_system&>(System));
                                                 }
-                                                else 
+                                                else if constexpr (T_SYSTEM::typedef_v.id_v == type::id::POOL_FAMILY_CREATE)
+                                                {
+                                                    Archetype.m_Events.m_OnPoolFamilyCreated.Register<&real_system::OnPoolFamily>(static_cast<real_system&>(System));
+                                                }
+                                                else if constexpr (T_SYSTEM::typedef_v.id_v == type::id::POOL_FAMILY_DESTROY)
+                                                {
+                                                    Archetype.m_Events.m_OnPoolFamilyDestroy.Register<&real_system::OnPoolFamily>(static_cast<real_system&>(System));
+                                                }
+                                                else
                                                 {
                                                     static_assert( xcore::types::always_false_v<T_SYSTEM>, "Case is not supported for right now");
                                                 }
@@ -161,11 +169,16 @@ namespace xecs::system
         using typedef_t   = std::decay_t<decltype(T_SYSTEM::typedef_v)>;
 
         //
+        // TODO: Validate the crap out of each system type
+        //
+
+
+        //
         // Register System
         //
         auto& System = *static_cast<real_system*>([&]
         {
-            if constexpr(real_system::typedef_v.is_notifier_v )
+            if constexpr( real_system::typedef_v.is_notifier_v )
             {
                 m_NotifierSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
                 return m_NotifierSystems.back().get();
@@ -179,6 +192,14 @@ namespace xecs::system
 
         m_SystemMaps.emplace( std::pair<type::guid, xecs::system::instance*>
             { type::info_v<T_SYSTEM>.m_Guid, static_cast<instance*>(&System) });
+
+        //
+        // Call the OnCreate if the user overwrote that
+        //
+        if constexpr ( &T_SYSTEM::OnCreate != &xecs::system::overrides::OnCreate )
+        {
+            System.OnCreate();
+        }
 
         //
         // For all systems that are not type event we create the query and update the info
@@ -197,7 +218,6 @@ namespace xecs::system
 
         //
         // For the Update systems hook the run function
-        // TODO: For optimizations we could remove the Run function with to OnUpdate
         //
         if constexpr(real_system::typedef_v.id_v == type::id::UPDATE )
         {

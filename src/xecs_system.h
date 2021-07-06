@@ -73,7 +73,7 @@ namespace xecs::system
         struct pool_family_create
         {
             static constexpr auto       id_v                = id::POOL_FAMILY_CREATE;
-            static constexpr auto       is_notifier_v       = false;
+            static constexpr auto       is_notifier_v       = true;
             const char*                 m_pName             = "Unnamed Pool Family Create System";
             guid                        m_Guid              {};
         };
@@ -81,7 +81,7 @@ namespace xecs::system
         struct pool_family_destroy
         {
             static constexpr auto       id_v                = id::POOL_FAMILY_DESTROY;
-            static constexpr auto       is_notifier_v       = false;
+            static constexpr auto       is_notifier_v       = true;
             const char*                 m_pName             = "Unnamed Pool Family Create System";
             guid                        m_Guid              {};
         };
@@ -140,10 +140,10 @@ namespace xecs::system
     //-----------------------------------------------------------------
     struct overrides
     {
-        using                   entity      = xecs::component::entity;
-        using                   query       = std::tuple<>;
-        using                   events      = std::tuple<>;
-        constexpr static auto   typedef_v   = type::update{};
+        using                   entity      = xecs::component::entity;      // Shortcut for entity
+        using                   query       = std::tuple<>;                 // Override this to specify the query for the system
+        using                   events      = std::tuple<>;                 // Override this to create events which other systems can use
+        constexpr static auto   typedef_v   = type::update{};               // Override this to specify which type of system this is
 
         void    OnCreate                ( void )                noexcept {} // All Systems:         When the system is created
         void    OnGameStart             ( void )                noexcept {} // All Systems:         When the game starts or when it becomes unpaused

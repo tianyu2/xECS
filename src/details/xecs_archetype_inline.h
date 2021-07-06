@@ -418,6 +418,11 @@ namespace xecs::archetype
         , std::span{ m_InfoData.data(),                     static_cast<std::size_t>(m_nDataComponents)  }
         );
 
+        //
+        // Notify to whoever is interested
+        //
+        m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, *pPoolFamily );
+
         return *pPoolFamily;
     }
 
@@ -535,6 +540,11 @@ instance::getOrCreatePoolFamily
         if( nullptr == m_pLastPendingFamilies) m_pLastPendingFamilies = m_PendingFamilies.get();
 
         m_Mgr.AddToStructutalPendingList(*this);
+
+        //
+        // Notify to whoever cares
+        //
+        m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, *m_PendingFamilies.get() );
 
         return *m_PendingFamilies.get();
     }
