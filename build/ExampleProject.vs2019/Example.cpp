@@ -73,7 +73,7 @@ struct grid_cell
     int m_Y;
 };
 
-using bullet_tuple = std::tuple<position, velocity, timer, bullet>;
+using bullet_tuple = std::tuple<position, velocity, timer, bullet, grid_cell>;
 
 //---------------------------------------------------------------------------------------
 // TOOLS
@@ -97,10 +97,13 @@ namespace grid
     bool Foreach( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
         using func1_arg_tuple = typename xcore::function::traits<T_FUNCTION>::args_tuple;
-        for( auto& Pair : Grid[Y][X] )
+        auto& V = Grid[Y][X];
+        for( auto& Pair : V )
         {
             if( Query.Compare(Pair.first->m_ComponentBits) == false )
                 continue;
+
+            assert(Pair.second->m_Guid.isValid());
 
             for( auto p = &Pair.second->m_DefaultPool; p ; p = p->m_Next.get() )
             {
@@ -108,10 +111,15 @@ namespace grid
                 if( i == 0 ) continue;
                 for( auto CachePtrs = xecs::archetype::details::GetDataComponentPointerArray(*p, { 0 }, xcore::types::null_tuple_v<func1_arg_tuple>); i; --i )
                 {
+                    int a = 22;
                     if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
-                        if( xecs::archetype::details::CallFunction( std::forward<T_FUNCTION&&>(Function), CachePtrs ) ) return true;
+                    {
+                        if (xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs)) return true;
+                    }
                     else
+                    {
                         xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs);
+                    }
                 }
             }
         }
@@ -125,7 +133,7 @@ namespace grid
     bool Search( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
         const auto XStart = std::max(0, X - 1);
-        const auto XEnd   = std::min(cell_y_count - 1, X + 1);
+        const auto XEnd   = std::min(cell_x_count - 1, X + 1);
         for( int y = std::max(0,Y-1), end_y = std::min(cell_y_count-1, Y+1); y != end_y; ++y )
             for (int x = XStart; x != XEnd; ++x)
             {
@@ -270,7 +278,8 @@ struct bullet_logic : xecs::system::instance
 
                 grid::Search( *m_pGrid, X, Y, QueryAny, [&]( entity& E, position& Pos )  constexpr noexcept
                 {
-                    assert( E.isZombie() == false );
+                    if (E.isZombie()) return false;
+                    //assert( E.isZombie() == false );
 
                     // Our we checking against my self?
                     if ( Entity == E ) return false;
@@ -377,13 +386,15 @@ struct space_ship_logic : xecs::system::instance
                         // Hopefully there is not system that intersects me and kills me
                         assert( !NewEntity.isZombie() );
 
-                        m_pBulletArchetype->CreateEntity([&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer ) noexcept
+                        m_pBulletArchetype->CreateEntities( 1, [&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer, grid_cell& Cell) noexcept
                         {
                             Direction  /= std::sqrt(DistanceSquare);
                             Vel.m_Value = Direction * 2.0f;
                             Pos.m_Value = Position.m_Value + Vel.m_Value;
 
                             Bullet.m_ShipOwner = NewEntity;
+
+                            Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
 
                             Timer.m_Value      = 10;
                         });
@@ -514,12 +525,43 @@ struct page_flip : xecs::system::instance
         .m_pName = "page_flip"
     };
 
+    grid::instance* m_pGrid;
+
+    void OnGameStart()
+    {
+        m_pGrid = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
+    }
+
     __inline
     void OnUpdate( void ) noexcept
     {
         glFlush();
         glutSwapBuffers();
         glClear(GL_COLOR_BUFFER_BIT);
+
+        //
+        // Render grid
+        //
+        for( int y=0; y<grid::cell_y_count; y++)
+        for (int x = 0; x < grid::cell_x_count; x++)
+        {
+            int Count = (int)(*m_pGrid)[y][x].size();
+            if( 0 == Count) continue;
+
+            float X = (x + 0.5f) * grid::cell_width_v;
+            float Y = (y + 0.5f) * grid::cell_width_v;
+            constexpr auto SizeX = grid::cell_width_v/2.0f - 1;
+            constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
+            glBegin(GL_QUADS);
+
+            float c = Count*0.01f + 0.4f;
+            glColor3f(c,c,c );
+            glVertex2i(X - SizeX, Y - SizeY);
+            glVertex2i(X - SizeX, Y + SizeY);
+            glVertex2i(X + SizeX, Y + SizeY);
+            glVertex2i(X + SizeX, Y - SizeY);
+            glEnd();
+        }
     }
 };
 
@@ -551,8 +593,8 @@ void InitializeGame( void ) noexcept
     s_Game.m_GameMgr->RegisterSystems
     <  update_timer            // Structural: Yes, RemoveComponent(Timer)
     ,   update_movement         // Structural: No
- //   ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
- //   ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+    ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
+    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -572,7 +614,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 1000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)

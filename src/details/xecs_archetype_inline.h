@@ -618,6 +618,7 @@ instance::getOrCreatePoolFamilyFromSameArchetype
         //
         // Create new Pool Family
         //
+        assert(m_DefaultPoolFamily.m_Guid.isValid());
         auto NewFamily = std::make_unique<xecs::pool::family>();
         m_Mgr.m_PoolFamily.emplace( NewFamilyGuid, NewFamily.get() );
 
@@ -807,7 +808,7 @@ instance::CreateEntity
         xecs::component::entity TheEntity;
 
         instance::CreateEntity
-        ( m_DefaultPoolFamily
+        ( getOrCreatePoolFamily( {}, {} )
         , 1
         , [&]
         {

@@ -226,6 +226,7 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
+            if (false == pE->m_DefaultPoolFamily.m_Guid.isValid()) continue;
             for( auto pFamily = &pE->m_DefaultPoolFamily; pFamily; pFamily = pFamily->m_Next.get() )
             {
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
@@ -263,6 +264,8 @@ namespace xecs::game_mgr
 
         for( const auto& pE : List )
         {
+            if( false == pE->m_DefaultPoolFamily.m_Guid.isValid() ) continue;
+
             //
             // Compute the index of the share component type in the family arrays
             // If it can not find a type it set to -1
