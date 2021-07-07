@@ -18,6 +18,10 @@ namespace xecs::query
         inline 
         bool                    Compare                 ( const tools::bits& ArchetypeBits
                                                         ) const noexcept;
+        inline 
+        bool                    Compare                 ( const tools::bits& ArchetypeBits
+                                                        , const tools::bits& ExclutiveTagBits
+                                                        ) const noexcept;
         template
         < typename T_FUNCTION
         > 
@@ -32,9 +36,22 @@ namespace xecs::query
                                                         ) noexcept;
         template
         < typename... T_QUERIES
-        >
-        void                    AddQueryFromTuple       ( std::tuple<T_QUERIES...>*
+        > requires
+        (((xcore::types::is_specialized_v< must, T_QUERIES>
+            || xcore::types::is_specialized_v< one_of, T_QUERIES>
+            || xcore::types::is_specialized_v< none_of, T_QUERIES>
+            ) && ...)
+        )
+        void                    AddQueryFromTuple       ( std::tuple<T_QUERIES...>* 
                                                         ) noexcept;
+        template
+        < typename T_TUPLE_QUERY
+        > requires ( xcore::types::is_specialized_v< std::tuple, T_TUPLE_QUERY> )
+        void                    AddQueryFromTuple       ( void
+                                                        ) noexcept;
+        inline
+        std::uint64_t           GenerateUniqueID        ( void
+                                                        ) const noexcept;
     };
 
     struct share_filter

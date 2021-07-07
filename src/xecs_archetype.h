@@ -2,12 +2,13 @@ namespace xecs::archetype
 {
     using guid = xcore::guid::unit<64, struct archetype_tag>;
 
-    template< typename...T_TUPLES_OF_COMPONENTS_OR_COMPONENTS >
-    constexpr static auto guid_v = []<typename...T>(std::tuple<T...>*) consteval
+    inline
+    guid ComputeGuidFromInfos( std::span<const xecs::component::type::info* const> Infos ) noexcept
     {
-        static_assert( ((xecs::component::type::is_valid_v<T>) && ... ) );
-        return guid{ ((xecs::component::type::info_v<T>.m_Guid.m_Value) + ...) };
-    }( xcore::types::null_tuple_v< xecs::tools::united_tuple<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...> > );
+        xecs::tools::bits Bits{};
+        for( const auto& e : Infos ) Bits.setBit( e->m_BitID );
+        return guid{ Bits.GenerateUniqueID() };
+    }
 
     //
     // ARCHETYPE INSTANCE
@@ -31,9 +32,9 @@ namespace xecs::archetype
                                                         ) noexcept;
         
         inline
-        void                    Initialize              ( std::span<const xecs::component::type::info* const> Infos
+        void                    Initialize              ( archetype::guid                                     Guid
+                                                        , std::span<const xecs::component::type::info* const> Infos
                                                         , const tools::bits&                                  Bits
-                                                        , bool                                                bTreatShareComponentsAsData
                                                         ) noexcept;
         template< typename T >
         T&                      getShareComponent       ( xecs::pool::family& Family 
@@ -51,12 +52,17 @@ namespace xecs::archetype
                                                         , std::span< std::byte* >                               MoveData
                                                         ) noexcept;
         inline
-        xecs::pool::family&     getOrCreatePoolFamily   ( xecs::pool::family&                                   FromFamily
+        xecs::pool::family&     getOrCreatePoolFamilyFromSameArchetype
+                                                        ( xecs::pool::family&                                   FromFamily
                                                         , std::span<const int>                                  IndexRemaps
                                                         , std::span< const xecs::component::type::info* const>  TypeInfos
                                                         , std::span< std::byte* >                               MoveData
                                                         , std::span< const xecs::component::entity >            EntitySpan
                                                         , std::span< const xecs::component::type::share::key >  Keys
+                                                        ) noexcept;
+        inline
+        xecs::pool::family&     getOrCreatePoolFamilyFromDifferentArchetype
+                                                        ( xecs::component::entity        Entity
                                                         ) noexcept;
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
@@ -165,6 +171,7 @@ namespace xecs::archetype
         xecs::archetype::mgr&               m_Mgr;
         guid                                m_Guid                      {};
         xecs::tools::bits                   m_ComponentBits             {};
+        xecs::tools::bits                   m_ExclusiveTagsBits         {};
         std::uint8_t                        m_nDataComponents           {};
         std::uint8_t                        m_nShareComponents          {};
         events                              m_Events                    {};
@@ -176,49 +183,5 @@ namespace xecs::archetype
         info_array                          m_InfoData                  {}; // rename to InfoArray
         instance*                           m_pPendingStructuralChanges {};
         share_archetypes_array              m_ShareArchetypesArray      {};
-    };
-
-    //
-    // ARCHETYPE MGR
-    //
-    struct mgr
-    {
-        struct events
-        {
-            xecs::event::instance<xecs::archetype::instance&>         m_OnNewArchetype;
-        };
-
-        inline                                  mgr                         ( xecs::game_mgr::instance& GameMgr 
-                                                                            ) noexcept;
-        inline
-        std::shared_ptr<archetype::instance>    getOrCreateArchetype        ( std::span<const component::type::info* const> Types
-                                                                            ) noexcept;
-        inline
-        void                                    UpdateStructuralChanges     ( void 
-                                                                            ) noexcept;
-        inline
-        void                                    AddToStructutalPendingList  ( instance& Archetype
-                                                                            ) noexcept;
-        inline
-        void                                    AddToStructutalPendingList  ( pool::instance& Pool
-                                                                            ) noexcept;
-
-        // Pool family is all the share components of a certain type with a certain value plus the archetype guid
-        using pool_family_map               = std::unordered_map<xecs::pool::family::guid,          xecs::pool::family*         >;
-        using archetype_map                 = std::unordered_map<xecs::archetype::guid,             xecs::archetype::instance*  >;
-        using share_component_entity_map    = std::unordered_map<xecs::component::type::share::key, xecs::component::entity     >;
-
-        template< typename T >
-        inline static const auto end_structural_changes_v = reinterpret_cast<T*>(~static_cast<std::size_t>(0));
-
-        xecs::game_mgr::instance&                           m_GameMgr;
-        events                                              m_Events                    {};
-        share_component_entity_map                          m_ShareComponentEntityMap   {};
-        archetype_map                                       m_ArchetypeMap              {};
-        std::vector<std::shared_ptr<archetype::instance>>   m_lArchetype                {};
-        std::vector<tools::bits>                            m_lArchetypeBits            {};
-        pool_family_map                                     m_PoolFamily                {};
-        instance*                                           m_pArchetypeStrututalPending{ end_structural_changes_v<instance> };
-        pool::instance*                                     m_pPoolStructuralPending    { end_structural_changes_v<pool::instance> };
     };
 }

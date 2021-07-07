@@ -31,6 +31,39 @@ namespace xecs::query
 
     //---------------------------------------------------------------------------
 
+    bool instance::Compare( const tools::bits& ArchetypeBits
+                          , const tools::bits& ExclutiveTagBits ) const noexcept
+    {
+        std::uint64_t c = 0;
+        std::uint64_t a = 0;
+
+        for (int i = 0, end = static_cast<int>(ArchetypeBits.m_Bits.size()); i != end; ++i)
+        {
+            if (m_NoneOf.m_Bits[i] & ArchetypeBits.m_Bits[i])
+                return false;
+
+            if ((m_Must.m_Bits[i] & ArchetypeBits.m_Bits[i]) != m_Must.m_Bits[i])
+                return false;
+
+            if ( ((m_OneOf.m_Bits[i] | m_Must.m_Bits[i]) & ExclutiveTagBits.m_Bits[i]) != ExclutiveTagBits.m_Bits[i] )
+                return false;
+
+            c |= (m_OneOf.m_Bits[i] & ArchetypeBits.m_Bits[i]);
+            a |= m_OneOf.m_Bits[i];
+        }
+
+        // a | c
+        // ------
+        // 0   0 | 1 true 
+        // 0   1 | x error
+        // 1   0 | 0 false
+        // 1   1 | 1 true 
+        assert(!(!a && c));
+        return !a || c;
+    }
+
+    //---------------------------------------------------------------------------
+
     template
     < typename T_FUNCTION
     > 
@@ -78,8 +111,13 @@ namespace xecs::query
 
     template
     < typename... T_QUERIES
-    > 
-    void instance::AddQueryFromTuple(std::tuple<T_QUERIES...>*) noexcept
+    > requires
+    (((xcore::types::is_specialized_v< must, T_QUERIES>
+        || xcore::types::is_specialized_v< one_of, T_QUERIES>
+        || xcore::types::is_specialized_v< none_of, T_QUERIES>
+        ) && ...)
+    )
+    void instance::AddQueryFromTuple(std::tuple<T_QUERIES...>* ) noexcept
     {
         ( [&]<template<typename...> class T_QTYPE, typename... T_COMPONENTS>(T_QTYPE<T_COMPONENTS...>*) constexpr noexcept
         {
@@ -105,34 +143,30 @@ namespace xecs::query
         );
     }
 
-    /*
     //---------------------------------------------------------------------------
     template
-    < typename... T_SHARE_COMPONENTS
-    > requires
-    ( xecs::tools::assert_all_components_are_share_types_v<T_SHARE_COMPONENTS>
-    )
-    instance& instance::AddFilter( T_SHARE_COMPONENTS&&... ShareComponents ) noexcept
+    < typename T_TUPLE_QUERY
+    > requires ( xcore::types::is_specialized_v< std::tuple, T_TUPLE_QUERY> )
+    void instance::AddQueryFromTuple( void ) noexcept
     {
-        ((AddFilter(xecs::component::type::info_v<T_SHARE_COMPONENTS>
-                  , xecs::component::type::info_v<T_SHARE_COMPONENTS>.m_pComputeKeyFn(reinterpret_cast<std::byte*>(&ShareComponents)))
-         ), ... );
-        return *this;
+        AddQueryFromTuple( xcore::types::null_tuple_v<T_TUPLE_QUERY> );
     }
 
     //---------------------------------------------------------------------------
     inline
-    instance& instance::AddFilter ( const xecs::component::type::info& ComponentTypeInfo
-                                  , xecs::component::type::share::key  PartialKey
-                                  ) noexcept
+    std::uint64_t instance::GenerateUniqueID( void ) const noexcept
     {
-        assert(m_nShareFilters < max_share_component_to_filter_v);
+        std::hash<std::uint64_t> Hasher;
+        auto                     Hashes = std::span{ reinterpret_cast<const std::uint64_t*>(this), sizeof(*this) / sizeof(std::uint64_t) };
 
-        m_Must.setBit(ComponentTypeInfo.m_BitID);
-        m_ShareFilterTypes[m_nShareFilters]         = &ComponentTypeInfo;
-        m_ShareFilterPartialKeys[m_nShareFilters]   = PartialKey;
-        m_nShareFilters++;
+        std::uint64_t Hash = Hasher(Hashes[0]);
+        for (int i = 1; i < Hashes.size(); ++i)
+        {
+            Hash ^= Hasher(Hashes[i]) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+        }
+
+        return Hash;
     }
-    */
+
 }
     

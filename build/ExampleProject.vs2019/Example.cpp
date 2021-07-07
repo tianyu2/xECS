@@ -247,12 +247,17 @@ struct bullet_logic : xecs::system::instance
         m_pGrid = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
+    using query = std::tuple
+    <
+        xecs::query::must<bullet>
+    >;
+
     void OnUpdate() noexcept
     {
         xecs::query::instance QueryBullets;
         xecs::query::instance QueryAny;
 
-        QueryBullets.m_Must.AddFromComponents<bullet>();
+        QueryBullets.AddQueryFromTuple<query>();
         QueryAny.m_Must.AddFromComponents<position>();
 
         for( int Y=0; Y<grid::cell_y_count; ++Y )
@@ -327,13 +332,18 @@ struct space_ship_logic : xecs::system::instance
         m_pGrid             = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
+    using query = std::tuple
+    <
+        xecs::query::must<position>
+    ,   xecs::query::none_of<bullet, timer>
+    >;
+
     void OnUpdate() noexcept
     {
         xecs::query::instance QueryThinkingShipsOnly;
         xecs::query::instance QueryAnyShips;
 
-        QueryThinkingShipsOnly.m_Must.AddFromComponents<position>();
-        QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<bullet, timer>();
+        QueryThinkingShipsOnly.AddQueryFromTuple<query>();
 
         QueryAnyShips.m_Must.AddFromComponents<position>();
         QueryAnyShips.m_NoneOf.AddFromComponents<bullet>();
@@ -341,11 +351,11 @@ struct space_ship_logic : xecs::system::instance
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( *m_pGrid, X, Y, QueryThinkingShipsOnly, [&]( entity& Entity, position& Position, bullet& Bullet ) constexpr noexcept
+            grid::Foreach( *m_pGrid, X, Y, QueryThinkingShipsOnly, [&]( entity& Entity, position& Position ) constexpr noexcept
             {
                 grid::Search( *m_pGrid, X, Y, QueryAnyShips, [&]( entity& E, position& Pos ) constexpr noexcept
                 {
-                    // Don't shoot myself, or try to shoot another bullet
+                    // Don't shoot myself
                     if ( Entity == E ) return false;
 
                     auto        Direction        = Pos.m_Value - Position.m_Value;
@@ -542,7 +552,7 @@ void InitializeGame( void ) noexcept
     <  update_timer            // Structural: Yes, RemoveComponent(Timer)
     ,   update_movement         // Structural: No
  //   ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+ //   ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No

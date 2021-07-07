@@ -15,6 +15,37 @@ namespace xecs::tools
     }();
 
     //------------------------------------------------------------------------------
+
+    template
+    < typename T_TUPLE_OF_COMPONENTS
+    > constexpr
+    auto valid_tuple_components_v = []
+    {
+        if constexpr ( xcore::types::is_specialized_v< std::tuple, T_TUPLE_OF_COMPONENTS> )
+        {
+            return []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
+            {
+                return ((xecs::component::type::is_valid_v<T_ARGS>) && ...);
+            }( xcore::types::null_tuple_v< T_TUPLE_OF_COMPONENTS> );
+        }
+        else
+        {
+            return false;
+        }
+    }();
+
+    //------------------------------------------------------------------------------
+
+    template
+    < typename T_TUPLE_OF_COMPONENTS
+    > constexpr
+    auto assert_valid_tuple_components_v = []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
+    {
+        static_assert( ((xecs::component::type::is_valid_v<T_ARGS>) && ... ), "You have an element which is not a component" );
+        return true;
+    }( xcore::types::null_tuple_v< T_TUPLE_OF_COMPONENTS> );
+
+    //------------------------------------------------------------------------------
     template
     < typename T_CALLABLE
     > constexpr
@@ -131,41 +162,50 @@ namespace xecs::tools
             using type = std::tuple<T...>;
         };
     }
-
     template< typename... T >
     using united_tuple = xcore::types::tuple_cat_t< typename details::as_tuple<T>::type ... >;
+
+    //------------------------------------------------------------------------------
 
     struct bits final
     {
         constexpr __inline
-        void        setBit              ( int Bit 
-                                        ) noexcept;
-
+        void                    setBit                  ( int Bit 
+                                                        ) noexcept;
+        inline
+        void                    setupAnd                ( const bits& A
+                                                        , const bits& B 
+                                                        ) noexcept;
         constexpr __inline
-        bool        getBit              ( int Bit
-                                        ) const noexcept;
+        bool                    getBit                  ( int Bit
+                                                        ) const noexcept;
 
         constexpr
-        bool        Superset            ( const bits& B 
-                                        ) const noexcept;
+        bool                    Superset                ( const bits& B 
+                                                        ) const noexcept;
 
         constexpr
-        bool        Subset              ( const bits& B 
-                                        ) const noexcept;
+        bool                    Subset                  ( const bits& B 
+                                                        ) const noexcept;
 
         constexpr
-        bool        Equals              ( const bits& B 
-                                        ) const noexcept;
+        bool                    Equals                  ( const bits& B 
+                                                        ) const noexcept;
 
         constexpr
-        void        clearBit            ( int Bit
-                                        ) noexcept;
-
+        void                    clearBit                ( int Bit
+                                                        ) noexcept;
         template
         < typename... T_COMPONENTS
-        > constexpr __inline
-        void        AddFromComponents   ( void 
-                                        ) noexcept;
+        > requires
+        ( assert_valid_tuple_components_v< std::tuple<T_COMPONENTS...> >
+        ) constexpr __inline
+        void                    AddFromComponents       ( void 
+                                                        ) noexcept;
+        inline
+        std::uint64_t           GenerateUniqueID        ( void
+                                                        ) const noexcept;
+
 
         std::array<std::uint64_t, ((xecs::settings::max_component_types_v-1)/64)+1> m_Bits{};
     };

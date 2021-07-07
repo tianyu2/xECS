@@ -243,6 +243,18 @@
     <ClInclude Include="..\..\src\details\xecs_event_inline.h">
       <Filter>xECS\Details</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\xecs_component_mgr.h">
+      <Filter>xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\details\xecs_component_mgr_inline.h">
+      <Filter>xECS\Details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\details\xecs_archetype_mgr_inline.h">
+      <Filter>xECS\Details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\xecs_archetype_mgr.h">
+      <Filter>xECS</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

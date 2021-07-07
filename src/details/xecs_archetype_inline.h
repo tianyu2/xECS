@@ -142,12 +142,13 @@ namespace xecs::archetype
 
         //-------------------------------------------------------------------------------------------------
         template< typename T_FUNCTION, typename T_ARRAY >
-        requires( xcore::function::is_callable_v<T_FUNCTION>
-                  && false == function_arguments_r_refs_v<T_FUNCTION>
-                  && std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
-                )
+        requires
+        ( xcore::function::is_callable_v<T_FUNCTION>
+          && false == function_arguments_r_refs_v<T_FUNCTION>
+          && std::is_same_v< bool, typename xcore::function::traits<T_FUNCTION>::return_type >
+        )
         constexpr __inline
-        bool CallFunction( T_FUNCTION&& Function, T_ARRAY& CachePointers) noexcept
+    bool CallFunction( T_FUNCTION&& Function, T_ARRAY& CachePointers) noexcept
         {
             using func_traits = xcore::function::traits<T_FUNCTION>;
             return [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
@@ -167,6 +168,67 @@ namespace xecs::archetype
                 ...);
             }(xcore::types::null_tuple_v<func_traits::args_tuple>);
         }
+
+        //-------------------------------------------------------------------------------------------------
+        inline
+        int
+    ComputeIndexRemaps
+        ( std::span<int>                                            To2From
+        , std::span<const xecs::component::type::info*>             FinalInfos
+        , const std::span<const xecs::component::type::info* const> To
+        , const std::span<const xecs::component::type::info* const> From
+        ) noexcept
+        {
+            assert( To2From.size() == To.size() );
+            int FinalCount = 0;
+            for( std::size_t iFrom = 0, iTo = 0; ; )
+            {
+                if( From[iFrom]->m_Guid.m_Value == To[iTo]->m_Guid.m_Value )
+                {
+                    FinalInfos[FinalCount] = From[iFrom];
+                    To2From[FinalCount++]  = static_cast<int>(iFrom);
+
+                    iFrom++;
+                    if (iFrom == From.size()) break;
+
+                    iTo++;
+                    if( iTo == To.size() ) break;
+                }
+                else if( xecs::component::type::details::CompareTypeInfos( To[iTo], From[iFrom] ) )
+                {
+                    iFrom++;
+                    if (iFrom == From.size()) break;
+                }
+                else
+                {
+                    iTo++;
+                    if (iTo == To2From.size()) break;
+                }
+            }
+            return FinalCount;
+        }
+
+        //-------------------------------------------------------------------------------------------------
+        inline
+        void CollectSharePointersFromFamily
+        ( std::span<std::byte*>                                     ToPointers
+        , const std::span<int const >                               To2From
+        , const std::span<const xecs::component::type::info* const> ToInfos
+        , const xecs::pool::family&                                 FromFamily
+        , const xecs::component::mgr&                               ComponentMgr
+        ) noexcept
+        {
+            for (int i = 0; i < ToInfos.size(); i++ )
+            {
+                const auto  iFrom    = To2From[i];
+                const auto& FromInfo = *FromFamily.m_ShareInfos[iFrom];
+
+                // Get the data from...
+                auto& ShareEntityDetails = ComponentMgr.getEntityDetails( FromFamily.m_ShareDetails[iFrom].m_Entity );
+                auto  FromIndex          = ShareEntityDetails.m_pPool->findIndexComponentFromInfo(FromInfo);
+                ToPointers[i]            = &ShareEntityDetails.m_pPool->m_pComponent[FromIndex][ShareEntityDetails.m_PoolIndex.m_Value * static_cast<int>(FromInfo.m_Size)];
+            }
+        }
     }
 
     //--------------------------------------------------------------------------------------------
@@ -180,32 +242,45 @@ namespace xecs::archetype
     //--------------------------------------------------------------------------------------------
 
     void instance::Initialize
-    ( std::span<const xecs::component::type::info* const>   Infos
+    ( archetype::guid                                       Guid
+    , std::span<const xecs::component::type::info* const>   Infos
     , const tools::bits&                                    Bits
-    , bool                                                  bTreatShareComponentsAsData
     ) noexcept
     {
         // Deep copy the infos just in case the user gave us data driven infos
+        // Also we will extract all the tag components (since no data can be store there)
         bool AreTheySorted = true;
         m_nShareComponents = 0;
+        int nInfos         = 0;
         for( int i=0; i<Infos.size(); ++i )
         {
-            m_InfoData[i] = Infos[i];
-            if( i && AreTheySorted )
+            // Make sure all the components are accounted for
+            assert(Bits.getBit(Infos[i]->m_BitID));
+
+            // Extract flags out (if any)
+            if( Infos[i]->m_TypeID == xecs::component::type::id::TAG )
             {
-                if( (int)m_InfoData[i - 1]->m_TypeID > (int)m_InfoData[i]->m_TypeID )         AreTheySorted = false;
-                else if ( m_InfoData[i - 1]->m_Guid.m_Value > m_InfoData[i]->m_Guid.m_Value ) AreTheySorted = false;
+                continue;
             }
 
-            if(m_InfoData[i]->m_TypeID == xecs::component::type::id::SHARE) ++m_nShareComponents;
+            m_InfoData[nInfos] = Infos[i];
+            if( nInfos && AreTheySorted )
+            {
+                AreTheySorted = xecs::component::type::details::CompareTypeInfos(m_InfoData[nInfos - 1], m_InfoData[nInfos]);
+            }
+
+            if( m_InfoData[nInfos]->m_TypeID == xecs::component::type::id::SHARE ) ++m_nShareComponents;
+
+            // Count up our new set
+            nInfos++;
         }
 
-        // Short Infos base on their GUID (smaller first) entry 0 should be the entity
+        // Short Infos, entry 0 should be the entity
         if( false == AreTheySorted )
         {
             std::sort
             ( m_InfoData.begin()
-            , m_InfoData.begin() + (Infos.size() - 1)
+            , m_InfoData.begin() + (nInfos - 1)
             , xecs::component::type::details::CompareTypeInfos
             );
         }
@@ -222,7 +297,7 @@ namespace xecs::archetype
             assert(Bits.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID));
 
             // Check all other components
-            for (int i = 1; i < Infos.size(); ++i)
+            for (int i = 1; i < nInfos; ++i)
             {
                 // There should be no duplication of components
                 assert(m_InfoData[i - 1] != m_InfoData[i]);
@@ -234,16 +309,48 @@ namespace xecs::archetype
 #endif
 
         //
-        // We can initialize our default pool
+        // We initialize the remaining vars
         //
-        if( bTreatShareComponentsAsData ) m_nShareComponents = 0;
-        if( m_nShareComponents == 0 ) 
-        {
-            m_DefaultPoolFamily.Initialize( pool::family::guid{42ull}, {}, {}, {}, { m_InfoData.data(), Infos.size() } );
-        }
 
-        m_ComponentBits = Bits;
-        m_nDataComponents = xcore::types::static_cast_safe<std::uint8_t>(Infos.size()) - m_nShareComponents;
+        // Is the user telling us not ignore the shares?
+        if( Bits.getBit(xecs::component::type::info_v<xecs::component::share_as_data_exclusive_tag>.m_BitID) ) m_nShareComponents = 0;
+
+        // Setup the last few bits
+        m_ComponentBits     = Bits;
+        m_ExclusiveTagsBits.setupAnd( Bits, xecs::component::mgr::m_ExclusiveTagsBits );
+        m_nDataComponents = xcore::types::static_cast_safe<std::uint8_t>(nInfos) - m_nShareComponents;
+        m_Guid            = Guid;
+
+        //
+        // We can initialize our default pool if not shares...
+        //
+        if( m_nShareComponents == 0 )
+        {
+            m_DefaultPoolFamily.Initialize( pool::family::guid{42ull}, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(nInfos) } );
+
+            //
+            // Notify whoever cares about new families
+            //
+            m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, m_DefaultPoolFamily );
+        }
+        else
+        {
+            //
+            // Make sure that all the pools for our share components are cached
+            //
+            for (int i = 0; i < m_nShareComponents; ++i)
+            {
+                // TODO: Add special TAG
+                m_ShareArchetypesArray[i] = m_Mgr.getOrCreateArchetype
+                ( std::array
+                    { &xecs::component::type::info_v<xecs::component::entity>
+                    , &xecs::component::type::info_v<xecs::component::ref_count>
+                    , &xecs::component::type::info_v<xecs::component::share_as_data_exclusive_tag>
+                    , m_InfoData[m_nDataComponents + i]
+                    }
+                );
+            }
+        }
     }
 
     //--------------------------------------------------------------------------------------------
@@ -266,7 +373,6 @@ namespace xecs::archetype
         // Lets do a quick sanity check
         //
 #ifdef _DEBUG
-
         for( auto& e : TypeInfos )
         {
             // The user only can give the share components to find the family
@@ -290,6 +396,10 @@ namespace xecs::archetype
                 assert( e->m_Guid != TypeInfos[i]->m_Guid );
             }
         }
+
+        // Make sure all the move data is there
+        for( auto e : MoveData )
+            assert(e);
 #endif
 
         //
@@ -305,22 +415,6 @@ namespace xecs::archetype
 
             if (auto It = m_Mgr.m_PoolFamily.find(FamilyGuid); It != m_Mgr.m_PoolFamily.end())
                 return *It->second;
-        }
-
-        //
-        // Make sure that all the pools for our share components are cached
-        //
-        if (nullptr == m_ShareArchetypesArray[0].get())
-        {
-            for (int i = 0; i < m_nShareComponents; ++i)
-            {
-                // TODO: Add special TAG
-                m_ShareArchetypesArray[i] = m_Mgr.getOrCreateArchetype(std::array
-                    { &xecs::component::type::info_v<xecs::component::entity>
-                    , &xecs::component::type::info_v<xecs::component::ref_count>
-                    , m_InfoData[m_nDataComponents + i]
-                    });
-            }
         }
 
         //
@@ -447,7 +541,7 @@ namespace xecs::archetype
     //--------------------------------------------------------------------------------------------
 
     xecs::pool::family& 
-instance::getOrCreatePoolFamily
+instance::getOrCreatePoolFamilyFromSameArchetype
     ( xecs::pool::family&                                   FromFamily
     , std::span< const int >                                IndexRemaps
     , std::span< const xecs::component::type::info* const>  TypeInfos
@@ -662,14 +756,17 @@ instance::CreateEntity
                 auto    iType   = Pool.findIndexComponentFromInfo(Info);
                 assert(iType>=0);
 
-                if( Info.m_pMoveFn )
+                if( MoveData[i] )
                 {
-                    Info.m_pMoveFn(&Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Info.m_Size], MoveData[i]);
-                }
-                else
-                {
-                    if( Info.m_pDestructFn ) Info.m_pDestructFn(&Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Info.m_Size]);
-                    std::memcpy( &Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Info.m_Size], MoveData[i], Info.m_Size );
+                    if( Info.m_pMoveFn )
+                    {
+                        Info.m_pMoveFn(&Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Info.m_Size], MoveData[i]);
+                    }
+                    else
+                    {
+                        if( Info.m_pDestructFn ) Info.m_pDestructFn(&Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Info.m_Size]);
+                        std::memcpy( &Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Info.m_Size], MoveData[i], Info.m_Size );
+                    }
                 }
             }
 
@@ -1023,7 +1120,7 @@ instance::MoveInEntity
     ) xecs::component::entity
     instance::MoveInEntity( xecs::component::entity& Entity, T_FUNCTION&& Function ) noexcept
     {
-        return MoveInEntity(Entity, m_DefaultPoolFamily, std::forward<T_FUNCTION&&>(Function) );
+        return MoveInEntity(Entity, getOrCreatePoolFamilyFromDifferentArchetype(Entity), std::forward<T_FUNCTION&&>(Function) );
     }
 
     //--------------------------------------------------------------------------------------------
@@ -1035,107 +1132,38 @@ instance::MoveInEntity
         m_pLastPendingFamilies = nullptr;
     }
 
-    //-------------------------------------------------------------------------------------
-    // ARCHETYPE MANAGER
-    //-------------------------------------------------------------------------------------
+    //--------------------------------------------------------------------------------------------
 
-    //-------------------------------------------------------------------------------------
-
-    mgr::mgr( xecs::game_mgr::instance& GameMgr ) noexcept
-    : m_GameMgr{ GameMgr }
+    xecs::pool::family& instance::getOrCreatePoolFamilyFromDifferentArchetype( xecs::component::entity Entity ) noexcept
     {
-    }
+        if( m_nShareComponents == 0 ) return m_DefaultPoolFamily;
 
-    //-------------------------------------------------------------------------------------
-
-    std::shared_ptr<archetype::instance>
-mgr::getOrCreateArchetype
-    ( std::span<const component::type::info* const> Types 
-    ) noexcept
-    {
-        tools::bits Query;
-        xecs::archetype::guid ArchetypeGuid{};
-        for (const auto& pE : Types)
-        {
-            assert(pE->m_BitID != xecs::component::type::info::invalid_bit_id_v );
-            Query.setBit(pE->m_BitID);
-            ArchetypeGuid.m_Value += pE->m_Guid.m_Value;
-        }
-            
-        // Make sure the entity is part of the list at this point
-        assert( Query.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID) );
-
-        // Return the archetype
-        if( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
-            return std::shared_ptr<archetype::instance>{ I->second };
+        std::array< int,                                xecs::settings::max_share_components_per_entity_v > IndexArray;
+        std::array< std::byte*,                         xecs::settings::max_share_components_per_entity_v > DataArray;
+        std::array< const xecs::component::type::info*, xecs::settings::max_share_components_per_entity_v > InfoArray;
 
         //
-        // Create Archetype...
+        // Compute Indices, Info, and data
         //
-        m_lArchetype.push_back      ( std::make_shared<archetype::instance>(*this) );
-        m_lArchetypeBits.push_back  ( Query );
+        auto&       FromEntityDetails   = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
+        auto&       FromFamily          = *FromEntityDetails.m_pPool->m_pMyFamily;
+        auto        ToShareInfos        = std::span{ m_InfoData.data() + m_nDataComponents, static_cast<std::size_t>(m_nShareComponents) };
+        auto        ToIndices           = std::span{ IndexArray.data(), ToShareInfos.size() };
+        auto        ToFinalInfos        = std::span{ InfoArray.data(),  ToShareInfos.size() };
+        const auto  FinalCount          = details::ComputeIndexRemaps( ToIndices, ToFinalInfos, ToShareInfos, FromFamily.m_ShareInfos );
+        auto        ToData              = std::span{ DataArray.data(), static_cast<std::size_t>(FinalCount) };
 
-        auto& Archetype = *m_lArchetype.back();
-        Archetype.Initialize(Types, Query, true);
-
-        m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
-
-        //
-        // Notify anyone interested on the new Archetype
-        //
-        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
-
-        return m_lArchetype.back();
-    }
-
-    //-------------------------------------------------------------------------------------
-
-    void mgr::UpdateStructuralChanges( void ) noexcept
-    {
-        //
-        // Update all the pools
-        //
-        for (auto p = m_pPoolStructuralPending; p != end_structural_changes_v<xecs::pool::instance>; )
-        {
-            auto pNext = p->m_pPendingStructuralChanges;
-            p->UpdateStructuralChanges(m_GameMgr.m_ComponentMgr);
-            p->m_pPendingStructuralChanges = nullptr;
-            p = pNext;
-        }
-        m_pPoolStructuralPending = end_structural_changes_v<xecs::pool::instance>;
+        details::CollectSharePointersFromFamily
+        ( ToData
+        , ToIndices
+        , ToFinalInfos
+        , FromFamily
+        , m_Mgr.m_GameMgr.m_ComponentMgr
+        );
 
         //
-        // Update all the archetypes
+        // Get the family
         //
-        for( auto p = m_pArchetypeStrututalPending; p != end_structural_changes_v<xecs::archetype::instance>; )
-        {
-            auto pNext = p->m_pPendingStructuralChanges;
-            p->UpdateStructuralChanges();
-            p->m_pPendingStructuralChanges = nullptr;
-            p = pNext;
-        }
-        m_pArchetypeStrututalPending = end_structural_changes_v<xecs::archetype::instance>;
-    }
-
-    //-------------------------------------------------------------------------------------
-
-    void mgr::AddToStructutalPendingList( instance& Archetype ) noexcept
-    {
-        if( nullptr == Archetype.m_pPendingStructuralChanges )
-        {
-            Archetype.m_pPendingStructuralChanges = m_pArchetypeStrututalPending;
-            m_pArchetypeStrututalPending = &Archetype;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------
-
-    void mgr::AddToStructutalPendingList( pool::instance& Pool ) noexcept
-    {
-        if( nullptr == Pool.m_pPendingStructuralChanges )
-        {
-            Pool.m_pPendingStructuralChanges = m_pPoolStructuralPending;
-            m_pPoolStructuralPending = &Pool;
-        }
-    }
+        return getOrCreatePoolFamily( ToShareInfos, ToData );
+    } 
 }

@@ -61,9 +61,38 @@ namespace xecs::tools
     }
 
     //------------------------------------------------------------------------------------
-    template< typename... T_COMPONENTS > constexpr
+    template< typename... T_COMPONENTS >
+    requires( assert_valid_tuple_components_v < std::tuple<T_COMPONENTS...> > )
+    constexpr
     void bits::AddFromComponents( void ) noexcept
     {
         ((setBit(xecs::component::type::info_v<T_COMPONENTS>.m_BitID)), ...);
     }
+
+    //------------------------------------------------------------------------------------
+
+    std::uint64_t bits::GenerateUniqueID( void ) const noexcept
+    {
+        std::hash<std::uint64_t> Hasher;
+        const auto               Hashes = std::span{ reinterpret_cast<const std::uint64_t*>(this), sizeof(*this) / sizeof(std::uint64_t) };
+
+        std::uint64_t Hash = Hasher(Hashes[0]);
+        for (int i = 1; i < Hashes.size(); ++i)
+        {
+            Hash ^= Hasher(Hashes[i]) + 0x9e3779b9u + (Hash << 6) + (Hash >> 2);
+        }
+
+        return Hash;
+    }
+
+    //------------------------------------------------------------------------------------
+    inline
+    void bits::setupAnd( const bits& A, const bits& B ) noexcept
+    {
+        for( auto i = 0, size = static_cast<const int>(m_Bits.size()); i < size; ++i)
+        {
+            m_Bits[i] = A.m_Bits[i] & B.m_Bits[i];
+        }
+    }
+
 }

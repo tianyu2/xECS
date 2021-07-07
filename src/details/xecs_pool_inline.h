@@ -45,7 +45,7 @@ namespace xecs::pool
             E.m_Key    = ShareKeyList[i];
         }
 
-        m_DefaultPool.Initialize(DataInfoList);
+        m_DefaultPool.Initialize( DataInfoList, *this );
     }
 
     //-------------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ namespace xecs::pool
             {
                 // Create a new pool
                 pPool->m_Next = std::make_unique<pool::instance>();
-                pPool->m_Next->Initialize( m_DefaultPool.m_ComponentInfos );
+                pPool->m_Next->Initialize( m_DefaultPool.m_ComponentInfos, *this );
             }
             else
             {
@@ -152,10 +152,14 @@ namespace xecs::pool
     //-------------------------------------------------------------------------------------
 
     void instance::Initialize
-    ( std::span<const component::type::info* const > Span
+    ( std::span<const component::type::info* const >    Span
+    , xecs::pool::family&                               Family
     ) noexcept
     {
+        assert(Span.size());
+
         m_ComponentInfos            = Span;
+        m_pMyFamily                 = &Family;
 
         // Reserve virtual memory for our data components
         for( int i=0, end = static_cast<int>(m_ComponentInfos.size()); i<end; ++i )

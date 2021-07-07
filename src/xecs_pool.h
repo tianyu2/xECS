@@ -1,5 +1,7 @@
 namespace xecs::pool
 {
+    struct family;
+
     constexpr static std::uint32_t invalid_delete_global_index_v = 0xffffffffu >> 1;
 
     namespace type
@@ -20,7 +22,8 @@ namespace xecs::pool
                        ~instance                            ( void 
                                                             ) noexcept;
         inline
-        void            Initialize                          ( std::span<const component::type::info* const > DataComponentInfosSpan
+        void            Initialize                          ( std::span<const component::type::info* const >    DataComponentInfosSpan
+                                                            , xecs::pool::family&                               Family
                                                             ) noexcept;
         inline
         void            Clear                               ( void 
@@ -78,14 +81,17 @@ namespace xecs::pool
                                                             ) noexcept;
     public:
 
-        std::span<const component::type::info* const >                      m_ComponentInfos            {};
-        int                                                                 m_CurrentCount              {};
-        int                                                                 m_Size                      {};
-        std::uint32_t                                                       m_DeleteGlobalIndex         { invalid_delete_global_index_v };
-        std::uint32_t                                                       m_DeleteMoveIndex           { invalid_delete_global_index_v };
-        std::array<std::byte*, xecs::settings::max_components_per_entity_v> m_pComponent                {};
-        instance*                                                           m_pPendingStructuralChanges { nullptr };
-        std::unique_ptr<instance>                                           m_Next                      {};
+        using pointer_array = std::array<std::byte*, xecs::settings::max_data_components_per_entity_v>;
+
+        std::span<const component::type::info* const >      m_ComponentInfos            {};
+        int                                                 m_CurrentCount              {};
+        int                                                 m_Size                      {};
+        std::uint32_t                                       m_DeleteGlobalIndex         { invalid_delete_global_index_v };
+        std::uint32_t                                       m_DeleteMoveIndex           { invalid_delete_global_index_v };
+        pointer_array                                       m_pComponent                {};
+        instance*                                           m_pPendingStructuralChanges { nullptr };
+        xecs::pool::family*                                 m_pMyFamily                 { nullptr };
+        std::unique_ptr<instance>                           m_Next                      {};
     };
 
     //------------------------------------------------------------------------------
@@ -126,7 +132,7 @@ namespace xecs::pool
             xecs::component::type::share::key   m_Key;
         };
 
-        using share_details_array = std::array<share_details, xecs::settings::max_components_per_entity_v>;
+        using share_details_array = std::array<share_details, xecs::settings::max_share_components_per_entity_v>;
 
         guid                                            m_Guid              {};
         instance                                        m_DefaultPool       {};

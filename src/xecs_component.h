@@ -27,9 +27,20 @@ namespace xecs::component
         {
             constexpr static auto   max_size_v          = 1;
             constexpr static auto   id_v                = id::TAG;
+            constexpr static auto   exclusive_v         = false;
 
             guid                    m_Guid              {};
             const char*             m_pName             { "Unnamed tag component" };
+        };
+
+        struct exclusive_tag
+        {
+            constexpr static auto   max_size_v          = 1;
+            constexpr static auto   id_v                = id::TAG;
+            constexpr static auto   exclusive_v         = true;
+
+            guid                    m_Guid              {};
+            const char*             m_pName             { "Unnamed exclusive tag component" };
         };
 
         struct share
@@ -59,13 +70,14 @@ namespace xecs::component
                 template<auto U>     struct Check;
                 template<typename>   static std::false_type Test(...);
                 template<typename C> static auto Test(Check<&C::typedef_v>*) -> std::conditional_t
-                                     <
-                                        ( std::is_same_v< const data, decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= data::max_size_v )
-                                     || ( std::is_same_v< const tag,  decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= tag::max_size_v  )
-                                     || ( std::is_same_v< const share,decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= share::max_size_v  )
-                                     , std::true_type
-                                     , std::false_type
-                                     >;
+                <
+                       ( std::is_same_v< const data,           decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= data::max_size_v   )
+                    || ( std::is_same_v< const tag,            decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= tag::max_size_v    )
+                    || ( std::is_same_v< const exclusive_tag,  decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= exclusive_tag::max_size_v )
+                    || ( std::is_same_v< const share,          decltype(C::typedef_v) > && sizeof(T_COMPONENT) <= share::max_size_v  )
+                ,   std::true_type
+                ,   std::false_type
+                >;
                 constexpr static auto value = decltype(Test<T_COMPONENT>(nullptr))::value;
             };
         }
@@ -89,7 +101,8 @@ namespace xecs::component
             std::uint16_t               m_Size;             // Size of the component in bytes
             type::id                    m_TypeID;           // Simple enumeration that tells what type of component is this
             bool                        m_bGlobalScoped:1   // If the component is a share, it indicates if it should be factor to a globally scope or to an archetype scope
-            ,                           m_bKeyCanFilter:1;  // If the component is a share, it indicates if the query can filter by its key
+            ,                           m_bKeyCanFilter:1   // If the component is a share, it indicates if the query can filter by its key
+            ,                           m_bExclusiveTag:1;  // If the component is a tag, is it a exclusive tag
             construct_fn*               m_pConstructFn;     // Constructor function pointer if required
             destruct_fn*                m_pDestructFn;      // Destructor function pointer if required
             move_fn*                    m_pMoveFn;          // Move function pointer if required
@@ -107,7 +120,7 @@ namespace xecs::component
             static constexpr auto info_v = CreateInfo<T>();
         }
         template< typename T_COMPONENT >
-        requires( type::is_valid_v<xcore::types::decay_full_t<T_COMPONENT>> )
+        requires( []{ static_assert( type::is_valid_v<xcore::types::decay_full_t<T_COMPONENT>> ); return true; }() )
         constexpr auto& info_v = details::info_v<xcore::types::decay_full_t<T_COMPONENT>>;
     } 
 
@@ -178,44 +191,14 @@ namespace xecs::component
     };
 
     //
-    // MGR
+    // Exclusive tag that tells Archetypes to treat share components as data components
     //
-    struct mgr final
+    struct share_as_data_exclusive_tag
     {
-        inline
-                                            mgr                     ( void 
-                                                                    ) noexcept;
-        template
-        < typename T_COMPONENT
-        > requires
-        ( xecs::component::type::is_valid_v<T_COMPONENT>
-        )
-        void                                RegisterComponent       ( void
-                                                                    ) noexcept;
-        inline
-        const entity::global_info&          getEntityDetails        ( xecs::component::entity Entity 
-                                                                    ) const noexcept;
-        inline
-        void                                DeleteGlobalEntity      ( std::uint32_t              GlobalIndex
-                                                                    , xecs::component::entity&   SwappedEntity 
-                                                                    ) noexcept;
-        inline
-        void                                DeleteGlobalEntity      ( std::uint32_t GlobalIndex
-                                                                    ) noexcept;
-        inline
-        void                                MovedGlobalEntity       ( xecs::pool::index         PoolIndex
-                                                                    , xecs::component::entity&  SwappedEntity
-                                                                    ) noexcept;
-        inline 
-        entity                              AllocNewEntity          ( pool::index                   PoolIndex
-                                                                    , xecs::archetype::instance&    Archetype
-                                                                    , xecs::pool::instance&         Pool 
-                                                                    ) noexcept;
-
-
-        inline static int                                   m_UniqueID  = 0;
-        std::unique_ptr<entity::global_info[]>              m_lEntities = std::make_unique<entity::global_info[]>(xecs::settings::max_entities_v);
-        int                                                 m_EmptyHead = 0;
+        constexpr static auto typedef_v = xecs::component::type::exclusive_tag
+        {
+            .m_pName = "Share As Data"
+        };
     };
 }
 

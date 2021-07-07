@@ -29,9 +29,10 @@ namespace xecs::system
                     }
                     else
                     {
+                        const auto& Q = type::info_v<T_USER_SYSTEM>.m_Query;
                         T_USER_SYSTEM::m_GameMgr.Foreach
                         (
-                            T_USER_SYSTEM::m_GameMgr.Search( type::info_v<T_USER_SYSTEM>.m_Query )
+                            T_USER_SYSTEM::m_GameMgr.Search(Q)
                         ,   *this
                         );
                     }

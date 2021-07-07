@@ -59,8 +59,10 @@ namespace xecs::pool
 #include "xecs_event.h"
 #include "xecs_component.h"
 #include "xecs_tools.h"
+#include "xecs_component_mgr.h"
 #include "xecs_pool.h"
 #include "xecs_archetype.h"
+#include "xecs_archetype_mgr.h"
 #include "xecs_query.h"
 #include "xecs_system.h"
 #include "xecs_game_mgr.h"
@@ -69,8 +71,10 @@ namespace xecs::pool
 // INLINE FILES
 //--------------------------------------------------------------
 #include "details/xecs_component_inline.h"
+#include "details/xecs_component_mgr_inline.h"
 #include "details/xecs_pool_inline.h"
 #include "details/xecs_archetype_inline.h"
+#include "details/xecs_archetype_mgr_inline.h"
 #include "details/xecs_system_inline.h"
 #include "details/xecs_game_mgr_inline.h"
 #include "details/xecs_query_inline.h"

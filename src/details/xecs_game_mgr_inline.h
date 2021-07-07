@@ -82,7 +82,7 @@ namespace xecs::game_mgr
         std::vector<archetype::instance*> ArchetypesFound;
         for( auto& E : m_ArchetypeMgr.m_lArchetypeBits )
         {
-            if( Query.Compare(E) )
+            if( Query.Compare(E.first, E.second) )
             {
                 const auto Index = static_cast<std::size_t>(&E - &m_ArchetypeMgr.m_lArchetypeBits[0]);
                 ArchetypesFound.push_back(m_ArchetypeMgr.m_lArchetype[Index].get());
@@ -96,6 +96,9 @@ namespace xecs::game_mgr
 
     archetype::instance& instance::getOrCreateArchetype( std::span<const component::type::info* const> Types ) noexcept
     {
+        return *m_ArchetypeMgr.getOrCreateArchetype( Types );
+
+        /*
         tools::bits Query;
         xecs::archetype::guid ArchetypeGuid{};
         for (const auto& pE : Types)
@@ -129,11 +132,12 @@ namespace xecs::game_mgr
         m_ArchetypeMgr.m_Events.m_OnNewArchetype.NotifyAll(Archetype);
 
         return Archetype;
+        */
     }
 
     //---------------------------------------------------------------------------
     inline
-    archetype::instance* instance::findArchetype(xecs::archetype::guid ArchetypeGuid ) const noexcept
+    archetype::instance* instance::findArchetype( xecs::archetype::guid ArchetypeGuid ) const noexcept
     {
         if ( auto I = m_ArchetypeMgr.m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMgr.m_ArchetypeMap.end() )
             return I->second;
@@ -145,14 +149,26 @@ namespace xecs::game_mgr
     template
     < typename... T_TUPLES_OF_COMPONENTS_OR_COMPONENTS
     > requires
-    ( !!xecs::archetype::guid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...>.m_Value
+    ( 
+        (   (  xecs::tools::valid_tuple_components_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS>
+            || xecs::component::type::is_valid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS> 
+            ) &&... )
     )
     archetype::instance& instance::getOrCreateArchetype( void ) noexcept
     {
         return [&]<typename...T>(std::tuple<T...>*) constexpr noexcept -> archetype::instance&
         {
-            // Set the fast path here as it will be the most common case
-            if( auto p = findArchetype(xecs::archetype::guid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...>); p ) 
+            static_assert( ((false == std::is_same_v< T, xecs::component::entity >) && ... ) );
+
+            // Compute the archetype GUID
+            const auto ArchetypeGuid = xecs::archetype::ComputeGuidFromInfos( std::array
+            {
+                &xecs::component::type::info_v< xecs::component::entity >
+            ,   &xecs::component::type::info_v<T> ...
+            });
+
+            // Try to find the archetype
+            if( auto p = findArchetype( ArchetypeGuid ); p )
                 return *p;
 
             // Slow path for creation
@@ -160,6 +176,7 @@ namespace xecs::game_mgr
             (
                 xecs::component::type::details::sorted_info_array_v< xecs::component::type::details::combined_t<xecs::component::entity, T... >>
             );
+
         }( xcore::types::null_tuple_v< xecs::tools::united_tuple<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...> > );
     }
 
@@ -401,7 +418,7 @@ namespace xecs::game_mgr
                                 //
                                 // Get the new family and move the entity there
                                 //
-                                pE->getOrCreatePoolFamily
+                                pE->getOrCreatePoolFamilyFromSameArchetype
                                 ( *pFamily
                                 , ShareIndices
                                 , SortedInfoArray
@@ -467,93 +484,12 @@ namespace xecs::game_mgr
     , T_FUNCTION&&                                          Function 
     ) noexcept
     {
-        assert(Entity.isZombie() == false);
-        auto& Entry = m_ComponentMgr.getEntityDetails(Entity);
-        auto  Bits  = Entry.m_pArchetype->m_ComponentBits;
-        assert(Entry.m_Validation.m_bZombie == false);
-
-        for( auto& pE : Add ) 
-        {
-            // Cant add the entity
-            assert( pE->m_BitID !=0 );
-            Bits.setBit( pE->m_BitID );
-        }
-        for( auto& pE : Sub ) 
-        {
-            // Cant remove the entity
-            assert(pE->m_BitID != 0);
-            Bits.clearBit(pE->m_BitID);
-        }
-        for( auto& E : m_ArchetypeMgr.m_lArchetypeBits )
-        {
-            if( E.Equals(Bits) )
-            {
-                const auto Index = static_cast<std::size_t>(&E - &m_ArchetypeMgr.m_lArchetypeBits[0]);
-                if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return m_ArchetypeMgr.m_lArchetype[Index]->MoveInEntity( Entity );
-                else                                                                  return m_ArchetypeMgr.m_lArchetype[Index]->MoveInEntity( Entity, Function );
-            }
-        }
-
-        std::array<const xecs::component::type::info*, xecs::settings::max_components_per_entity_v > ComponentList;
-        int Count = 0;
-
-        // Copy the existing ones
-        for( auto& pE : std::span{ Entry.m_pArchetype->m_InfoData.data(), (std::size_t)Entry.m_pArchetype->m_nDataComponents + (std::size_t)Entry.m_pArchetype->m_nShareComponents } )
-            ComponentList[Count++] = pE;
-
-        // Add
-        for( auto& pE : Add )
-        {
-            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::type::info* pA, const xecs::component::type::info* pB)
-            {
-                return pA->m_Guid < pB->m_Guid;
-            }) - ComponentList.begin());
-            assert(Index > 0);
-
-            // Check for duplicates
-            if( ComponentList[Index - 1] == pE )
-                continue;
-
-            // Create a hole to insert our entry
-            if( Index != Count )
-            {
-                std::memmove( &ComponentList[Index+1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::type::info*) );
-            }
-            ComponentList[Index] = pE;
-            Count++;
-        }
-
-        // Remove
-        for (auto& pE : Sub)
-        {
-            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count, pE, [](const xecs::component::type::info* pA, const xecs::component::type::info* pB)
-            {
-                return pA->m_Guid < pB->m_Guid;
-            }) - ComponentList.begin());
-            assert(Index > 0);
-
-            // Check if we found it
-            if ( ComponentList[Index - 1] == pE )
-            {
-                std::memmove(&ComponentList[Index-1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::type::info*));
-                Count--;
-            }
-        }
-
-        //
-        // Create Archetype...
-        //
-        m_ArchetypeMgr.m_lArchetype.push_back(std::make_shared<archetype::instance>(m_ArchetypeMgr));
-        m_ArchetypeMgr.m_lArchetypeBits.push_back(Bits);
-
-        auto& Archetype = *m_ArchetypeMgr.m_lArchetype.back();
-        Archetype.Initialize({ ComponentList.data(), static_cast<std::size_t>(Count) }, Bits, false );
-
-        // Notify anyone intested
-        m_ArchetypeMgr.m_Events.m_OnNewArchetype.NotifyAll(Archetype);
-
-        if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return Archetype.MoveInEntity(Entity);
-        else                                                                  return Archetype.MoveInEntity(Entity, Function);
+        return m_ArchetypeMgr.AddOrRemoveComponents
+        ( Entity
+        , Add
+        , Sub
+        , std::forward<T_FUNCTION&&>(Function)
+        );
     }
 
     //---------------------------------------------------------------------------
@@ -573,13 +509,13 @@ namespace xecs::game_mgr
     ) noexcept
     {
         if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda > )
-            return AddOrRemoveComponents
+            return m_ArchetypeMgr.AddOrRemoveComponents
             ( Entity
             , xecs::component::type::details::sorted_info_array_v<T_TUPLE_ADD>
             , xecs::component::type::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
             );
         else
-            return AddOrRemoveComponents
+            return m_ArchetypeMgr.AddOrRemoveComponents
             ( Entity
             , xecs::component::type::details::sorted_info_array_v<T_TUPLE_ADD>
             , xecs::component::type::details::sorted_info_array_v<T_TUPLE_SUBTRACT>

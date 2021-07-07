@@ -66,12 +66,14 @@ namespace xecs::game_mgr
         > [[nodiscard]] std::vector<archetype::instance*>
                                             Search                  ( const xecs::query::instance& Query
                                                                     ) const noexcept;
+        /*
         template
         < typename... T_COMPONENTS
         > [[nodiscard]] std::vector<archetype::instance*>
                                             Search                  ( const xecs::query::instance&          Query
                                                                     , std::span<xecs::query::share_filter>  ShareFilters
                                                                     ) const noexcept;
+*/
         inline
         [[nodiscard]] archetype::instance*  findArchetype           ( xecs::archetype::guid Guid 
                                                                     ) const noexcept;
@@ -97,7 +99,10 @@ namespace xecs::game_mgr
         template
         < typename... T_TUPLES_OF_COMPONENTS_OR_COMPONENTS
         > requires
-        ( !!xecs::archetype::guid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...>.m_Value
+        ( 
+            (   (  xecs::tools::valid_tuple_components_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS>
+                || xecs::component::type::is_valid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS> 
+                ) &&... )
         )
         archetype::instance&                getOrCreateArchetype    ( void 
                                                                     ) noexcept;
