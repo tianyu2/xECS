@@ -109,6 +109,7 @@ namespace xecs::pool
 
         void Initialize
         ( guid                                              Guid
+        , archetype::instance&                              ArchetypeInstance
         , std::span<xecs::component::entity>                ShareEntityList
         , std::span<xecs::component::type::share::key>      ShareKeyList
         , std::span<const xecs::component::type::info*>     ShareInfoList
@@ -138,7 +139,9 @@ namespace xecs::pool
         instance                                        m_DefaultPool       {};
         std::span<const xecs::component::type::info*>   m_ShareInfos        {};
         std::unique_ptr<xecs::pool::family>             m_Next              {};
-        xecs::pool::family*                             m_pPrev             {};
+        family*                                         m_pPrev             {};
         share_details_array                             m_ShareDetails      {};
+        archetype::instance*                            m_pArchetypeInstance{};
+        family*                                         m_pPendingStructuralChanges{};
     };
 }

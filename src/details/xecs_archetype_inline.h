@@ -324,16 +324,15 @@ namespace xecs::archetype
         //
         // We can initialize our default pool if not shares...
         //
+        /*
         if( m_nShareComponents == 0 )
         {
-            m_DefaultPoolFamily.Initialize( pool::family::guid{42ull}, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(nInfos) } );
-
-            //
-            // Notify whoever cares about new families
-            //
-            m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, m_DefaultPoolFamily );
+            m_DefaultPoolFamily2.Initialize( pool::family::guid{42ull}, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(nInfos) } );
+            m_Mgr.AddToStructutalPendingList(&m_DefaultPoolFamily2);
         }
-        else
+        */
+
+        if( m_nShareComponents )
         {
             //
             // Make sure that all the pools for our share components are cached
@@ -363,10 +362,15 @@ namespace xecs::archetype
         assert(TypeInfos.size() == MoveData.size());
         if (m_nShareComponents == 0)
         {
+            if(m_DefaultPoolFamily2.m_Guid.isValid()) return m_DefaultPoolFamily2;
+
             assert(TypeInfos.size() == 0);
 
             // For these types of archetypes we only have one family
-            return m_DefaultPoolFamily;
+            m_DefaultPoolFamily2.Initialize(pool::family::guid{ 42ull }, *this, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(m_nDataComponents+m_nShareComponents) });
+            m_Mgr.AddToStructuralPendingList( m_DefaultPoolFamily2 );
+
+            return m_DefaultPoolFamily2;
         }
 
         //
@@ -484,40 +488,13 @@ namespace xecs::archetype
         //
         // Create new Pool Family
         //
-        xecs::pool::family* pPoolFamily = nullptr;
-        if( m_DefaultPoolFamily.m_Guid.isNull() )
-        {
-            pPoolFamily = &m_DefaultPoolFamily;
-        }
-        else
-        {
-            auto NewFamily = std::make_unique<xecs::pool::family>();
-            pPoolFamily    = NewFamily.get();
-
-            if( m_DefaultPoolFamily.m_Next.get() )
-            {
-                m_DefaultPoolFamily.m_Next->m_pPrev = pPoolFamily;
-                NewFamily->m_Next = std::move(m_DefaultPoolFamily.m_Next);
-            }
-
-            m_DefaultPoolFamily.m_Next = std::move(NewFamily);
-        }
-        m_Mgr.m_PoolFamily.emplace(FamilyGuid, pPoolFamily);
-
-        pPoolFamily->Initialize
+        return CreateNewPoolFamily
         ( FamilyGuid
         , std::span{ ShareComponentEntityRefs.data(),       static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ AllKeys.data(),                        static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ m_InfoData.data() + m_nDataComponents, static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ m_InfoData.data(),                     static_cast<std::size_t>(m_nDataComponents)  }
         );
-
-        //
-        // Notify to whoever is interested
-        //
-        m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, *pPoolFamily );
-
-        return *pPoolFamily;
     }
 
     //--------------------------------------------------------------------------------------------
@@ -618,30 +595,13 @@ instance::getOrCreatePoolFamilyFromSameArchetype
         //
         // Create new Pool Family
         //
-        assert(m_DefaultPoolFamily.m_Guid.isValid());
-        auto NewFamily = std::make_unique<xecs::pool::family>();
-        m_Mgr.m_PoolFamily.emplace( NewFamilyGuid, NewFamily.get() );
-
-        NewFamily->Initialize
+        return CreateNewPoolFamily
         ( NewFamilyGuid
         , std::span{ FinalShareEntities.data(),             static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ FinalShareKeys.data(),                 static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ m_InfoData.data() + m_nDataComponents, static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ m_InfoData.data(),                     static_cast<std::size_t>(m_nDataComponents)  }
         );
-
-        NewFamily->m_Next = std::move(m_PendingFamilies);
-        m_PendingFamilies = std::move(NewFamily);
-        if( nullptr == m_pLastPendingFamilies) m_pLastPendingFamilies = m_PendingFamilies.get();
-
-        m_Mgr.AddToStructutalPendingList(*this);
-
-        //
-        // Notify to whoever cares
-        //
-        m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, *m_PendingFamilies.get() );
-
-        return *m_PendingFamilies.get();
     }
 
     //--------------------------------------------------------------------------------------------
@@ -787,7 +747,7 @@ instance::CreateEntity
         // TODO: In order for the system to work we need to call this function for share-components that is why MoveData.size()==1 is there
         // However this is a hack and probably another function like this should be created just for the system.
         assert( m_nShareComponents == 0 || MoveData.size() == 1 );
-        return CreateEntity( m_DefaultPoolFamily, Infos, MoveData);
+        return CreateEntity( getOrCreatePoolFamily({},{}), Infos, MoveData);
     }
 
     //--------------------------------------------------------------------------------------------
@@ -844,7 +804,7 @@ instance::CreateEntities
         using func_traits = xcore::function::traits<T_CALLBACK>;
         assert(xecs::tools::HaveAllComponents(m_ComponentBits, xcore::types::null_tuple_v<func_traits::args_tuple>));
 
-        instance::CreateEntity( m_DefaultPoolFamily, Count, [&](xecs::component::entity Entity, int)
+        instance::CreateEntity( getOrCreatePoolFamily({},{}), Count, [&](xecs::component::entity Entity, int)
         {
             if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) return;
 
@@ -993,7 +953,7 @@ xecs::component::entity instance::CreateEntity
         //
         // Add pull to the pending list
         //
-        m_Mgr.AddToStructutalPendingList( *GlobalEntry.m_pPool );
+        m_Mgr.AddToStructuralPendingList( *GlobalEntry.m_pPool );
 
         //
         // Notify any one that cares
@@ -1068,7 +1028,7 @@ instance::MoveInEntity
             //
             // Ok time to work
             //
-            m_Mgr.AddToStructutalPendingList(FromPool);
+            m_Mgr.AddToStructuralPendingList(FromPool);
             const auto  NewPoolIndex = Pool.MoveInFromPool( Index, GlobalEntity.m_PoolIndex, FromPool );
 
             GlobalEntity.m_pArchetype = this;
@@ -1126,18 +1086,25 @@ instance::MoveInEntity
 
     //--------------------------------------------------------------------------------------------
 
-    void instance::UpdateStructuralChanges( void ) noexcept
+    void instance::UpdateStructuralChanges( xecs::pool::family& PoolFamily ) noexcept
     {
-        if(m_DefaultPoolFamily.m_Next.get()) m_pLastPendingFamilies->m_Next = std::move(m_DefaultPoolFamily.m_Next);
-        m_DefaultPoolFamily.m_Next = std::move(m_PendingFamilies);
-        m_pLastPendingFamilies = nullptr;
+        if( m_FamilyHead.get() ) m_FamilyHead->m_pPrev = &PoolFamily;
+        PoolFamily.m_Next = std::move(m_FamilyHead);
+        m_FamilyHead = std::unique_ptr<xecs::pool::family>{ &PoolFamily };
+
+        // officially announce it
+        m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, PoolFamily );
     }
 
     //--------------------------------------------------------------------------------------------
 
     xecs::pool::family& instance::getOrCreatePoolFamilyFromDifferentArchetype( xecs::component::entity Entity ) noexcept
     {
-        if( m_nShareComponents == 0 ) return m_DefaultPoolFamily;
+        if( m_nShareComponents == 0 )
+        {
+            if( m_FamilyHead.get() ) return *m_FamilyHead;
+            return getOrCreatePoolFamily({},{});
+        }
 
         std::array< int,                                xecs::settings::max_share_components_per_entity_v > IndexArray;
         std::array< std::byte*,                         xecs::settings::max_share_components_per_entity_v > DataArray;
@@ -1166,5 +1133,48 @@ instance::MoveInEntity
         // Get the family
         //
         return getOrCreatePoolFamily( ToShareInfos, ToData );
-    } 
+    }
+
+    //--------------------------------------------------------------------------------------------
+
+    xecs::pool::family& instance::CreateNewPoolFamily
+    ( xecs::pool::family::guid                          NewFamilyGuid
+    , std::span<xecs::component::entity>                ShareEntityList
+    , std::span<xecs::component::type::share::key>      ShareKeyList
+    , std::span<const xecs::component::type::info*>     ShareInfoList
+    , std::span<const xecs::component::type::info*>     DataInfoList
+    ) noexcept
+    {
+        //
+        // Get the memory for the new family
+        //
+        xecs::pool::family* pPoolFamily;
+        if ( m_DefaultPoolFamily2.m_Guid.isNull() )
+        {
+            // This is scary... but we are trying to keep it consistent
+            pPoolFamily = &m_DefaultPoolFamily2;
+        }
+        else
+        {
+            pPoolFamily = new xecs::pool::family{};
+        }
+        m_Mgr.m_PoolFamily.emplace( NewFamilyGuid, pPoolFamily );
+
+        //
+        // Initialize the family
+        //
+        pPoolFamily->Initialize
+        ( NewFamilyGuid
+        , *this
+        , std::span{ ShareEntityList.data(),                static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ ShareKeyList.data(),                   static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ m_InfoData.data() + m_nDataComponents, static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ m_InfoData.data(),                     static_cast<std::size_t>(m_nDataComponents)  }
+        );
+
+        m_Mgr.AddToStructuralPendingList( *pPoolFamily );
+
+        return *pPoolFamily;
+    }
+
 }

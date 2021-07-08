@@ -19,10 +19,13 @@ namespace xecs::archetype
         void                                    UpdateStructuralChanges     ( void 
                                                                             ) noexcept;
         inline
-        void                                    AddToStructutalPendingList  ( instance& Archetype
+        void                                    AddToStructuralPendingList  ( instance& Archetype
                                                                             ) noexcept;
         inline
-        void                                    AddToStructutalPendingList  ( pool::instance& Pool
+        void                                    AddToStructuralPendingList ( pool::instance& Pool
+                                                                            ) noexcept;
+        inline
+        void                                    AddToStructuralPendingList  ( pool::family& PoolFamily
                                                                             ) noexcept;
         __inline
         archetype::instance*                    findArchetype               ( xecs::archetype::guid Guid 
@@ -55,5 +58,6 @@ namespace xecs::archetype
         pool_family_map                                     m_PoolFamily                {};
         instance*                                           m_pArchetypeStrututalPending{ reinterpret_cast<instance*>(end_structural_changes_v) };
         pool::instance*                                     m_pPoolStructuralPending    { reinterpret_cast<pool::instance*>(end_structural_changes_v) };
+        xecs::pool::family*                                 m_pPoolFamilyPending        { reinterpret_cast<pool::family*>(end_structural_changes_v) };
     };
 }

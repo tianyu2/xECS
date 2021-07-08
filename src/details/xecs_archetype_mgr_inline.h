@@ -72,6 +72,18 @@ mgr::getOrCreateArchetype
         m_pPoolStructuralPending = reinterpret_cast<xecs::pool::instance*>(end_structural_changes_v);
 
         //
+        // Update all the pool families
+        //
+        for (auto p = m_pPoolFamilyPending; p != reinterpret_cast<xecs::pool::family*>(end_structural_changes_v); )
+        {
+            auto pNext = p->m_pPendingStructuralChanges;
+            p->m_pArchetypeInstance->UpdateStructuralChanges( *p );
+            p->m_pPendingStructuralChanges = nullptr;
+            p = pNext;
+        }
+        m_pPoolFamilyPending = reinterpret_cast<xecs::pool::family*>(end_structural_changes_v);
+
+        //
         // Update all the archetypes
         //
         for( auto p = m_pArchetypeStrututalPending; p != reinterpret_cast<xecs::archetype::instance*>(end_structural_changes_v); )
@@ -86,7 +98,7 @@ mgr::getOrCreateArchetype
 
     //-------------------------------------------------------------------------------------
 
-    void mgr::AddToStructutalPendingList( instance& Archetype ) noexcept
+    void mgr::AddToStructuralPendingList( instance& Archetype ) noexcept
     {
         if( nullptr == Archetype.m_pPendingStructuralChanges )
         {
@@ -97,12 +109,24 @@ mgr::getOrCreateArchetype
 
     //-------------------------------------------------------------------------------------
 
-    void mgr::AddToStructutalPendingList( pool::instance& Pool ) noexcept
+    void mgr::AddToStructuralPendingList( pool::instance& Pool ) noexcept
     {
         if( nullptr == Pool.m_pPendingStructuralChanges )
         {
             Pool.m_pPendingStructuralChanges = m_pPoolStructuralPending;
             m_pPoolStructuralPending = &Pool;
+        }
+    }
+
+    //-------------------------------------------------------------------------------------
+
+    inline
+    void mgr::AddToStructuralPendingList( pool::family& PoolFamily ) noexcept
+    {
+        assert(nullptr == PoolFamily.m_pPendingStructuralChanges);
+        {
+            PoolFamily.m_pPendingStructuralChanges = m_pPoolFamilyPending;
+            m_pPoolFamilyPending = &PoolFamily;
         }
     }
 
@@ -150,7 +174,8 @@ mgr::AddOrRemoveComponents
         //
         // Search for the right archetype
         //
-        if( auto p = findArchetype( archetype::guid{ Bits.GenerateUniqueID() } ); p )
+        const auto  NewArchetypeGuid = xecs::archetype::guid{ Bits.GenerateUniqueID() };
+        if( auto p = findArchetype(NewArchetypeGuid); p )
         {
             if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return p->MoveInEntity(Entity);
             else                                                                  return p->MoveInEntity(Entity, Function);
@@ -212,13 +237,12 @@ mgr::AddOrRemoveComponents
         //
         auto  SharedArchetype   = std::make_shared<archetype::instance>(*this);
         auto& Archetype         = *SharedArchetype;
-        auto  ArchetypeGuid     = xecs::archetype::guid{ Bits.GenerateUniqueID() };
 
-        Archetype.Initialize( ArchetypeGuid, { ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
+        Archetype.Initialize(NewArchetypeGuid, { ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
 
         m_lArchetype.push_back( std::move(SharedArchetype) );
         m_lArchetypeBits.push_back( {Bits, Archetype.m_ExclusiveTagsBits} );
-        m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
+        m_ArchetypeMap.emplace(NewArchetypeGuid, &Archetype );
 
         // Notify anyone intested
         m_Events.m_OnNewArchetype.NotifyAll(Archetype);

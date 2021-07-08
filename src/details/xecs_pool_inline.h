@@ -25,6 +25,7 @@ namespace xecs::pool
 
     void family::Initialize
     ( family::guid                                      Guid
+    , archetype::instance&                              Archetype
     , std::span<xecs::component::entity>                ShareEntityList
     , std::span<xecs::component::type::share::key>      ShareKeyList
     , std::span<const xecs::component::type::info*>     ShareInfoList
@@ -36,8 +37,9 @@ namespace xecs::pool
         assert(ShareEntityList.size() == ShareKeyList.size());
         assert(ShareEntityList.size() == ShareInfoList.size());
 
-        m_Guid       = Guid;
-        m_ShareInfos = ShareInfoList;
+        m_Guid               = Guid;
+        m_pArchetypeInstance = &Archetype;
+        m_ShareInfos         = ShareInfoList;
         for( int i=0;i< ShareKeyList.size(); i++)
         {
             auto& E = m_ShareDetails[i];
@@ -74,7 +76,7 @@ namespace xecs::pool
                 //
                 // Lock the pool
                 //
-                ArchetypeMgr.AddToStructutalPendingList(*pPool);
+                ArchetypeMgr.AddToStructuralPendingList(*pPool);
                 
                 //
                 // Call the user's function
@@ -109,7 +111,7 @@ namespace xecs::pool
     , xecs::pool::index         FromIndex
     ) noexcept
     {
-        GameMgr.m_ArchetypeMgr.AddToStructutalPendingList(FromPool);
+        GameMgr.m_ArchetypeMgr.AddToStructuralPendingList(FromPool);
         FromFamily.AppendEntities( 1, GameMgr.m_ArchetypeMgr, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
         {
             auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
@@ -531,5 +533,4 @@ namespace xecs::pool
 
         return ToNewIndex;
     }
-
 }

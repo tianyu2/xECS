@@ -61,6 +61,14 @@ namespace xecs::archetype
                                                         , std::span< const xecs::component::type::share::key >  Keys
                                                         ) noexcept;
         inline
+        xecs::pool::family&     CreateNewPoolFamily     ( xecs::pool::family::guid                          Guid
+                                                        , std::span<xecs::component::entity>                ShareEntityList
+                                                        , std::span<xecs::component::type::share::key>      ShareKeyList
+                                                        , std::span<const xecs::component::type::info*>     ShareInfoList
+                                                        , std::span<const xecs::component::type::info*>     DataInfoList
+                                                        ) noexcept;
+
+        inline
         xecs::pool::family&     getOrCreatePoolFamilyFromDifferentArchetype
                                                         ( xecs::component::entity        Entity
                                                         ) noexcept;
@@ -163,6 +171,10 @@ namespace xecs::archetype
 
         __inline
         void                    UpdateStructuralChanges ( void
+                                                        ) noexcept {}
+
+        __inline
+        void                    UpdateStructuralChanges ( pool::family& poolFamily
                                                         ) noexcept;
 
         using info_array             = std::array<const xecs::component::type::info*,           xecs::settings::max_components_per_entity_v >;
@@ -175,11 +187,8 @@ namespace xecs::archetype
         std::uint8_t                        m_nDataComponents           {};
         std::uint8_t                        m_nShareComponents          {};
         events                              m_Events                    {};
-        pool::family                        m_DefaultPoolFamily         {};
-        std::unique_ptr<xecs::pool::family> m_PendingFamilies           {}; // Families pending to be added into the DefaultPool link list of families
-                                                                            // They need to be kept separated because it is a Structural change
-                                                                            // Ones everyone is done accessing the archetype it will link up the pending families
-        xecs::pool::family*                 m_pLastPendingFamilies      {};
+        std::unique_ptr<pool::family>       m_FamilyHead                {};
+        pool::family                        m_DefaultPoolFamily2        {};
         info_array                          m_InfoData                  {}; // rename to InfoArray
         instance*                           m_pPendingStructuralChanges {};
         share_archetypes_array              m_ShareArchetypesArray      {};

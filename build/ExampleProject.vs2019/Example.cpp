@@ -165,7 +165,7 @@ struct update_movement : xecs::system::instance
         .m_pName = "update_movement"
     };
 
-    void operator()( position& Position, velocity& Velocity, grid_cell& GridCell) noexcept
+    void operator()( position& Position, velocity& Velocity, grid_cell& GridCell ) noexcept
     {
         Position.m_Value += Velocity.m_Value;
 
@@ -215,7 +215,14 @@ struct grid_system_pool_family_create : xecs::system::instance
     void OnPoolFamily( xecs::archetype::instance& Archetype, xecs::pool::family& PoolFamily ) noexcept
     {
         assert(PoolFamily.m_ShareInfos.size() == 1);
+
         auto& Cell = Archetype.getShareComponent<grid_cell>(PoolFamily);
+
+        for( auto E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
+        {
+            assert( E.first != &Archetype );
+        }
+
         (*m_Grid)[Cell.m_Y][Cell.m_X].push_back( { &Archetype, &PoolFamily } );
     }
 };
@@ -554,8 +561,18 @@ struct page_flip : xecs::system::instance
             constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
             glBegin(GL_QUADS);
 
-            float c = Count*0.01f + 0.4f;
-            glColor3f(c,c,c );
+            if (Count > 100)
+            {
+                glColor3f(1.f, 0.f, 0.f);
+                auto& V = (*m_pGrid)[y][x];
+                assert(V.size());
+
+            }
+            else
+            {
+                float c = Count * 0.01f + 0.4f;
+                glColor3f(c, c, c);
+            }
             glVertex2i(X - SizeX, Y - SizeY);
             glVertex2i(X - SizeX, Y + SizeY);
             glVertex2i(X + SizeX, Y + SizeY);
@@ -614,7 +631,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 1000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 100, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
