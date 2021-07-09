@@ -69,8 +69,8 @@ struct grid_cell
     {
         .m_pName = "Grid Cell"
     };
-    int m_X;
-    int m_Y;
+    std::uint16_t m_X;
+    std::uint16_t m_Y;
 };
 
 using bullet_tuple = std::tuple<position, velocity, timer, bullet, grid_cell>;
@@ -148,8 +148,8 @@ namespace grid
     grid_cell ComputeGridCellFromWorldPosition( xcore::vector2 Position) noexcept
     {
         return
-        { static_cast<int>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  (float)cell_x_count - 1)))
-        , static_cast<int>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, (float)cell_y_count - 1)))
+        { static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  (float)cell_x_count - 1)))
+        , static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, (float)cell_y_count - 1)))
         };
     }
 }
@@ -217,12 +217,12 @@ struct grid_system_pool_family_create : xecs::system::instance
         assert(PoolFamily.m_ShareInfos.size() == 1);
 
         auto& Cell = Archetype.getShareComponent<grid_cell>(PoolFamily);
-
+#if _DEBUG
         for( auto E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
         {
             assert( E.first != &Archetype );
         }
-
+#endif
         (*m_Grid)[Cell.m_Y][Cell.m_X].push_back( { &Archetype, &PoolFamily } );
     }
 };
@@ -488,7 +488,7 @@ void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    glRasterPos2i(x, s_Game.m_H - (y + 1) * 20);
+    glRasterPos2i(x, s_Game.m_H -(y+20));//s_Game.m_H - (y + 1) * 20);
     for (int i = 0; i < len; ++i)
     {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, FinalString[i]);
@@ -542,6 +542,9 @@ struct page_flip : xecs::system::instance
     __inline
     void OnUpdate( void ) noexcept
     {
+        glColor3f(1.0f, 1.0f, 1.0f);
+        GlutPrint( 0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size() );
+
         glFlush();
         glutSwapBuffers();
         glClear(GL_COLOR_BUFFER_BIT);
@@ -549,8 +552,8 @@ struct page_flip : xecs::system::instance
         //
         // Render grid
         //
-        for( int y=0; y<grid::cell_y_count; y++)
-        for (int x = 0; x < grid::cell_x_count; x++)
+        for( int y=0; y<grid::cell_y_count; y++ )
+        for( int x=0; x<grid::cell_x_count; x++ )
         {
             int Count = (int)(*m_pGrid)[y][x].size();
             if( 0 == Count) continue;
@@ -559,25 +562,17 @@ struct page_flip : xecs::system::instance
             float Y = (y + 0.5f) * grid::cell_width_v;
             constexpr auto SizeX = grid::cell_width_v/2.0f - 1;
             constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
+            
             glBegin(GL_QUADS);
-
-            if (Count > 100)
-            {
-                glColor3f(1.f, 0.f, 0.f);
-                auto& V = (*m_pGrid)[y][x];
-                assert(V.size());
-
-            }
-            else
-            {
-                float c = Count * 0.01f + 0.4f;
-                glColor3f(c, c, c);
-            }
+            glColor3f(0.5f, 0.5f, 0.5f);
             glVertex2i(X - SizeX, Y - SizeY);
             glVertex2i(X - SizeX, Y + SizeY);
             glVertex2i(X + SizeX, Y + SizeY);
             glVertex2i(X + SizeX, Y - SizeY);
             glEnd();
+            
+            glColor3f(1.0f, 1.0f, 1.0f);
+            GlutPrint(X, Y-15, "%d", Count );
         }
     }
 };
@@ -610,8 +605,8 @@ void InitializeGame( void ) noexcept
     s_Game.m_GameMgr->RegisterSystems
     <  update_timer            // Structural: Yes, RemoveComponent(Timer)
     ,   update_movement         // Structural: No
-    ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+  //  ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
+  //  ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -631,7 +626,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 100, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 2, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
@@ -642,6 +637,8 @@ void InitializeGame( void ) noexcept
             Velocity.m_Value.m_X = (std::rand() / (float)RAND_MAX) - 0.5f;
             Velocity.m_Value.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
             Velocity.m_Value.Normalize();
+
+Velocity.m_Value.setZero();
 
             Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
         });
@@ -693,6 +690,7 @@ int main(int argc, char** argv)
         glTranslatef(0, -h, 0);
     });
     glutTimerFunc(0, timer, 0);
+    glDisable(GL_DEPTH_TEST);
     glutMainLoop();
 
     xcore::Kill();

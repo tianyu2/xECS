@@ -472,6 +472,16 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
+    template< typename T_FUNCTION>
+    requires( xcore::function::is_callable_v<T_FUNCTION> )
+    void instance::getEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
+    {
+        auto b = findEntity( Entity, std::forward<T_FUNCTION&&>(Function) );
+        assert(b);
+    }
+
+    //---------------------------------------------------------------------------
+
     template
     < typename T_FUNCTION
     > requires
@@ -503,7 +513,8 @@ namespace xecs::game_mgr
         && xcore::types::is_specialized_v<std::tuple, T_TUPLE_ADD>
         && xcore::types::is_specialized_v<std::tuple, T_TUPLE_SUBTRACT>
     )
-    xecs::component::entity instance::AddOrRemoveComponents
+    xecs::component::entity
+instance::AddOrRemoveComponents
     ( xecs::component::entity   Entity
     , T_FUNCTION&&              Function 
     ) noexcept

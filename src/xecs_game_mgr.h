@@ -62,6 +62,14 @@ namespace xecs::game_mgr
                                                                     , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         template
+        < typename T_FUNCTION = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_FUNCTION>
+        ) __inline
+        void                                getEntity               ( xecs::component::entity Entity
+                                                                    , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
+                                                                    ) noexcept;
+        template
         < typename... T_COMPONENTS
         > [[nodiscard]] std::vector<archetype::instance*>
                                             Search                  ( const xecs::query::instance& Query

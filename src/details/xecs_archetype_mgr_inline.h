@@ -244,7 +244,7 @@ mgr::AddOrRemoveComponents
         m_lArchetypeBits.push_back( {Bits, Archetype.m_ExclusiveTagsBits} );
         m_ArchetypeMap.emplace(NewArchetypeGuid, &Archetype );
 
-        // Notify anyone intested
+        // Notify anyone interested
         m_Events.m_OnNewArchetype.NotifyAll(Archetype);
 
         if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return Archetype.MoveInEntity(Entity);

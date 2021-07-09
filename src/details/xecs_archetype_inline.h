@@ -339,13 +339,12 @@ namespace xecs::archetype
             //
             for (int i = 0; i < m_nShareComponents; ++i)
             {
-                // TODO: Add special TAG
                 m_ShareArchetypesArray[i] = m_Mgr.getOrCreateArchetype
                 ( std::array
                     { &xecs::component::type::info_v<xecs::component::entity>
                     , &xecs::component::type::info_v<xecs::component::ref_count>
                     , &xecs::component::type::info_v<xecs::component::share_as_data_exclusive_tag>
-                    , m_InfoData[m_nDataComponents + i]
+                    , m_InfoData[ m_nDataComponents + i ]
                     }
                 );
             }
@@ -409,6 +408,7 @@ namespace xecs::archetype
         //
         // Fast Path... They give me all the data so just execute 
         //
+        xecs::pool::family::guid g{};
         if( TypeInfos.size() == m_nShareComponents )
         {
             auto FamilyGuid = xecs::pool::family::ComputeGuid
@@ -416,7 +416,7 @@ namespace xecs::archetype
                 , TypeInfos
                 , MoveData
             );
-
+            g = FamilyGuid;
             if (auto It = m_Mgr.m_PoolFamily.find(FamilyGuid); It != m_Mgr.m_PoolFamily.end())
                 return *It->second;
         }
@@ -424,9 +424,9 @@ namespace xecs::archetype
         //
         // Lets compute all the requires Keys
         //
-        std::array<xecs::component::type::share::key,   xecs::settings::max_components_per_entity_v> AllKeys;
-        std::array<std::byte*,                          xecs::settings::max_components_per_entity_v> DataInOrder;
-        std::array<xecs::component::entity,             xecs::settings::max_components_per_entity_v> ShareComponentEntityRefs;
+        std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> AllKeys;
+        std::array<std::byte*,                          xecs::settings::max_share_components_per_entity_v> DataInOrder;
+        std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareComponentEntityRefs;
 
         xecs::pool::family::guid FamilyGuid{ m_Guid.m_Value };
         for( int i=0; i< m_nShareComponents; i++ )
@@ -450,6 +450,7 @@ namespace xecs::archetype
             AllKeys[i]     = xecs::component::type::details::ComputeShareKey(m_Guid, *pInfo, DataInOrder[i]);
             FamilyGuid.m_Value += AllKeys[i].m_Value;
         }
+        assert(g.isValid() == false || g == FamilyGuid );
 
         if (auto It = m_Mgr.m_PoolFamily.find(FamilyGuid); It != m_Mgr.m_PoolFamily.end())
             return *It->second;
@@ -467,18 +468,25 @@ namespace xecs::archetype
             if( auto It = m_Mgr.m_ShareComponentEntityMap.find(AllKeys[i]); It == m_Mgr.m_ShareComponentEntityMap.end() )
             {
                 xecs::component::entity Entity;
-                if(DataInOrder[i]) Entity = m_ShareArchetypesArray[i]->CreateEntity
-                ( { &pInfo, 1u }
-                , { &DataInOrder[i], 1u }
-                );
-                else Entity = m_ShareArchetypesArray[i]->CreateEntity({},{});
-                m_Mgr.m_ShareComponentEntityMap.emplace(AllKeys[i], Entity);
+                if(DataInOrder[i])
+                {
+                    Entity = m_ShareArchetypesArray[i]->CreateEntity
+                    ( { &pInfo, 1u }
+                    , { &DataInOrder[i], 1u }
+                    );
+                }
+                else 
+                {
+                    Entity = m_ShareArchetypesArray[i]->CreateEntity({},{});
+                }
+
+                m_Mgr.m_ShareComponentEntityMap.emplace( AllKeys[i], Entity );
                 ShareComponentEntityRefs[i] = Entity;
             }
             else
             {
                 ShareComponentEntityRefs[i] = It->second;
-                m_Mgr.m_GameMgr.findEntity(ShareComponentEntityRefs[i], [](xecs::component::ref_count& RefCount )
+                m_Mgr.m_GameMgr.getEntity(ShareComponentEntityRefs[i], [](xecs::component::ref_count& RefCount )
                 {
                     RefCount.m_Value++;
                 });
@@ -551,8 +559,8 @@ instance::getOrCreatePoolFamilyFromSameArchetype
         //
         // Make sure all the shares Entities are created
         //
-        std::array< xecs::component::entity,            xecs::settings::max_components_per_entity_v > FinalShareEntities;
-        std::array< xecs::component::type::share::key,  xecs::settings::max_components_per_entity_v > FinalShareKeys;
+        std::array< xecs::component::entity,            xecs::settings::max_share_components_per_entity_v > FinalShareEntities;
+        std::array< xecs::component::type::share::key,  xecs::settings::max_share_components_per_entity_v > FinalShareKeys;
 
         // Copy all the share entity keys... some of them may get replace later
         for (int i = 0, end = static_cast<int>(Keys.size()); i != end; i++)
@@ -1092,7 +1100,9 @@ instance::MoveInEntity
         PoolFamily.m_Next = std::move(m_FamilyHead);
         m_FamilyHead = std::unique_ptr<xecs::pool::family>{ &PoolFamily };
 
+        //
         // officially announce it
+        //
         m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, PoolFamily );
     }
 
@@ -1158,7 +1168,18 @@ instance::MoveInEntity
         {
             pPoolFamily = new xecs::pool::family{};
         }
-        m_Mgr.m_PoolFamily.emplace( NewFamilyGuid, pPoolFamily );
+
+        ///DEBUG
+#if _DEBUG
+        {
+            xecs::pool::family::guid Guid{ m_Guid.m_Value };
+            for (auto& k : ShareKeyList)
+            {
+                Guid.m_Value += k.m_Value;
+            }
+            assert(Guid == NewFamilyGuid);
+        }
+#endif
 
         //
         // Initialize the family
@@ -1172,6 +1193,10 @@ instance::MoveInEntity
         , std::span{ m_InfoData.data(),                     static_cast<std::size_t>(m_nDataComponents)  }
         );
 
+        //
+        // Added to the pending list
+        //
+        m_Mgr.m_PoolFamily.emplace(NewFamilyGuid, pPoolFamily);
         m_Mgr.AddToStructuralPendingList( *pPoolFamily );
 
         return *pPoolFamily;
