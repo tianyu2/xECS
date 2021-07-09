@@ -97,42 +97,6 @@ namespace xecs::game_mgr
     archetype::instance& instance::getOrCreateArchetype( std::span<const component::type::info* const> Types ) noexcept
     {
         return *m_ArchetypeMgr.getOrCreateArchetype( Types );
-
-        /*
-        tools::bits Query;
-        xecs::archetype::guid ArchetypeGuid{};
-        for (const auto& pE : Types)
-        {
-            assert(pE->m_BitID != xecs::component::type::info::invalid_bit_id_v );
-            Query.setBit(pE->m_BitID);
-            ArchetypeGuid.m_Value += pE->m_Guid.m_Value;
-        }
-            
-        // Make sure the entity is part of the list at this point
-        assert( Query.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID) );
-
-        // Return the archetype
-        if( auto I = m_ArchetypeMgr.m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMgr.m_ArchetypeMap.end() )
-            return *I->second;
-
-        //
-        // Create Archetype...
-        //
-        m_ArchetypeMgr.m_lArchetype.push_back      ( std::make_shared<archetype::instance>(m_ArchetypeMgr) );
-        m_ArchetypeMgr.m_lArchetypeBits.push_back  ( Query );
-
-        auto& Archetype = *m_ArchetypeMgr.m_lArchetype.back();
-        Archetype.Initialize(Types, Query, false);
-
-        m_ArchetypeMgr.m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
-
-        //
-        // Notify anyone interested on the new Archetype
-        //
-        m_ArchetypeMgr.m_Events.m_OnNewArchetype.NotifyAll(Archetype);
-
-        return Archetype;
-        */
     }
 
     //---------------------------------------------------------------------------
@@ -156,28 +120,10 @@ namespace xecs::game_mgr
     )
     archetype::instance& instance::getOrCreateArchetype( void ) noexcept
     {
-        return [&]<typename...T>(std::tuple<T...>*) constexpr noexcept -> archetype::instance&
-        {
-            static_assert( ((false == std::is_same_v< T, xecs::component::entity >) && ... ) );
-
-            // Compute the archetype GUID
-            const auto ArchetypeGuid = xecs::archetype::ComputeGuidFromInfos( std::array
-            {
-                &xecs::component::type::info_v< xecs::component::entity >
-            ,   &xecs::component::type::info_v<T> ...
-            });
-
-            // Try to find the archetype
-            if( auto p = findArchetype( ArchetypeGuid ); p )
-                return *p;
-
-            // Slow path for creation
-            return getOrCreateArchetype
-            (
-                xecs::component::type::details::sorted_info_array_v< xecs::component::type::details::combined_t<xecs::component::entity, T... >>
-            );
-
-        }( xcore::types::null_tuple_v< xecs::tools::united_tuple<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...> > );
+        return getOrCreateArchetype
+        (
+            xecs::component::type::details::sorted_info_array_v< xecs::component::type::details::combined_t<xecs::component::entity, T_TUPLES_OF_COMPONENTS_OR_COMPONENTS... >>
+        );
     }
 
     //---------------------------------------------------------------------------
