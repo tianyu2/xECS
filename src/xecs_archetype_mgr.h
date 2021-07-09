@@ -40,7 +40,10 @@ namespace xecs::archetype
                                                                             , std::span<const xecs::component::type::info* const> Sub
                                                                             , T_FUNCTION&&                                        Function = xecs::tools::empty_lambda{}
                                                                             ) noexcept;
-
+        inline
+        std::shared_ptr<archetype::instance>    CreateArchetype             ( archetype::guid      Guid
+                                                                            , const tools::bits&   Bits
+                                                                            ) noexcept;
 
         // Pool family is all the share components of a certain type with a certain value plus the archetype guid
         using pool_family_map               = std::unordered_map<xecs::pool::family::guid,          xecs::pool::family*         >;

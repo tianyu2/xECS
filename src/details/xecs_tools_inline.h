@@ -95,4 +95,27 @@ namespace xecs::tools
         }
     }
 
+    //------------------------------------------------------------------------------------
+    inline
+    int bits::CountComponents( void ) const noexcept
+    {
+        int Count = 0;
+        for (int i = static_cast<int>(m_Bits.size()) - 1; i >= 0; --i)
+        {
+            Count += std::popcount(m_Bits[i]);
+        }
+        return Count;
+
+        /*
+        // https://graphics.stanford.edu/~seander/bithacks.html
+        int Count = 0;
+        for ( int i = static_cast<int>(m_Bits.size()) - 1; i >= 0; --i )
+        {
+            auto v = m_Bits[i] - ((m_Bits[i] >> 1) & 0x5555555555555555ull);
+            v = (v & 0x3333333333333333ull) + ((v >> 2) & 0x3333333333333333ull);
+            Count += ((v + (v >> 4) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56;
+        }
+        return Count;
+        */
+    }
 }

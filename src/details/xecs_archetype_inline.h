@@ -317,7 +317,7 @@ namespace xecs::archetype
 
         // Setup the last few bits
         m_ComponentBits     = Bits;
-        m_ExclusiveTagsBits.setupAnd( Bits, xecs::component::mgr::m_ExclusiveTagsBits );
+        m_ExclusiveTagsBits.setupAnd( Bits, xecs::component::mgr::s_ExclusiveTagsBits );
         m_nDataComponents = xcore::types::static_cast_safe<std::uint8_t>(nInfos) - m_nShareComponents;
         m_Guid            = Guid;
 

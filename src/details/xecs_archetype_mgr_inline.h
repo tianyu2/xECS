@@ -37,22 +37,7 @@ mgr::getOrCreateArchetype
         //
         // Create Archetype...
         //
-        auto SharedArchetype  = std::make_shared<archetype::instance>(*this);
-        auto& Archetype       = *SharedArchetype;
-
-        Archetype.Initialize( ArchetypeGuid, Types, ArchetypeComponentBits );
-
-        m_lArchetype.push_back( std::move(SharedArchetype) );
-        m_lArchetypeBits.push_back( {ArchetypeComponentBits, Archetype.m_ExclusiveTagsBits} );
-
-        m_ArchetypeMap.emplace( ArchetypeGuid, &Archetype );
-
-        //
-        // Notify anyone interested on the new Archetype
-        //
-        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
-
-        return m_lArchetype.back();
+        return CreateArchetype( ArchetypeGuid, ArchetypeComponentBits );
     }
 
     //-------------------------------------------------------------------------------------
@@ -184,72 +169,63 @@ mgr::AddOrRemoveComponents
         //
         // Fail to find the archetype which means that we must build one
         //
-        std::array<const xecs::component::type::info*, xecs::settings::max_components_per_entity_v > ComponentList;
-        int Count = 0;
-
-        // Copy the existing ones
-        for( auto& pE : std::span{ Entry.m_pArchetype->m_InfoData.data(), (std::size_t)Entry.m_pArchetype->m_nDataComponents + (std::size_t)Entry.m_pArchetype->m_nShareComponents } )
-            ComponentList[Count++] = pE;
-
-        assert(Count);
-
-        // Add
-        for( auto& pE : Add )
-        {
-            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count -1, pE, [](const xecs::component::type::info* pA, const xecs::component::type::info* pB)
-            {
-                return pA->m_Guid < pB->m_Guid;
-            }) - ComponentList.begin());
-            assert(Index > 0);
-
-            // Check for duplicates
-            if( ComponentList[Index - 1] == pE )
-                continue;
-
-            // Create a hole to insert our entry
-            if( Index != Count )
-            {
-                std::memmove( &ComponentList[Index+1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::type::info*) );
-            }
-            ComponentList[Index] = pE;
-            Count++;
-        }
-
-        // Remove
-        for (auto& pE : Sub)
-        {
-            const auto Index = static_cast<std::size_t>(std::upper_bound(ComponentList.begin(), ComponentList.begin() + Count -1 , pE, [](const xecs::component::type::info* pA, const xecs::component::type::info* pB)
-            {
-                return pA->m_Guid < pB->m_Guid;
-            }) - ComponentList.begin());
-            assert(Index > 0);
-
-            // Check if we found it
-            if ( ComponentList[Index - 1] == pE )
-            {
-                std::memmove(&ComponentList[Index-1], &ComponentList[Index], (Count - Index) * sizeof(xecs::component::type::info*));
-                Count--;
-            }
-        }
-
-        //
-        // Create Archetype...
-        //
-        auto  SharedArchetype   = std::make_shared<archetype::instance>(*this);
-        auto& Archetype         = *SharedArchetype;
-
-        Archetype.Initialize(NewArchetypeGuid, { ComponentList.data(), static_cast<std::size_t>(Count) }, Bits);
-
-        m_lArchetype.push_back( std::move(SharedArchetype) );
-        m_lArchetypeBits.push_back( {Bits, Archetype.m_ExclusiveTagsBits} );
-        m_ArchetypeMap.emplace(NewArchetypeGuid, &Archetype );
-
-        // Notify anyone interested
-        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
+        auto& Archetype = *CreateArchetype(NewArchetypeGuid, Bits);
 
         if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return Archetype.MoveInEntity(Entity);
         else                                                                  return Archetype.MoveInEntity(Entity, Function);
     }
 
+    //-------------------------------------------------------------------------------------
 
+    std::shared_ptr<archetype::instance> mgr::CreateArchetype( archetype::guid NewArchetypeGuid, const tools::bits& Bits ) noexcept
+    {
+        //
+        // Convert from bits to component Infos
+        //
+        std::array< const xecs::component::type::info*, xecs::settings::max_components_per_entity_v > ComponentInfos;
+
+        int nComponents = 0;
+        int GlobalBit   = 0;
+        for( int i=0; i< Bits.m_Bits.size(); ++i )
+        {
+            std::uint64_t V = Bits.m_Bits[i];
+            if (V)
+            {
+                int nBit = 0;
+                do
+                {
+                    const int c = std::countr_zero(V);
+                    nBit += c;
+                    ComponentInfos[nComponents++] = xecs::component::mgr::s_BitsToInfo[GlobalBit + nBit];
+                    V >>= (1 + c);
+                    nBit++;
+                } while (V);
+            }
+
+            GlobalBit += 32;
+        }
+
+        std::sort
+        ( ComponentInfos.begin()
+        , ComponentInfos.begin() + nComponents - 1
+        , xecs::component::type::details::CompareTypeInfos 
+        );
+
+        //
+        // Create Archetype...
+        //
+        auto  SharedArchetype = std::make_shared<archetype::instance>(*this);
+        auto& Archetype = *SharedArchetype;
+
+        Archetype.Initialize( NewArchetypeGuid, { ComponentInfos.data(), static_cast<std::size_t>(nComponents) }, Bits );
+
+        m_lArchetype.push_back(SharedArchetype);
+        m_lArchetypeBits.push_back({ Bits, Archetype.m_ExclusiveTagsBits });
+        m_ArchetypeMap.emplace(NewArchetypeGuid, &Archetype);
+
+        // Notify anyone interested
+        m_Events.m_OnNewArchetype.NotifyAll(Archetype);
+
+        return SharedArchetype;
+    }
 }

@@ -179,19 +179,15 @@ namespace xecs::tools
         constexpr __inline
         bool                    getBit                  ( int Bit
                                                         ) const noexcept;
-
         constexpr
         bool                    Superset                ( const bits& B 
                                                         ) const noexcept;
-
         constexpr
         bool                    Subset                  ( const bits& B 
                                                         ) const noexcept;
-
         constexpr
         bool                    Equals                  ( const bits& B 
                                                         ) const noexcept;
-
         constexpr
         void                    clearBit                ( int Bit
                                                         ) noexcept;
@@ -204,6 +200,9 @@ namespace xecs::tools
                                                         ) noexcept;
         inline
         std::uint64_t           GenerateUniqueID        ( void
+                                                        ) const noexcept;
+        inline
+        int                     CountComponents         ( void 
                                                         ) const noexcept;
 
 

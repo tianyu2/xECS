@@ -16,6 +16,8 @@
 #include <vector>
 #include <array>
 #include <functional>
+#include <bit>
+#include <bitset>
 
 //
 // EXTERNAL DEPENDENCIES

@@ -28,7 +28,7 @@ namespace xecs::component
     {
         if (component::type::info_v<T_COMPONENT>.m_BitID == type::info::invalid_bit_id_v)
         {
-            component::type::info_v<T_COMPONENT>.m_BitID = m_UniqueID++;
+            component::type::info_v<T_COMPONENT>.m_BitID = s_UniqueID++;
 
             if constexpr( component::type::info_v<T_COMPONENT>.m_TypeID == xecs::component::type::id::SHARE )
             {
@@ -38,16 +38,19 @@ namespace xecs::component
 
             switch( component::type::info_v<T_COMPONENT>.m_TypeID )
             {
-                case xecs::component::type::id::DATA:           m_DataBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
+                case xecs::component::type::id::DATA:           s_DataBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
                                                                 break;
-                case xecs::component::type::id::TAG:            m_TagsBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
+                case xecs::component::type::id::TAG:            s_TagsBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
                                                                 if( component::type::info_v<T_COMPONENT>.m_bExclusiveTag )
-                                                                    m_ExclusiveTagsBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
+                                                                    s_ExclusiveTagsBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
                                                                 break;
-                case xecs::component::type::id::SHARE:          m_ShareBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
+                case xecs::component::type::id::SHARE:          s_ShareBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
                                                                 break;
                 default: assert(false);
             }
+
+            s_BitsToInfo[component::type::info_v<T_COMPONENT>.m_BitID] = &component::type::info_v<T_COMPONENT>;
+            s_nTypes++;
         }
     }
 

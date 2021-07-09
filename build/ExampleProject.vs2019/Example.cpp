@@ -28,47 +28,34 @@ static struct game
 
 struct position 
 {
-    constexpr static auto typedef_v = xecs::component::type::data
-    {
-        .m_pName = "Position"
-    };
+    constexpr static auto typedef_v = xecs::component::type::data {};
     xcore::vector2 m_Value;
 };
 
 struct velocity
 {
-    constexpr static auto typedef_v = xecs::component::type::data
-    {
-        .m_pName = "Velocity"
-    };
+    constexpr static auto typedef_v = xecs::component::type::data {};
     xcore::vector2 m_Value;
 };
 
 struct timer
 {
-    constexpr static auto typedef_v = xecs::component::type::data
-    {
-        .m_pName = "Timer"
-    };
+    constexpr static auto typedef_v = xecs::component::type::data {};
 
     float        m_Value;
 };
 
 struct bullet
 {
-    constexpr static auto typedef_v = xecs::component::type::data
-    {
-        .m_pName = "Bullet"
-    };
+    constexpr static auto typedef_v = xecs::component::type::data {};
+
     xecs::component::entity m_ShipOwner;
 };
 
 struct grid_cell
 {
-    constexpr static auto typedef_v = xecs::component::type::share
-    {
-        .m_pName = "Grid Cell"
-    };
+    constexpr static auto typedef_v = xecs::component::type::share {};
+
     std::uint16_t m_X;
     std::uint16_t m_Y;
 };
@@ -637,8 +624,6 @@ void InitializeGame( void ) noexcept
             Velocity.m_Value.m_X = (std::rand() / (float)RAND_MAX) - 0.5f;
             Velocity.m_Value.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
             Velocity.m_Value.Normalize();
-
-Velocity.m_Value.setZero();
 
             Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
         });

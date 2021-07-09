@@ -67,7 +67,6 @@ namespace xecs::archetype
                                                         , std::span<const xecs::component::type::info*>     ShareInfoList
                                                         , std::span<const xecs::component::type::info*>     DataInfoList
                                                         ) noexcept;
-
         inline
         xecs::pool::family&     getOrCreatePoolFamilyFromDifferentArchetype
                                                         ( xecs::component::entity        Entity
@@ -81,7 +80,6 @@ namespace xecs::archetype
                                                         , int                                                   Count
                                                         , T_CALLBACK&&                                          Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
-
         __inline
         xecs::component::entity CreateEntity            ( xecs::pool::family&                                   PoolFamily
                                                         , std::span< const xecs::component::type::info* const>  Infos
