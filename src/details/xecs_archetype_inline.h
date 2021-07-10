@@ -207,28 +207,6 @@ namespace xecs::archetype
             }
             return FinalCount;
         }
-
-        //-------------------------------------------------------------------------------------------------
-        inline
-        void CollectSharePointersFromFamily
-        ( std::span<std::byte*>                                     ToPointers
-        , const std::span<int const >                               To2From
-        , const std::span<const xecs::component::type::info* const> ToInfos
-        , const xecs::pool::family&                                 FromFamily
-        , const xecs::component::mgr&                               ComponentMgr
-        ) noexcept
-        {
-            for (int i = 0; i < ToInfos.size(); i++ )
-            {
-                const auto  iFrom    = To2From[i];
-                const auto& FromInfo = *FromFamily.m_ShareInfos[iFrom];
-
-                // Get the data from...
-                auto& ShareEntityDetails = ComponentMgr.getEntityDetails( FromFamily.m_ShareDetails[iFrom].m_Entity );
-                auto  FromIndex          = ShareEntityDetails.m_pPool->findIndexComponentFromInfo(FromInfo);
-                ToPointers[i]            = &ShareEntityDetails.m_pPool->m_pComponent[FromIndex][ShareEntityDetails.m_PoolIndex.m_Value * static_cast<int>(FromInfo.m_Size)];
-            }
-        }
     }
 
     //--------------------------------------------------------------------------------------------
@@ -1083,33 +1061,36 @@ instance::MoveInEntity
             return getOrCreatePoolFamily({},{});
         }
 
-        std::array< int,                                xecs::settings::max_share_components_per_entity_v > IndexArray;
-        std::array< std::byte*,                         xecs::settings::max_share_components_per_entity_v > DataArray;
-        std::array< const xecs::component::type::info*, xecs::settings::max_share_components_per_entity_v > InfoArray;
-
-        //
-        // Compute Indices, Info, and data
-        //
         auto&       FromEntityDetails   = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
+        auto&       FromArchetype       = *FromEntityDetails.m_pArchetype;
         auto&       FromFamily          = *FromEntityDetails.m_pPool->m_pMyFamily;
-        auto        ToShareInfos        = std::span{ m_InfoData.data() + m_nDataComponents, static_cast<std::size_t>(m_nShareComponents) };
-        auto        ToIndices           = std::span{ IndexArray.data(), ToShareInfos.size() };
-        auto        ToFinalInfos        = std::span{ InfoArray.data(),  ToShareInfos.size() };
-        const auto  FinalCount          = details::ComputeIndexRemaps( ToIndices, ToFinalInfos, ToShareInfos, FromFamily.m_ShareInfos );
-        auto        ToData              = std::span{ DataArray.data(), static_cast<std::size_t>(FinalCount) };
 
-        details::CollectSharePointersFromFamily
-        ( ToData
-        , ToIndices
-        , ToFinalInfos
-        , FromFamily
-        , m_Mgr.m_GameMgr.m_ComponentMgr
-        );
+        xecs::tools::bits ShareOverlappingComponentsBits;
+        for( int i=0; i< ShareOverlappingComponentsBits.m_Bits.size(); ++i ) 
+            ShareOverlappingComponentsBits.m_Bits[i] = (m_ComponentBits.m_Bits[i] & FromArchetype.m_ComponentBits.m_Bits[i]) & xecs::component::mgr::s_ShareBits.m_Bits[i];
+
+        xecs::component::entity::info_array InfoArray;
+        int nMovableShares = ShareOverlappingComponentsBits.ToInfoArray(InfoArray);
+
+        std::array< std::byte*, xecs::settings::max_share_components_per_entity_v > MovablePointerArray;
+        xecs::tools::bits FromFamilyShareOnlyBits;
+        FromFamilyShareOnlyBits.setupAnd(FromArchetype.m_ComponentBits, xecs::component::mgr::s_ShareBits);
+        for( int i=0; i< nMovableShares; ++i ) 
+        {
+            const auto& Info              = *InfoArray[i];
+            const auto  IndexFromTheShare = FromFamilyShareOnlyBits.getIndexOfComponent(Info.m_BitID);
+            const auto& Details           = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails( FromFamily.m_ShareDetails[IndexFromTheShare].m_Entity );
+            const auto  IndexOfType       = Details.m_pPool->findIndexComponentFromInfo(Info);
+            MovablePointerArray[i] = &Details.m_pPool->m_pComponent[IndexOfType][Details.m_PoolIndex.m_Value * Info.m_Size];
+        }
 
         //
         // Get the family
         //
-        return getOrCreatePoolFamily( ToShareInfos, ToData );
+        return getOrCreatePoolFamily
+        ( std::span{ InfoArray.data(), static_cast<std::size_t>(nMovableShares) }
+        , std::span{ MovablePointerArray.data(), static_cast<std::size_t>(nMovableShares) }
+        );
     }
 
     //--------------------------------------------------------------------------------------------

@@ -7,6 +7,8 @@ namespace xecs::component
     {
         using guid = xcore::guid::unit<64, struct component_type_tag>;
 
+        // The order of this enum is very important as the system relies in this order
+        // This is the general shorting order of components Data, then Share components, then Tags
         enum class id : std::uint8_t
         {
             DATA
@@ -56,7 +58,7 @@ namespace xecs::component
             using compute_key_fn = key(const std::byte*) noexcept;
 
             guid                    m_Guid              {};
-            const char*             m_pName             { "Unnamed tag component" };
+            const char*             m_pName             { "Unnamed share component" };
             bool                    m_bGlobalScoped     { true };
             bool                    m_bKeyCanFilter     { false };
             compute_key_fn*         m_ComputeKeyFn      { nullptr };
