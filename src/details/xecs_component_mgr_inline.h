@@ -26,6 +26,7 @@ namespace xecs::component
     requires (xecs::component::type::is_valid_v<T_COMPONENT>)
     void mgr::RegisterComponent(void) noexcept
     {
+        assert( s_isLocked == false );
         if (component::type::info_v<T_COMPONENT>.m_BitID == type::info::invalid_bit_id_v)
         {
             component::type::info_v<T_COMPONENT>.m_BitID = s_UniqueID++;
@@ -36,21 +37,10 @@ namespace xecs::component
                 component::type::info_v<T_COMPONENT>.m_DefaultShareKey = component::type::info_v<T_COMPONENT>.m_pComputeKeyFn(reinterpret_cast<const std::byte*>(&X));
             }
 
-            switch( component::type::info_v<T_COMPONENT>.m_TypeID )
-            {
-                case xecs::component::type::id::DATA:           s_DataBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
-                                                                break;
-                case xecs::component::type::id::TAG:            s_TagsBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
-                                                                if( component::type::info_v<T_COMPONENT>.m_bExclusiveTag )
-                                                                    s_ExclusiveTagsBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
-                                                                break;
-                case xecs::component::type::id::SHARE:          s_ShareBits.setBit(component::type::info_v<T_COMPONENT>.m_BitID);
-                                                                break;
-                default: assert(false);
-            }
+            // Put there an invalid bitUD that indicates that we are waiting to be assign the right ID
+            component::type::info_v<T_COMPONENT>.m_BitID = type::info::invalid_bit_id_v-1;
 
-            s_BitsToInfo[component::type::info_v<T_COMPONENT>.m_BitID] = &component::type::info_v<T_COMPONENT>;
-            s_nTypes++;
+            s_BitsToInfo[s_nTypes++] = &component::type::info_v<T_COMPONENT>;
         }
     }
 
@@ -113,5 +103,49 @@ namespace xecs::component
             .m_GlobalIndex = static_cast<std::uint32_t>(iEntityIndex)
         ,   .m_Validation = Entry.m_Validation
         };
+    }
+
+    //---------------------------------------------------------------------------
+
+    inline
+    void mgr::LockComponentTypes( void ) noexcept
+    {
+        if(s_isLocked) return;
+        s_isLocked = true;
+
+        //
+        // Short the final list of component types infos 
+        //
+        std::sort
+        ( s_BitsToInfo.begin()
+        , s_BitsToInfo.begin() + s_nTypes - 1
+        , xecs::component::type::details::CompareTypeInfos
+        );
+
+        //
+        // Officially register each of the components
+        //
+        for( int i=0; i<s_nTypes; ++i )
+        {
+            // Everyone should be waiting for us to assign their BitID
+            assert( s_BitsToInfo[i]->m_BitID == (type::info::invalid_bit_id_v - 1) );
+
+            // Ok we just officially assing their ID now in shorted order
+            s_BitsToInfo[i]->m_BitID = i;
+
+            // Now we are ready to assign the IDs...
+            switch( s_BitsToInfo[i]->m_TypeID )
+            {
+                case xecs::component::type::id::DATA:           s_DataBits.setBit(s_BitsToInfo[i]->m_BitID);
+                                                                break;
+                case xecs::component::type::id::TAG:            s_TagsBits.setBit(s_BitsToInfo[i]->m_BitID);
+                                                                if( s_BitsToInfo[i]->m_bExclusiveTag )
+                                                                    s_ExclusiveTagsBits.setBit(s_BitsToInfo[i]->m_BitID);
+                                                                break;
+                case xecs::component::type::id::SHARE:          s_ShareBits.setBit(s_BitsToInfo[i]->m_BitID);
+                                                                break;
+                default: assert(false);
+            }
+        }
     }
 }

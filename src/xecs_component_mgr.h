@@ -34,6 +34,9 @@ namespace xecs::component
                                                                     , xecs::archetype::instance&    Archetype
                                                                     , xecs::pool::instance&         Pool 
                                                                     ) noexcept;
+        inline
+        void                                LockComponentTypes      ( void 
+                                                                    ) noexcept;
 
         using bits_to_info_array = std::array<const xecs::component::type::info*, xecs::settings::max_component_types_v>;
 
@@ -47,5 +50,6 @@ namespace xecs::component
         inline static int                                   s_UniqueID          = 0;
         inline static bits_to_info_array                    s_BitsToInfo        {};
         inline static int                                   s_nTypes            = 0;
+        inline static bool                                  s_isLocked          = false;
     };
 }

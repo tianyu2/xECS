@@ -204,7 +204,12 @@ namespace xecs::tools
         inline
         int                     CountComponents         ( void 
                                                         ) const noexcept;
-
+        inline
+        int                     ToInfoArray             ( xecs::component::entity::info_array& InfoArray
+                                                        ) const noexcept;
+        inline
+        int                     getIndexOfComponent     ( int BitIndex
+                                                        ) const noexcept;
 
         std::array<std::uint64_t, ((xecs::settings::max_component_types_v-1)/64)+1> m_Bits{};
     };

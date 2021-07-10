@@ -182,34 +182,8 @@ mgr::AddOrRemoveComponents
         //
         // Convert from bits to component Infos
         //
-        std::array< const xecs::component::type::info*, xecs::settings::max_components_per_entity_v > ComponentInfos;
-
-        int nComponents = 0;
-        int GlobalBit   = 0;
-        for( int i=0; i< Bits.m_Bits.size(); ++i )
-        {
-            std::uint64_t V = Bits.m_Bits[i];
-            if (V)
-            {
-                int nBit = 0;
-                do
-                {
-                    const int c = std::countr_zero(V);
-                    nBit += c;
-                    ComponentInfos[nComponents++] = xecs::component::mgr::s_BitsToInfo[GlobalBit + nBit];
-                    V >>= (1 + c);
-                    nBit++;
-                } while (V);
-            }
-
-            GlobalBit += 32;
-        }
-
-        std::sort
-        ( ComponentInfos.begin()
-        , ComponentInfos.begin() + nComponents - 1
-        , xecs::component::type::details::CompareTypeInfos 
-        );
+        xecs::component::entity::info_array ComponentInfos;
+        const int                           nComponents     = Bits.ToInfoArray(ComponentInfos);
 
         //
         // Create Archetype...

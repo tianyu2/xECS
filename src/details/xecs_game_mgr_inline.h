@@ -14,6 +14,7 @@ namespace xecs::game_mgr
     requires( std::derived_from< T_SYSTEMS, xecs::system::instance> && ... )
     void instance::RegisterSystems() noexcept
     {
+        m_ComponentMgr.LockComponentTypes();
         (m_SystemMgr.RegisterSystem<T_SYSTEMS>(*this), ... );
     }
 
@@ -35,6 +36,7 @@ namespace xecs::game_mgr
     )
     void instance::RegisterGlobalEvents( void ) noexcept
     {
+        m_ComponentMgr.LockComponentTypes();
         ((m_EventMgr.Register<T_GLOBAL_EVENTS>()), ...);
     }
 

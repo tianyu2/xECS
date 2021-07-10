@@ -135,6 +135,9 @@ namespace xecs::component
             .m_pName = "Entity"
         };
 
+        // Array of infos for an entity
+        using info_array = std::array< const xecs::component::type::info*, xecs::settings::max_components_per_entity_v >;
+
         // Validation allows us to know if a particular entity Unique ID is still valid
         // Farther more it allow us to know if an entity has been deleted but not removed yet (Zombie)
         union validation final

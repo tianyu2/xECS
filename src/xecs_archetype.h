@@ -175,7 +175,6 @@ namespace xecs::archetype
         void                    UpdateStructuralChanges ( pool::family& poolFamily
                                                         ) noexcept;
 
-        using info_array             = std::array<const xecs::component::type::info*,           xecs::settings::max_components_per_entity_v >;
         using share_archetypes_array = std::array<std::shared_ptr<xecs::archetype::instance>,   xecs::settings::max_components_per_entity_v >;
 
         xecs::archetype::mgr&               m_Mgr;
@@ -185,9 +184,9 @@ namespace xecs::archetype
         std::uint8_t                        m_nDataComponents           {};
         std::uint8_t                        m_nShareComponents          {};
         events                              m_Events                    {};
-        std::unique_ptr<pool::family>       m_FamilyHead                {};
-        pool::family                        m_DefaultPoolFamily2        {};
-        info_array                          m_InfoData                  {}; // rename to InfoArray
+        std::unique_ptr<pool::family>       m_FamilyHead                {}; // Please note that the Default family pool will be in this list so we can't let the unique pointer free it
+        pool::family                        m_DefaultPoolFamily         {};
+        xecs::component::entity::info_array m_InfoData                  {}; // rename to InfoArray
         instance*                           m_pPendingStructuralChanges {};
         share_archetypes_array              m_ShareArchetypesArray      {};
     };

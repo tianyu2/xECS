@@ -22,7 +22,7 @@ namespace xecs::archetype
         void                                    AddToStructuralPendingList  ( instance& Archetype
                                                                             ) noexcept;
         inline
-        void                                    AddToStructuralPendingList ( pool::instance& Pool
+        void                                    AddToStructuralPendingList  ( pool::instance& Pool
                                                                             ) noexcept;
         inline
         void                                    AddToStructuralPendingList  ( pool::family& PoolFamily

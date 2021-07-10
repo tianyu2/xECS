@@ -205,6 +205,21 @@ struct grid_system_pool_family_create : xecs::system::instance
 
         auto& Cell = Archetype.getShareComponent<grid_cell>(PoolFamily);
 #if _DEBUG
+
+        m_GameMgr.getEntity( PoolFamily.m_ShareDetails[0].m_Entity, [&](grid_cell& TheCell)
+        {
+            assert(TheCell.m_X == Cell.m_X);
+            assert(TheCell.m_Y == Cell.m_Y);
+            auto Key = xecs::component::type::details::ComputeShareKey(PoolFamily.m_pArchetypeInstance->m_Guid, *PoolFamily.m_ShareInfos[0], reinterpret_cast<std::byte*>(&TheCell) );
+            assert( PoolFamily.m_ShareDetails[0].m_Key == Key );
+
+            for (auto E : (*m_Grid)[Cell.m_Y][Cell.m_X])
+            {
+                assert( E.second->m_ShareDetails[0].m_Entity == PoolFamily.m_ShareDetails[0].m_Entity );
+                assert( E.second->m_ShareDetails[0].m_Key == Key );
+            }
+        });
+
         for( auto E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
         {
             assert( E.first != &Archetype );

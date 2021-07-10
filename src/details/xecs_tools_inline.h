@@ -118,4 +118,62 @@ namespace xecs::tools
         return Count;
         */
     }
+
+    //------------------------------------------------------------------------------------
+    inline
+    int bits::ToInfoArray( xecs::component::entity::info_array& InfoArray ) const noexcept
+    {
+        int nComponents = 0;
+        int GlobalBit   = 0;
+        for( int i=0; i< m_Bits.size(); ++i )
+        {
+            std::uint64_t V = m_Bits[i];
+            if (V)
+            {
+                int nBit = 0;
+                do
+                {
+                    const int c = std::countr_zero(V);
+                    nBit += c;
+                    InfoArray[nComponents++] = xecs::component::mgr::s_BitsToInfo[GlobalBit + nBit];
+                    V >>= (1 + c);
+                    nBit++;
+                } while (V);
+            }
+
+            GlobalBit += 64;
+        }
+        assert( CountComponents() == nComponents );
+
+        //
+        // Sanity Check
+        //
+#if _DEBUG
+
+        // Make sure that all the components are sorted
+        for (int i = 1; i < nComponents; ++i)
+        {
+            assert( xecs::component::type::details::CompareTypeInfos(InfoArray[i-1], InfoArray[i]) );
+        }
+#endif
+
+        return nComponents;
+    }
+
+    //------------------------------------------------------------------------------------
+    // Find which index a component is assuming we are in an array of components defined by the 1s
+    //------------------------------------------------------------------------------------
+    inline
+    int bits::getIndexOfComponent( int BitIndex ) const noexcept
+    {
+        assert(getBit(BitIndex));
+
+        const int   y     = BitIndex % 64;
+        int         x     = BitIndex / 64;
+        int         Count = std::popcount( m_Bits[x] & ((1ull << y) - 1) );
+
+        while(x) Count += std::popcount(m_Bits[--x]);
+        return Count;
+    }
+
 }

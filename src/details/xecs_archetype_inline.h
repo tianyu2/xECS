@@ -358,18 +358,21 @@ namespace xecs::archetype
     , std::span< std::byte* >                               MoveData
     ) noexcept
     {
+        //
+        // Handle the case where there are not shares (Single family Pool)
+        //
         assert(TypeInfos.size() == MoveData.size());
         if (m_nShareComponents == 0)
         {
-            if(m_DefaultPoolFamily2.m_Guid.isValid()) return m_DefaultPoolFamily2;
+            if(m_DefaultPoolFamily.m_Guid.isValid()) return m_DefaultPoolFamily;
 
             assert(TypeInfos.size() == 0);
 
             // For these types of archetypes we only have one family
-            m_DefaultPoolFamily2.Initialize(pool::family::guid{ 42ull }, *this, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(m_nDataComponents+m_nShareComponents) });
-            m_Mgr.AddToStructuralPendingList( m_DefaultPoolFamily2 );
+            m_DefaultPoolFamily.Initialize(pool::family::guid{ 42ull }, *this, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(m_nDataComponents+m_nShareComponents) });
+            m_Mgr.AddToStructuralPendingList( m_DefaultPoolFamily );
 
-            return m_DefaultPoolFamily2;
+            return m_DefaultPoolFamily;
         }
 
         //
@@ -548,6 +551,8 @@ instance::getOrCreatePoolFamilyFromSameArchetype
             NewFamilyGuid.m_Value += (TypeInfos[j] == FromFamily.m_ShareInfos[i])
             ? Keys[j++].m_Value
             : FromFamily.m_ShareDetails[i].m_Key.m_Value;
+
+            assert( xecs::component::type::details::ComputeShareKey( m_Guid, *TypeInfos[i], MoveData[i]) == Keys[i] );
         }
 
         //
@@ -1159,10 +1164,10 @@ instance::MoveInEntity
         // Get the memory for the new family
         //
         xecs::pool::family* pPoolFamily;
-        if ( m_DefaultPoolFamily2.m_Guid.isNull() )
+        if ( m_DefaultPoolFamily.m_Guid.isNull() )
         {
             // This is scary... but we are trying to keep it consistent
-            pPoolFamily = &m_DefaultPoolFamily2;
+            pPoolFamily = &m_DefaultPoolFamily;
         }
         else
         {
