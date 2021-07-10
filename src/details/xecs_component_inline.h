@@ -38,6 +38,12 @@ namespace xecs::component
                                         {
                                             *reinterpret_cast<T_COMPONENT*>(p1) = std::move(*reinterpret_cast<T_COMPONENT*>(p2));
                                         }
+            ,   .m_pCopyFn          = std::is_trivially_copy_assignable_v<T_COMPONENT>
+                                        ? nullptr
+                                        : []( std::byte* p1, const std::byte* p2 ) noexcept
+                                        {
+                                            *reinterpret_cast<T_COMPONENT*>(p1) = *reinterpret_cast<const T_COMPONENT*>(p2);
+                                        }
             ,   .m_pComputeKeyFn    = []() consteval noexcept ->type::share::compute_key_fn*
                                       {
                                             if constexpr (T_COMPONENT::typedef_v.id_v != type::id::SHARE) return nullptr;

@@ -37,6 +37,27 @@ namespace xecs::pool
         assert(ShareEntityList.size() == ShareKeyList.size());
         assert(ShareEntityList.size() == ShareInfoList.size());
 
+        //
+        // Do a sanity check
+        //
+#if _DEBUG
+
+        //
+        // Make sure all the keys are correct
+        //
+        {
+            for( int i=0; i< ShareEntityList.size(); ++i )
+            {
+                auto& Details    = Archetype.m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(ShareEntityList[i]);
+                auto  TypeIndex  = Details.m_pPool->findIndexComponentFromInfo(*ShareInfoList[i]);
+                auto  pData      = &Details.m_pPool->m_pComponent[TypeIndex][Details.m_PoolIndex.m_Value*ShareInfoList[i]->m_Size];
+                auto  Key        = xecs::component::type::details::ComputeShareKey( Archetype.m_Guid, *ShareInfoList[i], pData );
+                assert(Key == ShareKeyList[i]);
+            }
+        }
+
+#endif
+
         m_Guid               = Guid;
         m_pArchetypeInstance = &Archetype;
         m_ShareInfos         = ShareInfoList;

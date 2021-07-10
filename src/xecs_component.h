@@ -96,6 +96,7 @@ namespace xecs::component
             using construct_fn      = void(std::byte*) noexcept;
             using destruct_fn       = void(std::byte*) noexcept;
             using move_fn           = void(std::byte* Dst, std::byte* Src ) noexcept;
+            using copy_fn           = void(std::byte* Dst, const std::byte* Src ) noexcept;
             using compute_key_fn    = share::compute_key_fn;
 
             type::guid                  m_Guid;             // Unique Identifier for the component type
@@ -108,6 +109,7 @@ namespace xecs::component
             construct_fn*               m_pConstructFn;     // Constructor function pointer if required
             destruct_fn*                m_pDestructFn;      // Destructor function pointer if required
             move_fn*                    m_pMoveFn;          // Move function pointer if required
+            copy_fn*                    m_pCopyFn;          // Copy function for the component
             compute_key_fn*             m_pComputeKeyFn;    // Computes the key from a share component
             mutable type::share::key    m_DefaultShareKey;  // Default value for this share component
             const char*                 m_pName;            // Friendly Human readable string name for the component type

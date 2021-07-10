@@ -63,8 +63,6 @@ namespace xecs::archetype
         xecs::pool::family&     CreateNewPoolFamily     ( xecs::pool::family::guid                          Guid
                                                         , std::span<xecs::component::entity>                ShareEntityList
                                                         , std::span<xecs::component::type::share::key>      ShareKeyList
-                                                        , std::span<const xecs::component::type::info*>     ShareInfoList
-                                                        , std::span<const xecs::component::type::info*>     DataInfoList
                                                         ) noexcept;
         inline
         xecs::pool::family&     getOrCreatePoolFamilyFromDifferentArchetype
