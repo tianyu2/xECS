@@ -98,7 +98,14 @@ namespace xecs::game_mgr
 
     archetype::instance& instance::getOrCreateArchetype( std::span<const component::type::info* const> Types ) noexcept
     {
-        return *m_ArchetypeMgr.getOrCreateArchetype( Types );
+        xecs::tools::bits Bits{};
+        for( auto& e : Types )
+            Bits.setBit( e->m_BitID );
+
+        // Make sure we always include the entity
+        Bits.setBit( xecs::component::type::info_v<xecs::component::entity>.m_BitID );
+
+        return *m_ArchetypeMgr.getOrCreateArchetype(Bits);
     }
 
     //---------------------------------------------------------------------------
@@ -122,10 +129,13 @@ namespace xecs::game_mgr
     )
     archetype::instance& instance::getOrCreateArchetype( void ) noexcept
     {
-        return getOrCreateArchetype
-        (
-            xecs::component::type::details::sorted_info_array_v< xecs::component::type::details::combined_t<xecs::component::entity, T_TUPLES_OF_COMPONENTS_OR_COMPONENTS... >>
-        );
+        return [&]<typename...T>( std::tuple<T...>* ) constexpr noexcept -> archetype::instance&
+        {
+            xecs::tools::bits Bits;
+            Bits.AddFromComponents< T... >();
+            return *m_ArchetypeMgr.getOrCreateArchetype(Bits);
+
+        }( xcore::types::null_tuple_v<xecs::component::type::details::combined_t<xecs::component::entity, T_TUPLES_OF_COMPONENTS_OR_COMPONENTS... >>);
     }
 
     //---------------------------------------------------------------------------
@@ -442,10 +452,16 @@ namespace xecs::game_mgr
     , T_FUNCTION&&                                          Function 
     ) noexcept
     {
+        xecs::tools::bits AddBits;
+        xecs::tools::bits SubBits;
+
+        for( auto& e : Add ) AddBits.setBit(e->m_BitID);
+        for (auto& e : Sub ) AddBits.setBit(e->m_BitID);
+
         return m_ArchetypeMgr.AddOrRemoveComponents
         ( Entity
-        , Add
-        , Sub
+        , AddBits
+        , SubBits
         , std::forward<T_FUNCTION&&>(Function)
         );
     }
@@ -467,17 +483,23 @@ instance::AddOrRemoveComponents
     , T_FUNCTION&&              Function 
     ) noexcept
     {
+        xecs::tools::bits AddBits;
+        xecs::tools::bits SubBits;
+
+        [&]<typename...T>(std::tuple<T...>*){ AddBits.AddFromComponents<T...>(); }( xcore::types::null_tuple_v<T_TUPLE_ADD> );
+        [&]<typename...T>(std::tuple<T...>*){ SubBits.AddFromComponents<T...>(); }( xcore::types::null_tuple_v<T_TUPLE_SUBTRACT> );
+
         if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda > )
             return m_ArchetypeMgr.AddOrRemoveComponents
             ( Entity
-            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_ADD>
-            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
+            , AddBits
+            , SubBits
             );
         else
             return m_ArchetypeMgr.AddOrRemoveComponents
             ( Entity
-            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_ADD>
-            , xecs::component::type::details::sorted_info_array_v<T_TUPLE_SUBTRACT>
+            , AddBits
+            , SubBits
             , Function
             );
     }

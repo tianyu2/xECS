@@ -33,8 +33,7 @@ namespace xecs::archetype
         
         inline
         void                    Initialize              ( archetype::guid                                     Guid
-                                                        , std::span<const xecs::component::type::info* const> Infos
-                                                        , const tools::bits&                                  Bits
+                                                        , const tools::bits&                                  AllComponentsBits
                                                         ) noexcept;
         template< typename T >
         T&                      getShareComponent       ( xecs::pool::family& Family 

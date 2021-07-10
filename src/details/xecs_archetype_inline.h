@@ -242,49 +242,17 @@ namespace xecs::archetype
     //--------------------------------------------------------------------------------------------
 
     void instance::Initialize
-    ( archetype::guid                                       Guid
-    , std::span<const xecs::component::type::info* const>   Infos
-    , const tools::bits&                                    Bits
+    ( archetype::guid               Guid
+    , const tools::bits&            AllComponentsBits
     ) noexcept
     {
-        // Deep copy the infos just in case the user gave us data driven infos
-        // Also we will extract all the tag components (since no data can be store there)
-        bool AreTheySorted = true;
-        m_nShareComponents = 0;
-        int nInfos         = 0;
-        for( int i=0; i<Infos.size(); ++i )
-        {
-            // Make sure all the components are accounted for
-            assert(Bits.getBit(Infos[i]->m_BitID));
+        xecs::tools::bits BitsNoFlags;
+        for( int i=0; i< BitsNoFlags.m_Bits.size(); ++i ) BitsNoFlags.m_Bits[i] = AllComponentsBits.m_Bits[i] & (~xecs::component::mgr::s_TagsBits.m_Bits[i]);
+        int nInfos = BitsNoFlags.ToInfoArray(m_InfoData);
 
-            // Extract flags out (if any)
-            if( Infos[i]->m_TypeID == xecs::component::type::id::TAG )
-            {
-                continue;
-            }
-
-            m_InfoData[nInfos] = Infos[i];
-            if( nInfos && AreTheySorted )
-            {
-                AreTheySorted = xecs::component::type::details::CompareTypeInfos(m_InfoData[nInfos - 1], m_InfoData[nInfos]);
-            }
-
-            if( m_InfoData[nInfos]->m_TypeID == xecs::component::type::id::SHARE ) ++m_nShareComponents;
-
-            // Count up our new set
-            nInfos++;
-        }
-
-        // Short Infos, entry 0 should be the entity
-        if( false == AreTheySorted )
-        {
-            std::sort
-            ( m_InfoData.begin()
-            , m_InfoData.begin() + (nInfos - 1)
-            , xecs::component::type::details::CompareTypeInfos
-            );
-        }
-
+        BitsNoFlags.setupAnd(BitsNoFlags, xecs::component::mgr::s_ShareBits);
+        m_nShareComponents = BitsNoFlags.CountComponents();
+         
         //
         // Lets run a sanity check
         //
@@ -294,7 +262,7 @@ namespace xecs::archetype
             assert(m_InfoData[0] == &xecs::component::type::info_v<xecs::component::entity>);
 
             // Entity bit should be turn on
-            assert(Bits.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID));
+            assert(AllComponentsBits.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID));
 
             // Check all other components
             for (int i = 1; i < nInfos; ++i)
@@ -303,7 +271,7 @@ namespace xecs::archetype
                 assert(m_InfoData[i - 1] != m_InfoData[i]);
 
                 // Check that the bits match
-                assert( Bits.getBit(m_InfoData[i]->m_BitID));
+                assert( AllComponentsBits.getBit(m_InfoData[i]->m_BitID));
             }
         }
 #endif
@@ -313,25 +281,17 @@ namespace xecs::archetype
         //
 
         // Is the user telling us not ignore the shares?
-        if( Bits.getBit(xecs::component::type::info_v<xecs::component::share_as_data_exclusive_tag>.m_BitID) ) m_nShareComponents = 0;
+        if( AllComponentsBits.getBit(xecs::component::type::info_v<xecs::component::share_as_data_exclusive_tag>.m_BitID) ) m_nShareComponents = 0;
 
         // Setup the last few bits
-        m_ComponentBits     = Bits;
-        m_ExclusiveTagsBits.setupAnd( Bits, xecs::component::mgr::s_ExclusiveTagsBits );
+        m_ComponentBits   = AllComponentsBits;
+        m_ExclusiveTagsBits.setupAnd( AllComponentsBits, xecs::component::mgr::s_ExclusiveTagsBits );
         m_nDataComponents = xcore::types::static_cast_safe<std::uint8_t>(nInfos) - m_nShareComponents;
         m_Guid            = Guid;
 
         //
-        // We can initialize our default pool if not shares...
+        // Pre-Create all the share Archetypes since we will need them later
         //
-        /*
-        if( m_nShareComponents == 0 )
-        {
-            m_DefaultPoolFamily2.Initialize( pool::family::guid{42ull}, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(nInfos) } );
-            m_Mgr.AddToStructutalPendingList(&m_DefaultPoolFamily2);
-        }
-        */
-
         if( m_nShareComponents )
         {
             //
@@ -339,14 +299,16 @@ namespace xecs::archetype
             //
             for (int i = 0; i < m_nShareComponents; ++i)
             {
-                m_ShareArchetypesArray[i] = m_Mgr.getOrCreateArchetype
-                ( std::array
-                    { &xecs::component::type::info_v<xecs::component::entity>
-                    , &xecs::component::type::info_v<xecs::component::ref_count>
-                    , &xecs::component::type::info_v<xecs::component::share_as_data_exclusive_tag>
-                    , m_InfoData[ m_nDataComponents + i ]
-                    }
-                );
+                xecs::tools::bits ShareEntityBits;
+
+                ShareEntityBits.AddFromComponents
+                < xecs::component::entity
+                , xecs::component::ref_count
+                , xecs::component::share_as_data_exclusive_tag
+                >();
+                ShareEntityBits.setBit(m_InfoData[m_nDataComponents + i]->m_BitID);
+
+                m_ShareArchetypesArray[i] = m_Mgr.getOrCreateArchetype(ShareEntityBits);
             }
         }
     }

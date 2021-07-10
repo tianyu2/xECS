@@ -10,8 +10,8 @@ namespace xecs::component
         enum class id : std::uint8_t
         {
             DATA
-        ,   TAG
         ,   SHARE
+        ,   TAG
         };
 
         struct data

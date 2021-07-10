@@ -15,20 +15,13 @@ namespace xecs::archetype
 
     std::shared_ptr<archetype::instance>
 mgr::getOrCreateArchetype
-    ( std::span<const component::type::info* const> Types 
+    ( const xecs::tools::bits& ComponentBits
     ) noexcept
     {
-        tools::bits ArchetypeComponentBits;
-        for (const auto& pE : Types)
-        {
-            assert(pE->m_BitID != xecs::component::type::info::invalid_bit_id_v );
-            ArchetypeComponentBits.setBit(pE->m_BitID);
-        }
-
-        xecs::archetype::guid ArchetypeGuid{ ArchetypeComponentBits.GenerateUniqueID() };
+        xecs::archetype::guid ArchetypeGuid{ ComponentBits.GenerateUniqueID() };
 
         // Make sure the entity is part of the list at this point
-        assert(ArchetypeComponentBits.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID) );
+        assert(ComponentBits.getBit(xecs::component::type::info_v<xecs::component::entity>.m_BitID) );
 
         // Return the archetype
         if( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
@@ -37,7 +30,7 @@ mgr::getOrCreateArchetype
         //
         // Create Archetype...
         //
-        return CreateArchetype( ArchetypeGuid, ArchetypeComponentBits );
+        return CreateArchetype( ArchetypeGuid, ComponentBits );
     }
 
     //-------------------------------------------------------------------------------------
@@ -132,28 +125,29 @@ mgr::getOrCreateArchetype
     )
     xecs::component::entity
 mgr::AddOrRemoveComponents
-    ( xecs::component::entity                               Entity
-    , std::span<const xecs::component::type::info* const>   Add
-    , std::span<const xecs::component::type::info* const>   Sub
-    , T_FUNCTION&&                                          Function 
+    ( xecs::component::entity       Entity
+    , const xecs::tools::bits&      Add
+    , const xecs::tools::bits&      Sub
+    , T_FUNCTION&&                  Function 
     ) noexcept
     {
+        // Make sure that the entity is not in the list of things to delete
+        assert( !Sub.getBit( 0 ) );
+
+        //
+        // Get the entry and make sure we are dealing with a valid entity
+        //
         assert(Entity.isZombie() == false);
         auto& Entry = m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-        auto  Bits  = Entry.m_pArchetype->m_ComponentBits;
         assert(Entry.m_Validation.m_bZombie == false);
 
-        for( auto& pE : Add ) 
+        //
+        // Add or remove Components
+        //
+        auto Bits = Entry.m_pArchetype->m_ComponentBits;
+        for( int i=0; i<Bits.m_Bits.size(); ++i )
         {
-            // Cant add the entity
-            assert( pE->m_BitID !=0 );
-            Bits.setBit( pE->m_BitID );
-        }
-        for( auto& pE : Sub ) 
-        {
-            // Cant remove the entity
-            assert(pE->m_BitID != 0);
-            Bits.clearBit(pE->m_BitID);
+            Bits.m_Bits[i] = (Bits.m_Bits[i] & ~Sub.m_Bits[i]) | Add.m_Bits[i];
         }
 
         //
@@ -180,22 +174,17 @@ mgr::AddOrRemoveComponents
     std::shared_ptr<archetype::instance> mgr::CreateArchetype( archetype::guid NewArchetypeGuid, const tools::bits& Bits ) noexcept
     {
         //
-        // Convert from bits to component Infos
-        //
-        xecs::component::entity::info_array ComponentInfos;
-        const int                           nComponents     = Bits.ToInfoArray(ComponentInfos);
-
-        //
         // Create Archetype...
         //
         auto  SharedArchetype = std::make_shared<archetype::instance>(*this);
-        auto& Archetype = *SharedArchetype;
+        auto& Archetype       = *SharedArchetype;
 
-        Archetype.Initialize( NewArchetypeGuid, { ComponentInfos.data(), static_cast<std::size_t>(nComponents) }, Bits );
+        m_ArchetypeMap.emplace(NewArchetypeGuid, &Archetype);
+
+        Archetype.Initialize( NewArchetypeGuid, Bits );
 
         m_lArchetype.push_back(SharedArchetype);
         m_lArchetypeBits.push_back({ Bits, Archetype.m_ExclusiveTagsBits });
-        m_ArchetypeMap.emplace(NewArchetypeGuid, &Archetype);
 
         // Notify anyone interested
         m_Events.m_OnNewArchetype.NotifyAll(Archetype);

@@ -13,7 +13,7 @@ namespace xecs::archetype
         inline                                  mgr                         ( xecs::game_mgr::instance& GameMgr 
                                                                             ) noexcept;
         inline
-        std::shared_ptr<archetype::instance>    getOrCreateArchetype        ( std::span<const component::type::info* const> Types
+        std::shared_ptr<archetype::instance>    getOrCreateArchetype        ( const xecs::tools::bits& ComponentBits
                                                                             ) noexcept;
         inline
         void                                    UpdateStructuralChanges     ( void 
@@ -35,10 +35,10 @@ namespace xecs::archetype
         > requires
         ( xcore::function::is_callable_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
-                                                AddOrRemoveComponents       ( xecs::component::entity                             Entity
-                                                                            , std::span<const xecs::component::type::info* const> Add
-                                                                            , std::span<const xecs::component::type::info* const> Sub
-                                                                            , T_FUNCTION&&                                        Function = xecs::tools::empty_lambda{}
+                                                AddOrRemoveComponents       ( xecs::component::entity       Entity
+                                                                            , const xecs::tools::bits&      Add
+                                                                            , const xecs::tools::bits&      Sub
+                                                                            , T_FUNCTION&&                  Function = xecs::tools::empty_lambda{}
                                                                             ) noexcept;
         inline
         std::shared_ptr<archetype::instance>    CreateArchetype             ( archetype::guid      Guid
