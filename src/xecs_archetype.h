@@ -164,10 +164,10 @@ namespace xecs::archetype
 
         __inline
         void                    UpdateStructuralChanges ( void
-                                                        ) noexcept {}
+                                                        ) noexcept;
 
-        __inline
-        void                    UpdateStructuralChanges ( pool::family& poolFamily
+        inline
+        void                    AddFamilyToPendingList  ( pool::family& PoolFamily
                                                         ) noexcept;
 
         using share_archetypes_array = std::array<std::shared_ptr<xecs::archetype::instance>,   xecs::settings::max_components_per_entity_v >;
@@ -184,5 +184,7 @@ namespace xecs::archetype
         xecs::component::entity::info_array m_InfoData                  {}; // rename to InfoArray
         instance*                           m_pPendingStructuralChanges {};
         share_archetypes_array              m_ShareArchetypesArray      {};
+        xecs::pool::family*                 m_pPoolFamilyPending        { nullptr };
+
     };
 }

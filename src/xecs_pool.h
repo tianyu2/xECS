@@ -142,6 +142,6 @@ namespace xecs::pool
         family*                                         m_pPrev             {};
         share_details_array                             m_ShareDetails      {};
         archetype::instance*                            m_pArchetypeInstance{};
-        family*                                         m_pPendingStructuralChanges{};
+        family*                                         m_pPendingNext      {};
     };
 }

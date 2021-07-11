@@ -288,7 +288,7 @@ namespace xecs::game_mgr
 
 
                 //
-                // Copy the shares into a temporary memory
+                // Compute the key Sum Guid (We will use it to detect if there are changes made in the shares)
                 //
                 const auto KeySumGuid = xecs::pool::family::guid
                 { [&]<typename... T>(std::tuple<T...>*) constexpr noexcept
@@ -368,14 +368,12 @@ namespace xecs::game_mgr
                             if( NewKeySumGuid != KeySumGuid )
                             {
                                 std::array<std::byte*,                        std::tuple_size_v<share_sorted_tuple> >   PointersToShares;
-                                std::array<xecs::component::entity,           std::tuple_size_v<share_sorted_tuple> >   EntityList;
 
                                 // Collect the rest of the data
                                 (([&]<typename J>(J*) constexpr noexcept
                                 {
                                     const auto Index = xcore::types::tuple_t2i_v<J, share_sorted_tuple>;
                                     PointersToShares[Index] = reinterpret_cast<std::byte*>(&std::get<J>(SortedShares));
-                                    EntityList[Index]       = (UpdatedKeyArray[Index] == SortedShareKeyArray[Index]) ? pFamily->m_ShareDetails[ShareIndices[Index]].m_Entity : xecs::component::entity{};
 
                                 }(reinterpret_cast<T*>(nullptr))), ...);
 

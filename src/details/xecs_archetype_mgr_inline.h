@@ -50,18 +50,6 @@ mgr::getOrCreateArchetype
         m_pPoolStructuralPending = reinterpret_cast<xecs::pool::instance*>(end_structural_changes_v);
 
         //
-        // Update all the pool families
-        //
-        for (auto p = m_pPoolFamilyPending; p != reinterpret_cast<xecs::pool::family*>(end_structural_changes_v); )
-        {
-            auto pNext = p->m_pPendingStructuralChanges;
-            p->m_pArchetypeInstance->UpdateStructuralChanges( *p );
-            p->m_pPendingStructuralChanges = nullptr;
-            p = pNext;
-        }
-        m_pPoolFamilyPending = reinterpret_cast<xecs::pool::family*>(end_structural_changes_v);
-
-        //
         // Update all the archetypes
         //
         for( auto p = m_pArchetypeStrututalPending; p != reinterpret_cast<xecs::archetype::instance*>(end_structural_changes_v); )
@@ -93,18 +81,6 @@ mgr::getOrCreateArchetype
         {
             Pool.m_pPendingStructuralChanges = m_pPoolStructuralPending;
             m_pPoolStructuralPending = &Pool;
-        }
-    }
-
-    //-------------------------------------------------------------------------------------
-
-    inline
-    void mgr::AddToStructuralPendingList( pool::family& PoolFamily ) noexcept
-    {
-        assert(nullptr == PoolFamily.m_pPendingStructuralChanges);
-        {
-            PoolFamily.m_pPendingStructuralChanges = m_pPoolFamilyPending;
-            m_pPoolFamilyPending = &PoolFamily;
         }
     }
 

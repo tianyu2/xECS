@@ -92,22 +92,23 @@ namespace grid
 
             assert(Pair.second->m_Guid.isValid());
 
+            // Every pool
             for( auto p = &Pair.second->m_DefaultPool; p ; p = p->m_Next.get() )
             {
-                int i = p->Size();
-                if( i == 0 ) continue;
-                for( auto CachePtrs = xecs::archetype::details::GetDataComponentPointerArray(*p, { 0 }, xcore::types::null_tuple_v<func1_arg_tuple>); i; --i )
-                {
-                    int a = 22;
-                    if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
+                // Every Entity
+                if( int i = p->Size(); i )
+                    for( auto CachePtrs = xecs::archetype::details::GetDataComponentPointerArray(*p, { 0 }, xcore::types::null_tuple_v<func1_arg_tuple>); i; --i )
                     {
-                        if (xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs)) return true;
+                        if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
+                        {
+                            if (xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs)) 
+                                return true;
+                        }
+                        else
+                        {
+                            xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs);
+                        }
                     }
-                    else
-                    {
-                        xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs);
-                    }
-                }
             }
         }
         return false;
@@ -124,7 +125,8 @@ namespace grid
         for( int y = std::max(0,Y-1), end_y = std::min(cell_y_count-1, Y+1); y != end_y; ++y )
             for (int x = XStart; x != XEnd; ++x)
             {
-                if( Foreach( Grid, x,y, Query, std::forward<T_FUNCTION&&>(Function) ) ) return true;
+                if( Foreach( Grid, x,y, Query, std::forward<T_FUNCTION&&>(Function) ) ) 
+                    return true;
             }
         return false;
     }
@@ -277,6 +279,9 @@ struct bullet_logic : xecs::system::instance
         QueryBullets.AddQueryFromTuple<query>();
         QueryAny.m_Must.AddFromComponents<position>();
 
+        //
+        // Update all the bullets
+        //
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
@@ -554,6 +559,7 @@ struct page_flip : xecs::system::instance
         //
         // Render grid
         //
+        if(true)
         for( int y=0; y<grid::cell_y_count; y++ )
         for( int x=0; x<grid::cell_x_count; x++ )
         {
