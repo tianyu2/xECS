@@ -53,10 +53,8 @@ namespace xecs::archetype
         inline
         xecs::pool::family&     getOrCreatePoolFamilyFromSameArchetype
                                                         ( xecs::pool::family&                                   FromFamily
-                                                        , std::span<const int>                                  IndexRemaps
-                                                        , std::span< const xecs::component::type::info* const>  TypeInfos
+                                                        , xecs::tools::bits                                     UpdatedComponentBits
                                                         , std::span< std::byte* >                               MoveData
-                                                        , std::span< const xecs::component::entity >            EntitySpan
                                                         , std::span< const xecs::component::type::share::key >  Keys
                                                         ) noexcept;
         inline

@@ -217,7 +217,13 @@ namespace xecs::game_mgr
         std::array<xecs::component::type::share::key, std::tuple_size_v<share_sorted_tuple> > SortedShareKeyArray       {};
         share_sorted_tuple                                                                    SortedShares              {};
         
-        const auto& SortedInfoArray = xecs::component::type::details::sorted_info_array_v<share_sorted_tuple>;
+        const auto& SortedInfoArray         = xecs::component::type::details::sorted_info_array_v<share_sorted_tuple>;
+        const auto UpdatedComponentsBits    = []<typename...T>(std::tuple<T...>*) constexpr noexcept
+        {
+            xecs::tools::bits UpdatedComponents;
+            UpdatedComponents.AddFromComponents<T...>();
+            return UpdatedComponents;
+        }(xcore::types::null_tuple_v<share_sorted_tuple>);
 
         for( const auto& pE : List )
         {
@@ -378,10 +384,8 @@ namespace xecs::game_mgr
                                 //
                                 pE->getOrCreatePoolFamilyFromSameArchetype
                                 ( *pFamily
-                                , ShareIndices
-                                , SortedInfoArray
+                                , UpdatedComponentsBits
                                 , PointersToShares
-                                , EntityList
                                 , UpdatedKeyArray
                                 ).MoveIn
                                 ( *this

@@ -469,27 +469,78 @@ namespace xecs::archetype
     xecs::pool::family& 
 instance::getOrCreatePoolFamilyFromSameArchetype
     ( xecs::pool::family&                                   FromFamily
-    , std::span< const int >                                IndexRemaps
-    , std::span< const xecs::component::type::info* const>  TypeInfos
+    , xecs::tools::bits                                     UpdatedComponentBits
     , std::span< std::byte* >                               MoveData
-    , std::span< const xecs::component::entity >            EntitySpan
     , std::span< const xecs::component::type::share::key >  Keys
     ) noexcept
     {
-        /*
-        xecs::tools::bits UpdatedComponentBits;
-        for( int i=0; i< MoveData.size(); ++i ) UpdatedComponentBits.setBit( TypeInfos[i]->m_BitID );
+        assert(UpdatedComponentBits.CountComponents() == Keys.size());
 
-        xecs::tools::bits SharesBits;
-        SharesBits.setupAnd(m_ComponentBits, xecs::component::mgr::s_ShareBits);
-
-        xecs::pool::family::guid NewFamilyGuid{ m_Guid.m_Value };
-        for( int i = 0, j = 0, end = static_cast<int>(m_nShareComponents); i != end; i++ )
+        xecs::pool::family::guid                                                                            NewFamilyGuid{ m_Guid.m_Value };
+        std::array< xecs::component::type::share::key, xecs::settings::max_share_components_per_entity_v >  FinalShareKeys;
+        std::array< xecs::component::entity, xecs::settings::max_share_components_per_entity_v >            FinalEntities;
+        std::array< int, xecs::settings::max_share_components_per_entity_v >                                Remap;
+        for( int i = 0, j=0, end = static_cast<int>(FromFamily.m_ShareInfos.size()); i != end; i++ )
         {
-            if( )
+            if( UpdatedComponentBits.getBit(FromFamily.m_ShareInfos[i]->m_BitID) )
+            {
+                Remap[j]            = i;
+                FinalShareKeys[i]   = Keys[j++];
+            }
+            else
+            {
+                FinalShareKeys[i]   = FromFamily.m_ShareDetails[i].m_Key;
+                FinalEntities[i]    = FromFamily.m_ShareDetails[i].m_Entity;
+            }
+            NewFamilyGuid.m_Value += FinalShareKeys[i].m_Value;
         }
-        */
 
+        //
+        // Try to find the new family
+        //
+        if (auto It = m_Mgr.m_PoolFamily.find(NewFamilyGuid); It != m_Mgr.m_PoolFamily.end())
+            return *It->second;
+
+        //
+        // Find the missing entities
+        //
+        for (int i = 0, Count = static_cast<int>(Keys.size()); i != Count; i++)
+        {
+            //
+            // Does this share component exists?
+            //
+            if (auto It = m_Mgr.m_ShareComponentEntityMap.find(Keys[i]); It == m_Mgr.m_ShareComponentEntityMap.end())
+            {
+                xecs::component::entity Entity = m_ShareArchetypesArray[ Remap[i] ]->CreateEntity
+                (  { &FromFamily.m_ShareInfos[Remap[i]],    1u }
+                 , { &MoveData[i],                          1u }
+                );
+
+                m_Mgr.m_ShareComponentEntityMap.emplace(Keys[i], Entity);
+                FinalEntities[ Remap[i] ] = Entity;
+            }
+            else
+            {
+                m_Mgr.m_GameMgr.findEntity(It->second, [](xecs::component::ref_count& RefCount)
+                {
+                    RefCount.m_Value++;
+                });
+
+                assert(It->second.isZombie() == false );
+                FinalEntities[Remap[i]] = It->second;
+            }
+        }
+
+        //
+        // Create new Pool Family
+        //
+        return CreateNewPoolFamily
+        ( NewFamilyGuid
+        , std::span{ FinalEntities.data(),  static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ FinalShareKeys.data(), static_cast<std::size_t>(m_nShareComponents) }
+        );
+
+/**********************
         //
         // Sanity check
         //
@@ -602,7 +653,6 @@ instance::getOrCreatePoolFamilyFromSameArchetype
             }
         }
 
-
         //
         // Create new Pool Family
         //
@@ -611,6 +661,7 @@ instance::getOrCreatePoolFamilyFromSameArchetype
         , std::span{ FinalShareEntities.data(),             static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ FinalShareKeys.data(),                 static_cast<std::size_t>(m_nShareComponents) }
         );
+***********************/
     }
 
     //--------------------------------------------------------------------------------------------

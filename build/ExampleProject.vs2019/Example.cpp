@@ -607,8 +607,8 @@ void InitializeGame( void ) noexcept
     s_Game.m_GameMgr->RegisterSystems
     <  update_timer            // Structural: Yes, RemoveComponent(Timer)
     ,   update_movement         // Structural: No
-  //  ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-  //  ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+    ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
+    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   render_ships            // Structural: No
     ,   render_bullets          // Structural: No
     ,   page_flip               // Structural: No
@@ -628,7 +628,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 2, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 1000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
