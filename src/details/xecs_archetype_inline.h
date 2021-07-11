@@ -937,25 +937,6 @@ instance::MoveInEntity
         assert(Entity.isZombie() == false);
 
         //
-        // Deal with events
-        //
-        {
-            auto& GlobalEntity = m_Mgr.m_GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
-            if( GlobalEntity.m_Validation != Entity.m_Validation ) return { 0xffffffffffffffff };
-
-            auto& FromArchetype = *GlobalEntity.m_pArchetype;
-            if( FromArchetype.m_Events.m_OnEntityMovedOut.m_Delegates.size() )
-            {
-                auto& Pool       = *GlobalEntity.m_pPool;
-                auto& PoolEntity = Pool.getComponent<xecs::component::entity>( GlobalEntity.m_PoolIndex );
-                m_Events.m_OnEntityMovedOut.NotifyAll(PoolEntity);
-                Entity = PoolEntity;
-                if( GlobalEntity.m_Validation.m_bZombie ) return { 0xffffffffffffffff };
-                if( GlobalEntity.m_Validation != Entity.m_Validation ) return { 0xffffffffffffffff };
-            }
-        }
-
-        //
         // Ready to move then...
         //
         auto&       GlobalEntity  = m_Mgr.m_GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];

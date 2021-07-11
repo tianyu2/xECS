@@ -19,7 +19,6 @@ static struct game
 
     int m_nEntityThinkingDead = 0;
     int m_nEntityWaitingDead  = 0;
-    int m_nBullets            = 0;
 
 } s_Game;
 
@@ -334,8 +333,6 @@ struct destroy_bullet_on_remove_timer : xecs::system::instance
 
     void operator()(entity& Entity) noexcept
     {
-        s_Game.m_nBullets--;
-
         m_GameMgr.DeleteEntity(Entity);
     }
 };
@@ -405,8 +402,6 @@ struct space_ship_logic : xecs::system::instance
 
                         m_pBulletArchetype->CreateEntities( 1, [&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer, grid_cell& Cell) noexcept
                         {
-                            s_Game.m_nBullets++;
-
                             Direction  /= std::sqrt(DistanceSquare);
                             Vel.m_Value = Direction * 2.0f;
                             Pos.m_Value = Position.m_Value + Vel.m_Value;
@@ -556,7 +551,6 @@ struct page_flip : xecs::system::instance
     {
         glColor3f(1.0f, 1.0f, 1.0f);
         GlutPrint( 0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size() );
-        GlutPrint(0, 20, "#Bullets: %d", s_Game.m_nBullets );
 
         glFlush();
         glutSwapBuffers();
