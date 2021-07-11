@@ -36,19 +36,22 @@ namespace xecs::system
                         ,   *this
                         );
                     }
-                }
 
-                //
-                // Ask the game to update all the pending structural changes
-                //
-                T_USER_SYSTEM::m_GameMgr.m_ArchetypeMgr.UpdateStructuralChanges();
+                    //
+                    // Ask the game to update all the pending structural changes
+                    //
+                    {
+                        XCORE_PERF_ZONE_SCOPED_N("UpdateStructuralChanges")
+                        T_USER_SYSTEM::m_GameMgr.m_ArchetypeMgr.UpdateStructuralChanges();
+                    }
 
-                //
-                // Check to see if the user would like to be notified 
-                //
-                if constexpr ( &T_USER_SYSTEM::OnPostStructuralChanges != &instance::OnPostStructuralChanges )
-                {
-                    T_USER_SYSTEM::OnPostStructuralChanges();
+                    //
+                    // Check to see if the user would like to be notified 
+                    //
+                    if constexpr ( &T_USER_SYSTEM::OnPostStructuralChanges != &instance::OnPostStructuralChanges )
+                    {
+                        T_USER_SYSTEM::OnPostStructuralChanges();
+                    }
                 }
             }
 
