@@ -923,14 +923,15 @@ xecs::component::entity instance::CreateEntity
     template
     < typename T_FUNCTION
     > requires
-    ( xecs::tools::assert_function_return_v<T_FUNCTION, void>
+    ( xcore::function::is_callable_v<T_FUNCTION>
+        && xecs::tools::assert_function_return_v<T_FUNCTION, void>
         && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
         && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
     ) xecs::component::entity
 instance::MoveInEntity
     ( xecs::component::entity&  Entity
     , xecs::pool::family&       PoolFamily
-    , T_FUNCTION&&              Function 
+    , T_FUNCTION&&              Function
     ) noexcept
     {
         assert(Entity.isZombie() == false);
@@ -1017,7 +1018,8 @@ instance::MoveInEntity
     template
     < typename T_FUNCTION
     > requires
-    ( xecs::tools::assert_function_return_v<T_FUNCTION, void>
+    ( xcore::function::is_callable_v<T_FUNCTION>
+        && xecs::tools::assert_function_return_v<T_FUNCTION, void>
         && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
         && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
     ) xecs::component::entity

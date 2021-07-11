@@ -19,6 +19,7 @@ static struct game
 
     int m_nEntityThinkingDead = 0;
     int m_nEntityWaitingDead  = 0;
+    int m_nBullets            = 0;
 
 } s_Game;
 
@@ -333,6 +334,8 @@ struct destroy_bullet_on_remove_timer : xecs::system::instance
 
     void operator()(entity& Entity) noexcept
     {
+        s_Game.m_nBullets--;
+
         m_GameMgr.DeleteEntity(Entity);
     }
 };
@@ -402,6 +405,8 @@ struct space_ship_logic : xecs::system::instance
 
                         m_pBulletArchetype->CreateEntities( 1, [&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer, grid_cell& Cell) noexcept
                         {
+                            s_Game.m_nBullets++;
+
                             Direction  /= std::sqrt(DistanceSquare);
                             Vel.m_Value = Direction * 2.0f;
                             Pos.m_Value = Position.m_Value + Vel.m_Value;
@@ -495,7 +500,7 @@ void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    glRasterPos2i(x, s_Game.m_H -(y+20));//s_Game.m_H - (y + 1) * 20);
+    glRasterPos2i(x, s_Game.m_H -(y+20));
     for (int i = 0; i < len; ++i)
     {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, FinalString[i]);
@@ -551,6 +556,7 @@ struct page_flip : xecs::system::instance
     {
         glColor3f(1.0f, 1.0f, 1.0f);
         GlutPrint( 0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size() );
+        GlutPrint(0, 20, "#Bullets: %d", s_Game.m_nBullets );
 
         glFlush();
         glutSwapBuffers();
@@ -559,14 +565,15 @@ struct page_flip : xecs::system::instance
         //
         // Render grid
         //
-        if(false)
+        if(true)
         for( int y=0; y<grid::cell_y_count; y++ )
         for( int x=0; x<grid::cell_x_count; x++ )
         {
             int Count = (int)(*m_pGrid)[y][x].size();
             if( 0 == Count) continue;
 
-            if(true)
+            // Print number of entities?
+            if(false)
             {
                 auto& V = (*m_pGrid)[y][x];
                 int nEntities = 0;
@@ -585,15 +592,18 @@ struct page_flip : xecs::system::instance
             constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
             
             glBegin(GL_QUADS);
-            glColor3f(0.5f, 0.5f, 0.5f);
+            glColor3f(0.25f, 0.25f, 0.25f);
             glVertex2i(X - SizeX, Y - SizeY);
             glVertex2i(X - SizeX, Y + SizeY);
             glVertex2i(X + SizeX, Y + SizeY);
             glVertex2i(X + SizeX, Y - SizeY);
             glEnd();
-            
-            glColor3f(1.0f, 1.0f, 1.0f);
-            GlutPrint(X, Y-15, "%d", Count );
+
+            if(false)
+            {
+                glColor3f(1.0f, 1.0f, 1.0f);
+                GlutPrint(X, Y - 15, "%d", Count);
+            }
         }
     }
 };
@@ -624,7 +634,7 @@ void InitializeGame( void ) noexcept
 
     // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
-    <  update_timer            // Structural: Yes, RemoveComponent(Timer)
+    <   update_timer            // Structural: Yes, RemoveComponent(Timer)
     ,   update_movement         // Structural: No
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
     ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)

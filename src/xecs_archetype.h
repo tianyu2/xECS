@@ -143,7 +143,8 @@ namespace xecs::archetype
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::assert_function_return_v<T_FUNCTION, void>
+        ( xcore::function::is_callable_v<T_FUNCTION>
+            && xecs::tools::assert_function_return_v<T_FUNCTION, void>
             && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
             && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
@@ -154,7 +155,8 @@ namespace xecs::archetype
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::assert_function_return_v<T_FUNCTION, void>
+        ( xcore::function::is_callable_v<T_FUNCTION>
+            && xecs::tools::assert_function_return_v<T_FUNCTION, void>
             && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
             && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity

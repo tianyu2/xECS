@@ -129,20 +129,24 @@ mgr::AddOrRemoveComponents
         //
         // Search for the right archetype
         //
-        const auto  NewArchetypeGuid = xecs::archetype::guid{ Bits.GenerateUniqueID() };
-        if( auto p = findArchetype(NewArchetypeGuid); p )
+        const auto                  NewArchetypeGuid = xecs::archetype::guid{ Bits.GenerateUniqueID() };
+        xecs::archetype::instance*  pArchetype       = findArchetype(NewArchetypeGuid);
+
+        if( pArchetype == nullptr )
         {
-            if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return p->MoveInEntity(Entity);
-            else                                                                  return p->MoveInEntity(Entity, Function);
+            // Fail to find the archetype which means that we must build one
+            pArchetype = CreateArchetype(NewArchetypeGuid, Bits).get();
         }
 
         //
-        // Fail to find the archetype which means that we must build one
+        // Move the Entity
         //
-        auto& Archetype = *CreateArchetype(NewArchetypeGuid, Bits);
+        auto& PoolFamily = pArchetype->getOrCreatePoolFamilyFromDifferentArchetype(Entity);
 
-        if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >) return Archetype.MoveInEntity(Entity);
-        else                                                                  return Archetype.MoveInEntity(Entity, Function);
+        if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >)
+            return pArchetype->MoveInEntity(Entity, PoolFamily );
+        else
+            return pArchetype->MoveInEntity(Entity, PoolFamily, std::forward<T_FUNCTION&&>(Function));
     }
 
     //-------------------------------------------------------------------------------------
