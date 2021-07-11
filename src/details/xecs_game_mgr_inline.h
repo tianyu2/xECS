@@ -184,7 +184,7 @@ namespace xecs::game_mgr
         
         for( const auto& pE : List )
         {
-            for( auto pFamily = pE->m_FamilyHead.get(); pFamily; pFamily = pFamily->m_Next.get() )
+            for( auto pFamily = pE->getFamilyHead(); pFamily; pFamily = pFamily->m_Next.get() )
             {
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {

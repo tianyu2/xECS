@@ -55,7 +55,7 @@ mgr::getOrCreateArchetype
         for( auto p = m_pArchetypeStrututalPending; p != reinterpret_cast<xecs::archetype::instance*>(end_structural_changes_v); )
         {
             auto pNext = p->m_pPendingStructuralChanges;
-            p->UpdateStructuralChanges();
+            p->_UpdateStructuralChanges();
             p->m_pPendingStructuralChanges = nullptr;
             p = pNext;
         }
@@ -163,9 +163,9 @@ mgr::AddOrRemoveComponents
         auto& PoolFamily = pArchetype->getOrCreatePoolFamilyFromDifferentArchetype(Entity);
 
         if constexpr (std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda >)
-            return pArchetype->MoveInEntity(Entity, PoolFamily );
+            return pArchetype->_MoveInEntity(Entity, PoolFamily );
         else
-            return pArchetype->MoveInEntity(Entity, PoolFamily, std::forward<T_FUNCTION&&>(Function));
+            return pArchetype->_MoveInEntity(Entity, PoolFamily, std::forward<T_FUNCTION&&>(Function));
     }
 
     //-------------------------------------------------------------------------------------

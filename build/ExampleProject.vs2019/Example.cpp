@@ -87,7 +87,7 @@ namespace grid
         auto& V = Grid[Y][X];
         for( auto& Pair : V )
         {
-            if( Query.Compare(Pair.first->m_ComponentBits) == false )
+            if( Query.Compare(Pair.first->getComponentBits()) == false )
                 continue;
 
             assert(Pair.second->m_Guid.isValid());
@@ -212,7 +212,7 @@ struct grid_system_pool_family_create : xecs::system::instance
         {
             assert(TheCell.m_X == Cell.m_X);
             assert(TheCell.m_Y == Cell.m_Y);
-            auto Key = xecs::component::type::details::ComputeShareKey(PoolFamily.m_pArchetypeInstance->m_Guid, *PoolFamily.m_ShareInfos[0], reinterpret_cast<std::byte*>(&TheCell) );
+            auto Key = xecs::component::type::details::ComputeShareKey(PoolFamily.m_pArchetypeInstance->getGuid(), *PoolFamily.m_ShareInfos[0], reinterpret_cast<std::byte*>(&TheCell) );
             assert( PoolFamily.m_ShareDetails[0].m_Key == Key );
 
             for (auto E : (*m_Grid)[Cell.m_Y][Cell.m_X])
@@ -293,7 +293,6 @@ struct bullet_logic : xecs::system::instance
                 grid::Search( *m_pGrid, X, Y, QueryAny, [&]( entity& E, position& Pos )  constexpr noexcept
                 {
                     if (E.isZombie()) return false;
-                    //assert( E.isZombie() == false );
 
                     // Our we checking against my self?
                     if ( Entity == E ) return false;
@@ -400,7 +399,7 @@ struct space_ship_logic : xecs::system::instance
                         // Hopefully there is not system that intersects me and kills me
                         assert( !NewEntity.isZombie() );
 
-                        m_pBulletArchetype->CreateEntities( 1, [&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer, grid_cell& Cell) noexcept
+                        m_pBulletArchetype->CreateEntity( [&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer, grid_cell& Cell) noexcept
                         {
                             Direction  /= std::sqrt(DistanceSquare);
                             Vel.m_Value = Direction * 2.0f;

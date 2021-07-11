@@ -52,6 +52,7 @@ namespace xecs::tools
     auto assert_standard_function_v = []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
     {
         static_assert( xcore::function::is_callable_v<T_CALLABLE>, "This is not a callable function");
+        static_assert( ((std::is_same_v< T_ARGS, std::remove_const_t<T_ARGS>>) && ...), "You can not have const in the parameters" );
         static_assert( ((xecs::component::type::is_valid_v<T_ARGS>) && ... ), "You have a type in your function call that is not a valid component" );
         static_assert( false == xcore::types::tuple_has_duplicates_v< std::tuple< xcore::types::decay_full_t<T_ARGS> ... > >, "Found duplicated types in the function which is not allowed");
         static_assert( ((xecs::component::type::info_v<T_ARGS>.m_TypeID != xecs::component::type::id::TAG) && ...), "I found a tag in the parameter list of the function that is illegal");

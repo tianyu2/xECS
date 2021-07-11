@@ -35,6 +35,7 @@ namespace xecs::game_mgr
 namespace xecs::system
 {
     struct instance;
+    struct mgr;
 }
 
 namespace xecs::archetype

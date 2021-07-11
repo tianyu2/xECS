@@ -310,7 +310,7 @@ namespace xecs::archetype
 
             // For these types of archetypes we only have one family
             m_DefaultPoolFamily.Initialize(pool::family::guid{ 42ull }, *this, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(m_nDataComponents) });
-            AddFamilyToPendingList( m_DefaultPoolFamily );
+            _AddFamilyToPendingList( m_DefaultPoolFamily );
 
             return m_DefaultPoolFamily;
         }
@@ -577,7 +577,7 @@ xecs::pool::family& instance::getOrCreatePoolFamily
     ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
     ) 
     void
-instance::CreateEntity
+instance::_CreateEntity
     ( xecs::pool::family&                                   PoolFamily
     , int                                                   Count
     , T_CALLBACK&&                                          Function
@@ -643,7 +643,7 @@ instance::CreateEntity
     {
         assert( xecs::tools::HaveAllComponents(m_ComponentBits, Infos) );
         xecs::component::entity TheEntity;
-        instance::CreateEntity( PoolFamily, 1, [&](xecs::component::entity Entity, int )
+        instance::_CreateEntity( PoolFamily, 1, [&](xecs::component::entity Entity, int )
         {
             auto& Details   = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails( Entity );
             auto& Pool      = *Details.m_pPool;
@@ -693,57 +693,86 @@ instance::CreateEntity
     template
     < typename T_CALLBACK
     > requires
-    ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-        && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-        && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
-    )    xecs::component::entity
+    ( xecs::tools::assert_standard_function_v<T_CALLBACK>
+        && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+    ) xecs::component::entity
 instance::CreateEntity
     ( T_CALLBACK&& Function 
     ) noexcept
     {
-        using func_traits = xcore::function::traits<T_CALLBACK>;
-        assert(xecs::tools::HaveAllComponents(m_ComponentBits, xcore::types::null_tuple_v<func_traits::args_tuple>));
-        xecs::component::entity TheEntity;
-
-        instance::CreateEntity
-        ( getOrCreatePoolFamily( {}, {} )
-        , 1
-        , [&]
-        {
-            if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) return xecs::tools::empty_lambda{};
-            else return [&](xecs::component::entity Entity, int) noexcept
-            {
-                auto& Details        = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-                auto  CachedPointers = xecs::archetype::details::GetDataComponentPointerArray( *Details.m_pPool, Details.m_PoolIndex, xcore::types::null_tuple_v<func_traits::args_tuple>);
-                xecs::archetype::details::CallFunction( Function, CachedPointers );
-
-                TheEntity = Entity;
-            };
-        }()
-        );
-
-        return TheEntity;
+        return _CreateEntities( 1, std::forward<T_CALLBACK&&>(Function) );
     }
 
     //--------------------------------------------------------------------------------------------
+
     template
     < typename T_CALLBACK
     > requires
-    ( false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+    ( xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
         && xecs::tools::assert_function_return_v<T_CALLBACK, void>
-        && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
-    )
-    void
+    ) void
 instance::CreateEntities
     ( const int         Count
     , T_CALLBACK&&      Function 
     ) noexcept
     {
+        _CreateEntities( Count, std::forward<T_CALLBACK&&>(Function) );
+    }
+
+    //--------------------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLBACK
+    > requires
+    ( xecs::tools::assert_standard_function_v<T_CALLBACK>
+        && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+    ) xecs::component::entity
+instance::CreateEntity
+    ( xecs::pool::family&   PoolFamily
+    , T_CALLBACK&&          Function
+    ) noexcept
+    {
+        return _CreateEntities( 1, PoolFamily, std::forward<T_CALLBACK&&>(Function));
+    }
+
+    //--------------------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLBACK
+    > requires
+    ( xcore::function::is_callable_v<T_CALLBACK>
+        && false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+    )
+    xecs::component::entity
+instance::_CreateEntities
+    ( int           Count
+    , T_CALLBACK&&  Function
+    ) noexcept
+    {
+        return _CreateEntities( Count, getOrCreatePoolFamily({}, {}), std::forward<T_CALLBACK&&>(Function));
+    }
+
+    //--------------------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLBACK
+    > requires
+    (xcore::function::is_callable_v<T_CALLBACK>
+        && false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+    ) xecs::component::entity
+instance::_CreateEntities
+    ( int                   Count
+    , xecs::pool::family&   PoolFamily
+    , T_CALLBACK&&          Function
+    ) noexcept
+    {
         using func_traits = xcore::function::traits<T_CALLBACK>;
         assert(xecs::tools::HaveAllComponents(m_ComponentBits, xcore::types::null_tuple_v<func_traits::args_tuple>));
 
-        instance::CreateEntity( getOrCreatePoolFamily({},{}), Count, [&](xecs::component::entity Entity, int)
+        xecs::component::entity First;
+        _CreateEntity( PoolFamily, Count, [&](xecs::component::entity Entity, int) constexpr noexcept
         {
+            if( First.isValid() == false ) First = Entity;
             if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) return;
 
             auto& Details        = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
@@ -754,6 +783,8 @@ instance::CreateEntities
             );
             xecs::archetype::details::CallFunction( Function, CachedPointers );
         });
+
+        return First;
     }
 
     //--------------------------------------------------------------------------------------------
@@ -761,14 +792,13 @@ instance::CreateEntities
     template
     < typename T_CALLBACK
     > requires
-    ( true == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
-        && xecs::tools::assert_function_return_v<T_CALLBACK, void>
-        && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
+    ( xcore::function::is_callable_v<T_CALLBACK>
+        && true == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
     )
-    void
-instance::CreateEntities
-    ( const int         Count
-    , T_CALLBACK&&      Function 
+    xecs::component::entity
+instance::_CreateEntities
+    ( int           Count
+    , T_CALLBACK&&  Function
     ) noexcept
     {
         using func_traits = xcore::function::traits<T_CALLBACK>;
@@ -806,6 +836,8 @@ instance::CreateEntities
 
         assert( ComponentIndex[0] != -1 );
 
+        xecs::component::entity First;
+
         // Call the function with the tuple
         for( int i=0; i<Count; i++ )
         {
@@ -819,9 +851,11 @@ instance::CreateEntities
             auto       ShareData      = [&]<typename...T>(std::tuple<T...>*){ return std::array{ reinterpret_cast<std::byte*>( &std::get<T>(Components) ) ... }; }(xcore::types::null_tuple_v<share_only_tuple>);
             auto&      Family         = getOrCreatePoolFamily(ShareTypeInfos, ShareData);
 
-            instance::CreateEntity( Family, 1, [&](xecs::component::entity Entity, int) constexpr noexcept
+            instance::_CreateEntity( Family, 1, [&]( xecs::component::entity Entity, int) constexpr noexcept
             {
                 auto& Details = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
+
+                if(i==0) First = Entity;
 
                 // Move all the components
                 [&]< typename...T >( std::tuple<T...>* ) constexpr noexcept
@@ -831,40 +865,8 @@ instance::CreateEntities
                 }(xcore::types::null_tuple_v<data_sorted_tuple>);
             });
         }
-    }
 
-    //--------------------------------------------------------------------------------------------
-
-    template
-    < typename T_CALLBACK
-    > requires
-    ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-        && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-        && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
-    )
-xecs::component::entity instance::CreateEntity
-    ( xecs::pool::family&   PoolFamily
-    , T_CALLBACK&&          Function
-    ) noexcept
-    {
-        using func_traits = xcore::function::traits<T_CALLBACK>;
-        xecs::component::entity TheEntity;
-
-        CreateEntity( PoolFamily, 1, [&]( xecs::component::entity& Entity, int )
-        {
-            if constexpr (std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >) return;
-
-            TheEntity = Entity;
-            auto& Details        = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-            auto  CachedPointers = xecs::archetype::details::GetDataComponentPointerArray
-            ( *Details.m_pPool
-            ,  Details.m_PoolIndex
-            ,  xcore::types::null_tuple_v<func_traits::args_tuple> 
-            );
-            xecs::archetype::details::CallFunction( Function, CachedPointers );
-        });
-
-        return TheEntity;
+        return First;
     }
 
     //--------------------------------------------------------------------------------------------
@@ -928,7 +930,7 @@ xecs::component::entity instance::CreateEntity
         && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
         && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
     ) xecs::component::entity
-instance::MoveInEntity
+instance::_MoveInEntity
     ( xecs::component::entity&  Entity
     , xecs::pool::family&       PoolFamily
     , T_FUNCTION&&              Function
@@ -1004,9 +1006,9 @@ instance::MoveInEntity
         && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
         && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
     ) xecs::component::entity
-    instance::MoveInEntity( xecs::component::entity& Entity, T_FUNCTION&& Function ) noexcept
+    instance::_MoveInEntity( xecs::component::entity& Entity, T_FUNCTION&& Function ) noexcept
     {
-        return MoveInEntity(Entity, getOrCreatePoolFamilyFromDifferentArchetype(Entity), std::forward<T_FUNCTION&&>(Function) );
+        return _MoveInEntity(Entity, getOrCreatePoolFamilyFromDifferentArchetype(Entity), std::forward<T_FUNCTION&&>(Function) );
     }
 
     //--------------------------------------------------------------------------------------------
@@ -1101,14 +1103,14 @@ instance::MoveInEntity
         // Added to the pending list
         //
         m_Mgr.m_PoolFamily.emplace(NewFamilyGuid, pPoolFamily);
-        AddFamilyToPendingList( *pPoolFamily );
+        _AddFamilyToPendingList( *pPoolFamily );
 
         return *pPoolFamily;
     }
 
     //-------------------------------------------------------------------------------------
 
-    void instance::AddFamilyToPendingList( pool::family& PoolFamily ) noexcept
+    void instance::_AddFamilyToPendingList( pool::family& PoolFamily ) noexcept
     {
         assert(nullptr == PoolFamily.m_pPendingNext);
         {
@@ -1121,7 +1123,7 @@ instance::MoveInEntity
 
     //-------------------------------------------------------------------------------------
 
-    void instance::UpdateStructuralChanges( void ) noexcept
+    void instance::_UpdateStructuralChanges( void ) noexcept
     {
         //
         // Update all the pool families
@@ -1149,4 +1151,26 @@ instance::MoveInEntity
         }
         m_pPoolFamilyPending = nullptr;
     }
+
+    //-------------------------------------------------------------------------------------
+    constexpr
+    const xecs::tools::bits& instance::getComponentBits(void) const noexcept
+    {
+        return m_ComponentBits;
+    }
+
+    //-------------------------------------------------------------------------------------
+    constexpr
+    guid instance::getGuid(void) const noexcept
+    {
+        return m_Guid;
+    }
+
+    //-------------------------------------------------------------------------------------
+    
+    pool::family* instance::getFamilyHead( void ) const noexcept
+    {
+        return m_FamilyHead.get();
+    }
+
 }

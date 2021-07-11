@@ -38,6 +38,16 @@ namespace xecs::archetype
         template< typename T >
         T&                      getShareComponent       ( xecs::pool::family& Family 
                                                         ) noexcept;
+        constexpr __inline
+        const xecs::tools::bits& getComponentBits       ( void 
+                                                        ) const noexcept;
+        constexpr __inline
+        guid                     getGuid                ( void 
+                                                        ) const noexcept;
+        __inline
+        pool::family*            getFamilyHead          ( void 
+                                                        ) const noexcept;
+
         template
         < typename...T_SHARE_COMPONENTS
         > requires
@@ -66,15 +76,7 @@ namespace xecs::archetype
         xecs::pool::family&     getOrCreatePoolFamilyFromDifferentArchetype
                                                         ( xecs::component::entity        Entity
                                                         ) noexcept;
-        template
-        < typename T_CALLBACK = xecs::tools::empty_lambda
-        > requires
-        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-        ) 
-        void                    CreateEntity            ( xecs::pool::family&                                   PoolFamily
-                                                        , int                                                   Count
-                                                        , T_CALLBACK&&                                          Function = xecs::tools::empty_lambda{}
-                                                        ) noexcept;
+
         __inline
         xecs::component::entity CreateEntity            ( xecs::pool::family&                                   PoolFamily
                                                         , std::span< const xecs::component::type::info* const>  Infos
@@ -85,20 +87,18 @@ namespace xecs::archetype
                                                         , std::span< std::byte* >                               MoveData
                                                         ) noexcept;
         template
-        < typename T_CALLBACK
+        < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::assert_standard_function_v<T_CALLBACK>
+            && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
-        xecs::component::entity CreateEntity            ( T_CALLBACK&& Function
+        xecs::component::entity CreateEntity            ( T_CALLBACK&& Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::assert_standard_function_v<T_CALLBACK>
+            && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
         xecs::component::entity CreateEntity            ( xecs::pool::family&   PoolFamily
                                                         , T_CALLBACK&&          Function = xecs::tools::empty_lambda{}
@@ -106,20 +106,8 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+        ( xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
             && xecs::tools::assert_function_return_v<T_CALLBACK, void>
-            && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
-        ) __inline
-        void                    CreateEntities          ( int           Count
-                                                        , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
-                                                        ) noexcept;
-
-        template
-        < typename T_CALLBACK = xecs::tools::empty_lambda
-        > requires
-        ( true == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
-            && xecs::tools::assert_function_return_v<T_CALLBACK, void>
-            && xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
         ) __inline
         void                    CreateEntities          ( int           Count
                                                         , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
@@ -129,9 +117,8 @@ namespace xecs::archetype
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
-            && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_CALLBACK>
-            && xecs::tools::assert_function_args_have_only_non_const_references_v<T_CALLBACK>
+        ( xecs::tools::assert_standard_function_v<T_CALLBACK>
+            && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
         void                    CreateEntities          ( int                   Count
                                                         , xecs::pool::family    PoolFamily
@@ -139,7 +126,11 @@ namespace xecs::archetype
                                                         ) noexcept;
         inline
         void                    DestroyEntity           ( xecs::component::entity& Entity
+
                                                         ) noexcept;
+
+protected:
+
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
@@ -148,7 +139,7 @@ namespace xecs::archetype
             && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
             && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
-                                MoveInEntity            ( xecs::component::entity&  Entity
+                                _MoveInEntity           ( xecs::component::entity&  Entity
                                                         , xecs::pool::family&       PoolFamily
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
                                                         ) noexcept;
@@ -160,16 +151,52 @@ namespace xecs::archetype
             && xecs::tools::assert_function_args_have_no_share_or_tag_components_v<T_FUNCTION>
             && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
-                                MoveInEntity            ( xecs::component::entity&  Entity
+                                _MoveInEntity           ( xecs::component::entity&  Entity
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
                                                         ) noexcept;
-
         __inline
-        void                    UpdateStructuralChanges ( void
+        void                    _UpdateStructuralChanges( void
+                                                        ) noexcept;
+        inline
+        void                    _AddFamilyToPendingList ( pool::family& PoolFamily
+                                                        ) noexcept;
+        template
+        < typename T_CALLBACK = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_CALLBACK>
+            && false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+        ) __inline
+        xecs::component::entity _CreateEntities         ( int           Count
+                                                        , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
+                                                        ) noexcept;
+        template
+        < typename T_CALLBACK = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_CALLBACK>
+            && false == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+        )
+        xecs::component::entity _CreateEntities         ( int                   Count
+                                                        , xecs::pool::family&   PoolFamily
+                                                        , T_CALLBACK&&          Function = xecs::tools::empty_lambda{}
+                                                        ) noexcept;
+        template
+        < typename T_CALLBACK = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_CALLBACK>
+            && true == xecs::tools::function_has_share_component_args_v<T_CALLBACK>
+        )
+        xecs::component::entity _CreateEntities         ( int           Count
+                                                        , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
 
-        inline
-        void                    AddFamilyToPendingList  ( pool::family& PoolFamily
+        template
+        < typename T_CALLBACK = xecs::tools::empty_lambda
+        > requires
+        ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
+        ) 
+        void                    _CreateEntity           ( xecs::pool::family&                                   PoolFamily
+                                                        , int                                                   Count
+                                                        , T_CALLBACK&&                                          Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
 
         using share_archetypes_array = std::array<std::shared_ptr<xecs::archetype::instance>,   xecs::settings::max_components_per_entity_v >;
@@ -180,7 +207,6 @@ namespace xecs::archetype
         xecs::tools::bits                   m_ExclusiveTagsBits         {};
         std::uint8_t                        m_nDataComponents           {};
         std::uint8_t                        m_nShareComponents          {};
-        events                              m_Events                    {};
         std::unique_ptr<pool::family>       m_FamilyHead                {}; // Please note that the Default family pool will be in this list so we can't let the unique pointer free it
         pool::family                        m_DefaultPoolFamily         {};
         xecs::component::entity::info_array m_InfoData                  {}; // rename to InfoArray
@@ -188,5 +214,11 @@ namespace xecs::archetype
         share_archetypes_array              m_ShareArchetypesArray      {};
         xecs::pool::family*                 m_pPoolFamilyPending        { nullptr };
 
+    public:
+        events                              m_Events                    {};
+    friend struct mgr;
+    friend struct pool::family;
+    friend struct system::mgr;
+    friend struct game_mgr::instance;
     };
 }
