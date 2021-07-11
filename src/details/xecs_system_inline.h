@@ -54,7 +54,6 @@ namespace xecs::system
 
             void Notify( xecs::component::entity& Entity ) noexcept
             {
-                XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
                 if constexpr (T_USER_SYSTEM::typedef_v.is_notifier_v )
                 {
                     XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)

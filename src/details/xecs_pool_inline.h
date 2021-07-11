@@ -133,8 +133,10 @@ namespace xecs::pool
     ) noexcept
     {
         GameMgr.m_ArchetypeMgr.AddToStructuralPendingList(FromPool);
-        FromFamily.AppendEntities( 1, GameMgr.m_ArchetypeMgr, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
+        AppendEntities( 1, GameMgr.m_ArchetypeMgr, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
         {
+            assert( &FromPool != &ToPool );
+
             auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
             auto& Details = GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
 

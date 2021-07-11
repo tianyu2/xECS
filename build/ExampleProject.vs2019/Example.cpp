@@ -559,12 +559,25 @@ struct page_flip : xecs::system::instance
         //
         // Render grid
         //
-        if(true)
+        if(false)
         for( int y=0; y<grid::cell_y_count; y++ )
         for( int x=0; x<grid::cell_x_count; x++ )
         {
             int Count = (int)(*m_pGrid)[y][x].size();
             if( 0 == Count) continue;
+
+            if(true)
+            {
+                auto& V = (*m_pGrid)[y][x];
+                int nEntities = 0;
+
+                for (auto& e : V)
+                {
+                    nEntities += e.second->m_DefaultPool.Size();
+                }
+
+                Count = nEntities;
+            }
 
             float X = (x + 0.5f) * grid::cell_width_v;
             float Y = (y + 0.5f) * grid::cell_width_v;
@@ -634,7 +647,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 1000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)

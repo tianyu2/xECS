@@ -6,7 +6,7 @@ namespace xecs::settings
     constexpr auto max_tags_components_per_entity_v     = 32;
     constexpr auto max_components_per_entity_v          = max_data_components_per_entity_v + max_share_components_per_entity_v;
     constexpr auto max_entity_count_per_pool_v          = 50000;
-    constexpr auto max_entities_v                       = 100000;
+    constexpr auto max_entities_v                       = 500000;
     constexpr auto virtual_page_size_v                  = 4096;
 
     //------------------------------------------------------------------

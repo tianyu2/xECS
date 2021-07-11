@@ -163,6 +163,9 @@ namespace xecs::component
         // still valid can be done thought the m_Validation 
         struct global_info final
         {
+            global_info( const global_info&) = delete;
+            global_info() = default;
+
             xecs::archetype::instance*      m_pArchetype    {};
             xecs::pool::instance*           m_pPool         {};
             xecs::pool::index               m_PoolIndex     {-1};
