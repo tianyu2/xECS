@@ -26,18 +26,11 @@ namespace xecs::archetype
             std::array<xecs::event::instance<xecs::component::entity&>, xecs::settings::max_components_per_entity_v> m_OnComponentUpdated;
         };
 
-                                instance                ( const instance& 
-                                                        ) = delete;
         inline                  instance                ( xecs::archetype::mgr& Mgr 
                                                         ) noexcept;
-        
-        inline
-        void                    Initialize              ( archetype::guid                                     Guid
-                                                        , const tools::bits&                                  AllComponentsBits
-                                                        ) noexcept;
         template< typename T >
-        T&                      getShareComponent       ( xecs::pool::family& Family 
-                                                        ) noexcept;
+        const T&                getShareComponent       ( const xecs::pool::family& Family 
+                                                        ) const noexcept;
         constexpr __inline
         const xecs::tools::bits& getComponentBits       ( void 
                                                         ) const noexcept;
@@ -60,23 +53,6 @@ namespace xecs::archetype
         xecs::pool::family&     getOrCreatePoolFamily   ( std::span< const xecs::component::type::info* const>  TypeInfos
                                                         , std::span< std::byte* >                               MoveData
                                                         ) noexcept;
-        inline
-        xecs::pool::family&     getOrCreatePoolFamilyFromSameArchetype
-                                                        ( xecs::pool::family&                                   FromFamily
-                                                        , xecs::tools::bits                                     UpdatedComponentBits
-                                                        , std::span< std::byte* >                               MoveData
-                                                        , std::span< const xecs::component::type::share::key >  Keys
-                                                        ) noexcept;
-        inline
-        xecs::pool::family&     CreateNewPoolFamily     ( xecs::pool::family::guid                          Guid
-                                                        , std::span<xecs::component::entity>                ShareEntityList
-                                                        , std::span<xecs::component::type::share::key>      ShareKeyList
-                                                        ) noexcept;
-        inline
-        xecs::pool::family&     getOrCreatePoolFamilyFromDifferentArchetype
-                                                        ( xecs::component::entity        Entity
-                                                        ) noexcept;
-
         __inline
         xecs::component::entity CreateEntity            ( xecs::pool::family&                                   PoolFamily
                                                         , std::span< const xecs::component::type::info* const>  Infos
@@ -130,7 +106,28 @@ namespace xecs::archetype
                                                         ) noexcept;
 
 protected:
-
+                                instance                ( const instance& 
+                                                        ) = delete;
+        inline
+        void                    Initialize              ( archetype::guid                                     Guid
+                                                        , const tools::bits&                                  AllComponentsBits
+                                                        ) noexcept;
+        inline
+        xecs::pool::family&     getOrCreatePoolFamilyFromSameArchetype
+                                                        ( xecs::pool::family&                                   FromFamily
+                                                        , xecs::tools::bits                                     UpdatedComponentBits
+                                                        , std::span< std::byte* >                               MoveData
+                                                        , std::span< const xecs::component::type::share::key >  Keys
+                                                        ) noexcept;
+        inline
+        xecs::pool::family&     CreateNewPoolFamily     ( xecs::pool::family::guid                          Guid
+                                                        , std::span<xecs::component::entity>                ShareEntityList
+                                                        , std::span<xecs::component::type::share::key>      ShareKeyList
+                                                        ) noexcept;
+        inline
+        xecs::pool::family&     getOrCreatePoolFamilyFromDifferentArchetype
+                                                        ( xecs::component::entity        Entity
+                                                        ) noexcept;
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires

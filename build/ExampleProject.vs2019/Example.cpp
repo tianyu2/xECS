@@ -607,9 +607,8 @@ struct render_grid : xecs::system::instance
             ,   ENTITIES
             };
 
-            // What are we printing? A for archetypes
-            const char* pFmt = nullptr;
-            switch( print::NONE)
+            // What are we printing?
+            switch( print::NONE )
             {
                 case print::ARCHETYPES: 
                 {
@@ -646,8 +645,11 @@ struct render_grid : xecs::system::instance
         //
         // Print how many archetypes we have so far
         //
-        glColor3f(1.0f, 1.0f, 1.0f);
-        GlutPrint(0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size());
+        if(false)
+        {
+            glColor3f(1.0f, 1.0f, 1.0f);
+            GlutPrint(0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size());
+        }
     }
 };
 

@@ -448,7 +448,7 @@ namespace xecs::archetype
 
     //--------------------------------------------------------------------------------------------
     template< typename T >
-    T& instance::getShareComponent( xecs::pool::family& Family ) noexcept
+    const T& instance::getShareComponent( const xecs::pool::family& Family ) const noexcept
     {
         assert( m_nShareComponents == Family.m_ShareInfos.size() );
         for( int i=0, end = m_nShareComponents; i!=end; ++i )

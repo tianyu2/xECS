@@ -6,7 +6,7 @@ namespace xecs::pool
 
     namespace type
     {
-        using guid = xcore::guid::unit<64, struct pool_guid_tag>;
+        using guid = xcore::guid::unit<64, struct pool_family_guid_tag>;
     }
 
     //------------------------------------------------------------------------------
