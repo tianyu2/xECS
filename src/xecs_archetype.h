@@ -40,7 +40,6 @@ namespace xecs::archetype
         __inline
         pool::family*            getFamilyHead          ( void 
                                                         ) noexcept;
-
         template
         < typename...T_SHARE_COMPONENTS
         > requires
@@ -88,8 +87,6 @@ namespace xecs::archetype
         void                    CreateEntities          ( int           Count
                                                         , T_CALLBACK&&  Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
-
-
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
         > requires
@@ -102,15 +99,16 @@ namespace xecs::archetype
                                                         ) noexcept;
         inline
         void                    DestroyEntity           ( xecs::component::entity& Entity
-
                                                         ) noexcept;
 
+//-------------------------------------------------------------------------------------------------------------
 protected:
+//-------------------------------------------------------------------------------------------------------------
                                 instance                ( const instance& 
                                                         ) = delete;
         inline
-        void                    Initialize              ( archetype::guid                                     Guid
-                                                        , const tools::bits&                                  AllComponentsBits
+        void                    Initialize              ( archetype::guid       Guid
+                                                        , const tools::bits&    AllComponentsBits
                                                         ) noexcept;
         inline
         xecs::pool::family&     getOrCreatePoolFamilyFromSameArchetype
@@ -191,9 +189,9 @@ protected:
         > requires
         ( xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) 
-        void                    _CreateEntity           ( xecs::pool::family&                                   PoolFamily
-                                                        , int                                                   Count
-                                                        , T_CALLBACK&&                                          Function = xecs::tools::empty_lambda{}
+        void                    _CreateEntity           ( xecs::pool::family&   PoolFamily
+                                                        , int                   Count
+                                                        , T_CALLBACK&&          Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
 
         using share_archetypes_array = std::array<std::shared_ptr<xecs::archetype::instance>,   xecs::settings::max_components_per_entity_v >;
