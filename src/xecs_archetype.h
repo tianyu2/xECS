@@ -39,7 +39,7 @@ namespace xecs::archetype
                                                         ) const noexcept;
         __inline
         pool::family*            getFamilyHead          ( void 
-                                                        ) const noexcept;
+                                                        ) noexcept;
 
         template
         < typename...T_SHARE_COMPONENTS
@@ -155,7 +155,7 @@ protected:
         void                    _UpdateStructuralChanges( void
                                                         ) noexcept;
         inline
-        void                    _AddFamilyToPendingList ( pool::family& PoolFamily
+        void                    _AddFamilyToPendingList ( std::unique_ptr<pool::family>&& PoolFamily
                                                         ) noexcept;
         template
         < typename T_CALLBACK = xecs::tools::empty_lambda
@@ -204,12 +204,11 @@ protected:
         xecs::tools::bits                   m_ExclusiveTagsBits         {};
         std::uint8_t                        m_nDataComponents           {};
         std::uint8_t                        m_nShareComponents          {};
-        std::unique_ptr<pool::family>       m_FamilyHead                {}; // Please note that the Default family pool will be in this list so we can't let the unique pointer free it
         pool::family                        m_DefaultPoolFamily         {};
         xecs::component::entity::info_array m_InfoData                  {}; // rename to InfoArray
         instance*                           m_pPendingStructuralChanges {};
         share_archetypes_array              m_ShareArchetypesArray      {};
-        xecs::pool::family*                 m_pPoolFamilyPending        { nullptr };
+        std::unique_ptr<pool::family>       m_PoolFamilyPending         {};
 
     public:
         events                              m_Events                    {};

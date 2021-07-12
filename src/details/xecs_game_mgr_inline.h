@@ -251,7 +251,7 @@ namespace xecs::game_mgr
             //
             // Loop through each of the families
             //
-            for( auto pFamily = pArchetype->m_FamilyHead.get(); pFamily; pFamily = pFamily->m_Next.get() )
+            for( auto pFamily = pArchetype->getFamilyHead(); pFamily; pFamily = pFamily->m_Next.get() )
             {
                 //
                 // Updates all the share pointers if need be

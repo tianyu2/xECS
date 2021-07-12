@@ -42,7 +42,7 @@ struct timer
 {
     constexpr static auto typedef_v = xecs::component::type::data {};
 
-    float        m_Value;
+    float m_Value;
 };
 
 struct bullet

@@ -304,15 +304,16 @@ namespace xecs::archetype
         assert(TypeInfos.size() == MoveData.size());
         if (m_nShareComponents == 0)
         {
-            if(m_DefaultPoolFamily.m_Guid.isValid()) return m_DefaultPoolFamily;
+            if(m_DefaultPoolFamily.m_Guid.isValid()) 
+                return m_DefaultPoolFamily;
 
             assert(TypeInfos.size() == 0);
 
-            // For these types of archetypes we only have one family
-            m_DefaultPoolFamily.Initialize(pool::family::guid{ 42ull }, *this, {}, {}, {}, { m_InfoData.data(), static_cast<std::size_t>(m_nDataComponents) });
-            _AddFamilyToPendingList( m_DefaultPoolFamily );
-
-            return m_DefaultPoolFamily;
+            return CreateNewPoolFamily
+            (   pool::family::guid{ 42ull }
+            ,   {}
+            ,   {}
+            );
         }
 
         //
@@ -1017,7 +1018,7 @@ instance::_MoveInEntity
     {
         if( m_nShareComponents == 0 )
         {
-            if( m_FamilyHead.get() ) return *m_FamilyHead;
+            if( m_DefaultPoolFamily.m_Guid.isValid() ) return m_DefaultPoolFamily;
             return getOrCreatePoolFamily({},{});
         }
 
@@ -1064,19 +1065,20 @@ instance::_MoveInEntity
         //
         // Get the memory for the new family
         //
-        xecs::pool::family* pPoolFamily;
+        std::unique_ptr<xecs::pool::family> PoolFamily;
         if ( m_DefaultPoolFamily.m_Guid.isValid() )
         {
-            pPoolFamily = new xecs::pool::family{};
+            PoolFamily = std::make_unique<xecs::pool::family>();
         }
         else
         {
             // This is scary... but we are trying to keep it consistent
-            pPoolFamily = &m_DefaultPoolFamily;
+            PoolFamily = std::unique_ptr<xecs::pool::family>(&m_DefaultPoolFamily);
         }
 
         ///DEBUG
 #if _DEBUG
+        if(m_nShareComponents)
         {
             xecs::pool::family::guid Guid{ m_Guid.m_Value };
             for (auto& k : ShareKeyList)
@@ -1090,7 +1092,7 @@ instance::_MoveInEntity
         //
         // Initialize the family
         //
-        pPoolFamily->Initialize
+        PoolFamily->Initialize
         ( NewFamilyGuid
         , *this
         , ShareEntityList
@@ -1100,22 +1102,40 @@ instance::_MoveInEntity
         );
 
         //
+        // If it is a share base family add it to the hash map
+        //
+        if( m_nShareComponents )
+        {
+            assert(m_Mgr.m_PoolFamily.find(NewFamilyGuid) == m_Mgr.m_PoolFamily.end());
+            m_Mgr.m_PoolFamily.emplace(NewFamilyGuid, PoolFamily.get());
+        }
+
+        //
         // Added to the pending list
         //
-        m_Mgr.m_PoolFamily.emplace(NewFamilyGuid, pPoolFamily);
-        _AddFamilyToPendingList( *pPoolFamily );
+        auto tmp = PoolFamily.get();
+        _AddFamilyToPendingList( std::move(PoolFamily) );
 
-        return *pPoolFamily;
+        return *tmp;
     }
 
     //-------------------------------------------------------------------------------------
 
-    void instance::_AddFamilyToPendingList( pool::family& PoolFamily ) noexcept
+    void instance::_AddFamilyToPendingList( std::unique_ptr<pool::family>&& PoolFamily ) noexcept
     {
-        assert(nullptr == PoolFamily.m_pPendingNext);
+        assert(nullptr == PoolFamily->m_Next.get());
+        if( PoolFamily.get() == &m_DefaultPoolFamily )
         {
-            PoolFamily.m_pPendingNext = m_pPoolFamilyPending;
-            m_pPoolFamilyPending = &PoolFamily;
+            // We use this trick so that we don't need to put the default pool into the unique_ptr.
+            // Also the Next of the DefaultPool has two porpuses and adding into the pending list will mess up
+            // everything. So we use the m_pPrev as a flag to tell the system that "we are in the pending list"
+            PoolFamily->m_pPrev = PoolFamily.get();
+            PoolFamily.release();
+        }
+        else
+        {
+            PoolFamily->m_Next  = std::move(m_PoolFamilyPending);
+            m_PoolFamilyPending = std::move(PoolFamily);
         }
 
         m_Mgr.AddToStructuralPendingList(*this);
@@ -1126,30 +1146,49 @@ instance::_MoveInEntity
     void instance::_UpdateStructuralChanges( void ) noexcept
     {
         //
+        // Handle the special case of the default pool
+        //
+        if (m_DefaultPoolFamily.m_pPrev)
+        {
+            m_DefaultPoolFamily.m_pPrev = nullptr;
+            m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, m_DefaultPoolFamily );
+        }
+
+        //
         // Update all the pool families
         //
-        for (auto p = m_pPoolFamilyPending; p; )
+        for (auto p = std::move(m_PoolFamilyPending); p.get(); )
         {
-            auto pNext = p->m_pPendingNext;
+            auto Next = std::move(p->m_Next);
 
             //
             // Doing the actual updating of the pools
             //
             {
-                if (m_FamilyHead.get()) m_FamilyHead->m_pPrev = p;
-                p->m_Next = std::move(m_FamilyHead);
-                m_FamilyHead = std::unique_ptr<xecs::pool::family>{ p };
-
                 //
                 // officially announce it
                 //
                 m_Events.m_OnPoolFamilyCreated.NotifyAll(*this, *p);
+
+                //
+                // Link it to the rest of the chain
+                //
+                if( p.get() == &m_DefaultPoolFamily )
+                {
+                    assert(m_DefaultPoolFamily.m_Guid.isValid());
+                    p.release();
+                }
+                else
+                {
+                    assert(m_DefaultPoolFamily.m_Guid.isValid());
+                    if( m_DefaultPoolFamily.m_Next.get() ) m_DefaultPoolFamily.m_Next->m_pPrev = p.get();
+                    p->m_Next = std::move(m_DefaultPoolFamily.m_Next);
+                    m_DefaultPoolFamily.m_Next = std::move(p);
+                }
             }
 
-            p->m_pPendingNext = nullptr;
-            p = pNext;
+            p = std::move(Next);
         }
-        m_pPoolFamilyPending = nullptr;
     }
 
     //-------------------------------------------------------------------------------------
@@ -1168,9 +1207,10 @@ instance::_MoveInEntity
 
     //-------------------------------------------------------------------------------------
     
-    pool::family* instance::getFamilyHead( void ) const noexcept
+    pool::family* instance::getFamilyHead( void ) noexcept
     {
-        return m_FamilyHead.get();
+        if(m_DefaultPoolFamily.m_Guid.isValid()) return &m_DefaultPoolFamily;
+        return nullptr;
     }
 
 }
