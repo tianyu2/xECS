@@ -622,9 +622,8 @@ struct render_grid : xecs::system::instance
                     for (auto& ArchetypeCell : GridCell)
                         nFamilies += (int)ArchetypeCell.m_ListOfFamilies.size();
 
-                    Count = nFamilies;
                     glColor3f(1.0f, 1.0f, 1.0f);
-                    GlutPrint(X, Y - 15, "%d", Count);
+                    GlutPrint(X, Y - 15, "%d", nFamilies);
                     break;
                 }
                 case print::ENTITIES:
@@ -634,9 +633,8 @@ struct render_grid : xecs::system::instance
                         for (auto& Family : ArchetypeCell.m_ListOfFamilies)
                             nEntities += (int)Family->m_DefaultPool.Size();
 
-                    Count = nEntities;
                     glColor3f(1.0f, 1.0f, 1.0f);
-                    GlutPrint(X, Y - 15, "%d", Count);
+                    GlutPrint(X, Y - 15, "%d", nEntities);
                     break;
                 }
             }
