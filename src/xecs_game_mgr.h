@@ -124,15 +124,6 @@ namespace xecs::game_mgr
                                                                     , T_FUNCTION&&                                  Function 
                                                                     ) noexcept;
         template
-        <   typename T_FUNCTION
-        > requires
-        ( xecs::tools::function_return_v<T_FUNCTION, void >
-            && true == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
-        ) __inline
-        void                                Foreach                 ( std::span<xecs::archetype::instance* const>   List
-                                                                    , T_FUNCTION&&                                  Function 
-                                                                    ) noexcept;
-        template
         < typename T_FUNCTION
         > requires
         ( xecs::tools::function_return_v<T_FUNCTION, void >
@@ -140,6 +131,15 @@ namespace xecs::game_mgr
         ) __inline
         void                                Foreach                 ( std::span<xecs::archetype::instance* const>   List
                                                                     , T_FUNCTION&&                                  Function
+                                                                    ) noexcept;
+        template
+        <   typename T_FUNCTION
+        > requires
+        ( xecs::tools::function_return_v<T_FUNCTION, void >
+            && true == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
+        ) __inline
+        void                                Foreach                 ( std::span<xecs::archetype::instance* const>   List
+                                                                    , T_FUNCTION&&                                  Function 
                                                                     ) noexcept;
         inline
         void                                Run                     ( void 

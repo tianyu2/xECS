@@ -75,7 +75,13 @@ namespace grid
     constexpr static int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
     constexpr static int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
 
-    using instance = std::array<std::array<std::vector<std::pair<xecs::archetype::instance*,xecs::pool::family*>>,cell_x_count>,cell_y_count>;
+    struct archetype_entry
+    {
+        xecs::archetype::instance*          m_pArchetype;
+        std::vector<xecs::pool::family*>    m_ListOfFamilies;
+    };
+
+    using instance = std::array<std::array<std::vector<archetype_entry>,cell_x_count>,cell_y_count>;
 
     //---------------------------------------------------------------------------------------
 
@@ -84,16 +90,16 @@ namespace grid
     bool Foreach( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
         using func1_arg_tuple = typename xcore::function::traits<T_FUNCTION>::args_tuple;
-        auto& V = Grid[Y][X];
-        for( auto& Pair : V )
+        auto& GridCell = Grid[Y][X];
+        for( auto& ArchetypeCell : GridCell )
         {
-            if( Query.Compare(Pair.first->getComponentBits()) == false )
+            // Make sure this archetype matches are query
+            if( Query.Compare(ArchetypeCell.m_pArchetype->getComponentBits()) == false )
                 continue;
 
-            assert(Pair.second->m_Guid.isValid());
-
-            // Every pool
-            for( auto p = &Pair.second->m_DefaultPool; p ; p = p->m_Next.get() )
+            // Every Family, Every pool
+            for( auto F : ArchetypeCell.m_ListOfFamilies )
+            for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
             {
                 // Every Entity
                 if( int i = p->Size(); i )
@@ -215,19 +221,36 @@ struct grid_system_pool_family_create : xecs::system::instance
             auto Key = xecs::component::type::details::ComputeShareKey(PoolFamily.m_pArchetypeInstance->getGuid(), *PoolFamily.m_ShareInfos[0], reinterpret_cast<std::byte*>(&TheCell) );
             assert( PoolFamily.m_ShareDetails[0].m_Key == Key );
 
-            for (auto E : (*m_Grid)[Cell.m_Y][Cell.m_X])
+            for( auto& E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
             {
-                assert( E.second->m_ShareDetails[0].m_Entity == PoolFamily.m_ShareDetails[0].m_Entity );
-                assert( E.second->m_ShareDetails[0].m_Key == Key );
+                for( auto& F : E.m_ListOfFamilies )
+                {
+                    assert(F->m_ShareDetails[0].m_Entity == PoolFamily.m_ShareDetails[0].m_Entity);
+                    assert(F->m_ShareDetails[0].m_Key == Key);
+                }
             }
         });
 
-        for( auto E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
+        for( auto& E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
         {
-            assert( E.first != &Archetype );
+            assert( E.m_pArchetype != &Archetype );
         }
 #endif
-        (*m_Grid)[Cell.m_Y][Cell.m_X].push_back( { &Archetype, &PoolFamily } );
+        auto& GridCell  = (*m_Grid)[Cell.m_Y][Cell.m_X];
+        for( auto& E : GridCell )
+        {
+            if(E.m_pArchetype == &Archetype)
+            {
+                E.m_ListOfFamilies.push_back(&PoolFamily);
+                return;
+            }
+        }
+        
+        // We made it here so it means we did not find the archetype
+        // So lets create a new entry for our new archetype
+        GridCell.emplace_back();
+        GridCell.back().m_pArchetype = &Archetype;
+        GridCell.back().m_ListOfFamilies.push_back(&PoolFamily);
     }
 };
 
@@ -480,11 +503,44 @@ struct render_ships : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
+struct on_destroy_count_dead_ships : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::notify_destroy
+    {
+        .m_pName = "on_destroy_count_dead_ships"
+    };
+
+    using query = std::tuple
+    < xecs::query::none_of<bullet>
+    , xecs::query::one_of<entity>
+    , xecs::query::must<position>
+    >;
+
+    void operator()(timer* pTimer) noexcept
+    {
+        if (pTimer) s_Game.m_nEntityWaitingDead++;
+        else        s_Game.m_nEntityThinkingDead++;
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
+struct render_begin : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::update{};
+    void OnUpdate()
+    {
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
 template< typename... T_ARGS>
 void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
 {
     std::array<char, 256> FinalString;
-    const auto len = sprintf_s(FinalString.data(), FinalString.size(), pFmt, Args... );
+    const auto len = sprintf_s(FinalString.data(), FinalString.size(), pFmt, Args...);
 
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -494,7 +550,7 @@ void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    glRasterPos2i(x, s_Game.m_H -(y+20));
+    glRasterPos2i(x, s_Game.m_H - (y + 20));
     for (int i = 0; i < len; ++i)
     {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, FinalString[i]);
@@ -508,35 +564,9 @@ void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
 
 //---------------------------------------------------------------------------------------
 
-struct on_destroy_count_dead_ships : xecs::system::instance
+struct render_grid : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::notify_destroy
-    {
-        .m_pName = "on_destroy_count_dead_ships"
-    };
-
-    using query = std::tuple
-    <
-        xecs::query::none_of<bullet>
-    ,   xecs::query::one_of<entity>
-    ,   xecs::query::must<position>
-    >;
-
-    void operator()( timer* pTimer ) noexcept
-    {
-        if(pTimer) s_Game.m_nEntityWaitingDead++;
-        else       s_Game.m_nEntityThinkingDead++;
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
-struct page_flip : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::update
-    {
-        .m_pName = "page_flip"
-    };
+    constexpr static auto typedef_v = xecs::system::type::update{};
 
     grid::instance* m_pGrid;
 
@@ -545,39 +575,16 @@ struct page_flip : xecs::system::instance
         m_pGrid = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
-    __inline
-    void OnUpdate( void ) noexcept
+    void OnUpdate()
     {
-        glColor3f(1.0f, 1.0f, 1.0f);
-        GlutPrint( 0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size() );
-
-        glFlush();
-        glutSwapBuffers();
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        //
-        // Render grid
-        //
-        if(true)
         for( int y=0; y<grid::cell_y_count; y++ )
         for( int x=0; x<grid::cell_x_count; x++ )
         {
-            int Count = (int)(*m_pGrid)[y][x].size();
+            auto& GridCell = (*m_pGrid)[y][x];
+
+            // If we don't have any archetypes then move on
+            int Count = (int)(GridCell.size());
             if( 0 == Count) continue;
-
-            // Print number of entities?
-            if(false)
-            {
-                auto& V = (*m_pGrid)[y][x];
-                int nEntities = 0;
-
-                for (auto& e : V)
-                {
-                    nEntities += e.second->m_DefaultPool.Size();
-                }
-
-                Count = nEntities;
-            }
 
             float X = (x + 0.5f) * grid::cell_width_v;
             float Y = (y + 0.5f) * grid::cell_width_v;
@@ -592,12 +599,72 @@ struct page_flip : xecs::system::instance
             glVertex2i(X + SizeX, Y - SizeY);
             glEnd();
 
-            if(false)
+            enum print
             {
-                glColor3f(1.0f, 1.0f, 1.0f);
-                GlutPrint(X, Y - 15, "%d", Count);
+                NONE
+            ,   FAMILIES
+            ,   ARCHETYPES
+            ,   ENTITIES
+            };
+
+            // What are we printing? A for archetypes
+            const char* pFmt = nullptr;
+            switch( print::NONE)
+            {
+                case print::ARCHETYPES: 
+                {
+                    glColor3f(1.0f, 1.0f, 1.0f);
+                    GlutPrint(X, Y - 15, "%d", Count);
+                    break;
+                }
+                case print::FAMILIES:
+                {
+                    int nFamilies = 0;
+                    for (auto& ArchetypeCell : GridCell)
+                        nFamilies += (int)ArchetypeCell.m_ListOfFamilies.size();
+
+                    Count = nFamilies;
+                    glColor3f(1.0f, 1.0f, 1.0f);
+                    GlutPrint(X, Y - 15, "%d", Count);
+                    break;
+                }
+                case print::ENTITIES:
+                {
+                    int nEntities = 0;
+                    for (auto& ArchetypeCell : GridCell)
+                        for (auto& Family : ArchetypeCell.m_ListOfFamilies)
+                            nEntities += (int)Family->m_DefaultPool.Size();
+
+                    Count = nEntities;
+                    glColor3f(1.0f, 1.0f, 1.0f);
+                    GlutPrint(X, Y - 15, "%d", Count);
+                    break;
+                }
             }
         }
+
+        //
+        // Print how many archetypes we have so far
+        //
+        glColor3f(1.0f, 1.0f, 1.0f);
+        GlutPrint(0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size());
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
+struct page_flip : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::update
+    {
+        .m_pName = "page_flip"
+    };
+
+    __inline
+    void OnUpdate( void ) noexcept
+    {
+        glFlush();
+        glutSwapBuffers();
     }
 };
 
@@ -631,8 +698,10 @@ void InitializeGame( void ) noexcept
     ,   update_movement         // Structural: No
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
     ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
-    ,   render_ships            // Structural: No
-    ,   render_bullets          // Structural: No
+    ,   render_begin            // Structural: No
+    ,       render_grid         // Structural: No
+    ,       render_ships        // Structural: No
+    ,       render_bullets      // Structural: No
     ,   page_flip               // Structural: No
     >();
 
