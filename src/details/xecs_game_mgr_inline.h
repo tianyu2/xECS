@@ -139,59 +139,34 @@ namespace xecs::game_mgr
     }
 
     //---------------------------------------------------------------------------
-
-    template
-    <   typename T_FUNCTION
-    > requires
-    ( xecs::tools::function_return_v<T_FUNCTION, bool >
-        && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
-    )
-    void instance::Foreach(const std::span<xecs::archetype::instance* const> List, T_FUNCTION&& Function ) noexcept
-    {
-        using func_traits = xcore::function::traits<T_FUNCTION>;
-        
-        for( const auto& pE : List )
-        {
-            const auto& Pool = pE->m_Pool;
-            auto        CachePointers = archetype::details::GetDataComponentPointerArray(Pool, 0, xcore::types::null_tuple_v<func_traits::args_tuple>);
-
-            bool bBreak = false;
-            pE->AccessGuard([&]
-            {
-                for( int i=Pool.Size(); i; --i )
-                {
-                    if( archetype::details::CallFunction(Function, CachePointers) )
-                    {
-                        bBreak = true;
-                        break;
-                    }
-                }
-            });
-            if(bBreak) break;
-        }
-    }
-
-    //---------------------------------------------------------------------------
     template
     < typename T_FUNCTION
     > requires
-    ( xecs::tools::function_return_v<T_FUNCTION, void >
-        && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
+    ( (xecs::tools::function_return_v<T_FUNCTION, bool >
+        || xecs::tools::function_return_v<T_FUNCTION, void >
+        ) && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
     )
     void instance::Foreach(const std::span<xecs::archetype::instance* const> List, T_FUNCTION&& Function ) noexcept
     {
         using func_traits = xcore::function::traits<T_FUNCTION>;
-        
         for( const auto& pE : List )
         {
             for( auto pFamily = pE->getFamilyHead(); pFamily; pFamily = pFamily->m_Next.get() )
             {
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {
-                    auto        CachePointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
-                    for( int i = pPool->Size(); i; --i )
+                    auto CachePointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    for (int i = pPool->Size(); i; --i)
                     {
-                        archetype::details::CallFunction(Function, CachePointers);
+                        if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool >)
+                        {
+                            if (archetype::details::CallFunction(Function, CachePointers))
+                                return;
+                        }
+                        else
+                        {
+                            archetype::details::CallFunction(Function, CachePointers);
+                        }
                     }
                 }
             }

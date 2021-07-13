@@ -117,20 +117,12 @@ namespace xecs::game_mgr
         template
         <   typename T_FUNCTION
         > requires
-        ( xecs::tools::function_return_v<T_FUNCTION, bool >
-            && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
+        ( ( xecs::tools::function_return_v<T_FUNCTION, bool >
+            || xecs::tools::function_return_v<T_FUNCTION, void > 
+          ) && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
         ) __inline
         void                                Foreach                 (std::span<xecs::archetype::instance* const>    List
                                                                     , T_FUNCTION&&                                  Function 
-                                                                    ) noexcept;
-        template
-        < typename T_FUNCTION
-        > requires
-        ( xecs::tools::function_return_v<T_FUNCTION, void >
-            && false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>
-        ) __inline
-        void                                Foreach                 ( std::span<xecs::archetype::instance* const>   List
-                                                                    , T_FUNCTION&&                                  Function
                                                                     ) noexcept;
         template
         <   typename T_FUNCTION
@@ -158,14 +150,10 @@ namespace xecs::game_mgr
         T_SYSTEM&                           getSystem               ( void
                                                                     ) noexcept;
 
-        // Given the sum of all { share component keys + may be the archetype guid for the scope }
-        using pool_map          = std::unordered_map<xecs::pool::type::guid, std::pair<xecs::archetype::instance*,xecs::pool::instance*>>;
-
         xecs::system::mgr                                   m_SystemMgr         {};
         xecs::event::mgr                                    m_EventMgr          {};
         xecs::component::mgr                                m_ComponentMgr      {};
         xecs::archetype::mgr                                m_ArchetypeMgr      {*this};
-
         bool                                                m_isRunning         = false;
     };
 }

@@ -187,6 +187,7 @@ struct update_movement : xecs::system::instance
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
 
+        // Update the grid cell base on our new position
         GridCell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
     }
 };
@@ -705,7 +706,7 @@ void InitializeGame( void ) noexcept
     ,   page_flip               // Structural: No
     >();
 
-    // Register notifiers. Note that the order for this system are not related with the update systems
+    // Register Reactive Systems. Note that the order for this system are not related with the update systems
     // Since these are event base they can happen at any time. But if many of them are going to get the
     // same message they will get them in the order that are here.
     // This is why I create a separate section for these even thought they still are systems.
