@@ -193,47 +193,90 @@ namespace xecs::query
         if constexpr ( parent_t::has_shares_v )
         {
             auto& GameMgr = Archetype.m_Mgr.m_GameMgr;
+            bool  bBreak  = false;
 
             //
             // Call the user function
             //
-            [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
+            if constexpr (std::is_same_v<bool, ret_t>)
             {
-                Function
-                (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
-                    {
-                        using univ = parent_t::template universal_t<J>;
-
-                        if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE)
+                bBreak = [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
+                {
+                    return Function
+                    (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
                         {
-                            if constexpr (std::is_pointer_v<J>)
+                            using univ = parent_t::template universal_t<J>;
+
+                            if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE)
                             {
-                                if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
-                                else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
+                                if constexpr (std::is_pointer_v<J>)
+                                {
+                                    if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
+                                    else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
+                                }
+                                else
+                                {
+                                    if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
+                                    else                                   return std::get<univ>(parent_t::m_UniversalTuple);
+                                }
                             }
                             else
                             {
-                                if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
-                                else                                   return std::get<univ>(parent_t::m_UniversalTuple);
+                                auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
+
+                                if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
+
+                                auto p = MyP;                   // Back up the pointer
+                                MyP++;                         // Get ready for the next entity
+
+                                if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
+                                else                                return reinterpret_cast<J>(*p);
                             }
-                        }
-                        else
+                        }( xcore::types::make_null_tuple_v<T> )
+                        ...
+                    );
+
+                }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
+            }
+            else
+            {
+                [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
+                {
+                    Function
+                    (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
                         {
-                            auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
+                            using univ = parent_t::template universal_t<J>;
 
-                            if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
+                            if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE)
+                            {
+                                if constexpr (std::is_pointer_v<J>)
+                                {
+                                    if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
+                                    else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
+                                }
+                                else
+                                {
+                                    if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
+                                    else                                   return std::get<univ>(parent_t::m_UniversalTuple);
+                                }
+                            }
+                            else
+                            {
+                                auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
 
-                            auto p = MyP;                   // Back up the pointer
-                            MyP++;                         // Get ready for the next entity
+                                if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
 
-                            if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
-                            else                                return reinterpret_cast<J>(*p);
-                        }
-                    }( xcore::types::make_null_tuple_v<T> )
-                    ...
-                );
+                                auto p = MyP;                   // Back up the pointer
+                                MyP++;                         // Get ready for the next entity
 
-            }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
+                                if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
+                                else                                return reinterpret_cast<J>(*p);
+                            }
+                        }( xcore::types::make_null_tuple_v<T> )
+                        ...
+                    );
+                }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
+            }
 
             //
             // Did the user change any of the share components?
@@ -322,6 +365,11 @@ namespace xecs::query
             // Increase the entity index count
             //
             parent_t::m_EntityIndex++;
+
+            //
+            // Return the right thing if we are a bool function
+            //
+            if constexpr (std::is_same_v<bool, ret_t>) return bBreak;
         }
         else
         {
