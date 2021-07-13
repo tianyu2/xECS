@@ -75,6 +75,7 @@
     <ClInclude Include="..\..\src\details\xecs_game_mgr_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_pool_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_query_inline.h" />
+    <ClInclude Include="..\..\src\details\xecs_query_iterator_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_system_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_tools_inline.h" />
     <ClInclude Include="..\..\src\xecs.h" />
@@ -86,6 +87,7 @@
     <ClInclude Include="..\..\src\xecs_game_mgr.h" />
     <ClInclude Include="..\..\src\xecs_pool.h" />
     <ClInclude Include="..\..\src\xecs_query.h" />
+    <ClInclude Include="..\..\src\xecs_query_iterator.h" />
     <ClInclude Include="..\..\src\xecs_settings.h" />
     <ClInclude Include="..\..\src\xecs_system.h" />
     <ClInclude Include="..\..\src\xecs_tools.h" />

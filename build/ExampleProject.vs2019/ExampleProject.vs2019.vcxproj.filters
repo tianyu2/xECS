@@ -255,6 +255,12 @@
     <ClInclude Include="..\..\src\xecs_archetype_mgr.h">
       <Filter>xECS</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\xecs_query_iterator.h">
+      <Filter>xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\details\xecs_query_iterator_inline.h">
+      <Filter>xECS\Details</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

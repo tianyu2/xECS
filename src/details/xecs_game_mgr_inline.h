@@ -148,24 +148,24 @@ namespace xecs::game_mgr
     )
     void instance::Foreach(const std::span<xecs::archetype::instance* const> List, T_FUNCTION&& Function ) noexcept
     {
-        using func_traits = xcore::function::traits<T_FUNCTION>;
+        xecs::query::iterator<T_FUNCTION> Iterator;
         for( const auto& pE : List )
         {
             for( auto pFamily = pE->getFamilyHead(); pFamily; pFamily = pFamily->m_Next.get() )
             {
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {
-                    auto CachePointers = archetype::details::GetDataComponentPointerArray( *pPool, pool::index{0}, xcore::types::null_tuple_v<func_traits::args_tuple> );
+                    Iterator.ForeachPool( pE->m_ComponentBits, *pPool );
                     for (int i = pPool->Size(); i; --i)
                     {
-                        if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool >)
+                        if constexpr (std::is_same_v<xecs::query::iterator<T_FUNCTION>::ret_t, bool >)
                         {
-                            if (archetype::details::CallFunction(Function, CachePointers))
+                            if( Iterator.CallUserFunction( std::forward<T_FUNCTION&&>(Function) ) )
                                 return;
                         }
                         else
                         {
-                            archetype::details::CallFunction(Function, CachePointers);
+                            Iterator.CallUserFunction(*pE, *pFamily, *pPool, std::forward<T_FUNCTION&&>(Function));
                         }
                     }
                 }

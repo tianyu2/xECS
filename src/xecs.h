@@ -67,6 +67,7 @@ namespace xecs::pool
 #include "xecs_archetype.h"
 #include "xecs_archetype_mgr.h"
 #include "xecs_query.h"
+#include "xecs_query_iterator.h"
 #include "xecs_system.h"
 #include "xecs_game_mgr.h"
 
@@ -79,6 +80,7 @@ namespace xecs::pool
 #include "details/xecs_archetype_inline.h"
 #include "details/xecs_archetype_mgr_inline.h"
 #include "details/xecs_system_inline.h"
+#include "details/xecs_query_iterator_inline.h"
 #include "details/xecs_game_mgr_inline.h"
 #include "details/xecs_query_inline.h"
 #include "details/xecs_tools_inline.h"
