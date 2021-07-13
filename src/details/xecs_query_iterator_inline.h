@@ -7,7 +7,13 @@ namespace xecs::query
         : m_UpdatedComponentsBits { [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
                                     {
                                         xecs::tools::bits Bits;
-                                        Bits.AddFromComponents< xcore::types::decay_full_t<T>...>();
+                                        (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                                        {
+                                            if constexpr ( false == std::is_const_v<J> )
+                                            {
+                                                Bits.AddFromComponents< xcore::types::decay_full_t<J> >();
+                                            }
+                                        }(xcore::types::make_null_tuple_v<T>)), ...);
                                         return Bits;
                                     }(xcore::types::null_tuple_v<data_pack<T_FUNCTION, true>::share_tuple_unfilter>) }
         {   
@@ -22,25 +28,27 @@ namespace xecs::query
         if constexpr( parent_t::has_shares_v )
         {
             // Setup the share bits only
-            parent_t::m_ArchetypeShareBits.setupAnd( Archetype.m_ComponentBits, xecs::component::mgr::s_ShareBits );
+            parent_t::m_ArchetypeShareBits.setupAnd( Archetype.getComponentBits(), xecs::component::mgr::s_ShareBits );
 
             // Cache a map that goes from the function share args to the family share
-            [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+            [&]<typename...T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
             {
-                if constexpr ( std::is_pointer_v<T>)
+                (([&]<typename J>(std::tuple<J>*) constexpr noexcept
                 {
-                    ((parent_t::m_RemapIndices[xcore::types::tuple_t2i_v<T, parent_t::share_tuple_unfilter>] 
-                        = (parent_t::m_ArchetypeShareBits.getBit(xecs::component::type::info_v<T>.m_BitID) )
-                            ? parent_t::m_ArchetypeShareBits.getIndexOfComponent(xecs::component::type::info_v<T>.m_BitID)
-                            : -1),...);
-                }
-                else
-                {
-                    assert(parent_t::m_ArchetypeShareBits.getBit(xecs::component::type::info_v<T>.m_BitID));
-                    ((parent_t::m_RemapIndices[xcore::types::tuple_t2i_v<T, parent_t::share_tuple_unfilter>]
-                        = parent_t::m_ArchetypeShareBits.getIndexOfComponent(xecs::component::type::info_v<T>.m_BitID)
-                        ), ...);
-                }
+                    if constexpr ( std::is_pointer_v<J>)
+                    {
+                        parent_t::m_RemapIndices[xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>] 
+                            = (parent_t::m_ArchetypeShareBits.getBit(xecs::component::type::info_v<J>.m_BitID) )
+                                ? parent_t::m_ArchetypeShareBits.getIndexOfComponent(xecs::component::type::info_v<J>.m_BitID)
+                                : -1;
+                    }
+                    else
+                    {
+                        assert(parent_t::m_ArchetypeShareBits.getBit(xecs::component::type::info_v<J>.m_BitID));
+                        parent_t::m_RemapIndices[xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>]
+                            = parent_t::m_ArchetypeShareBits.getIndexOfComponent(xecs::component::type::info_v<J>.m_BitID);
+                    }
+                }(xcore::types::make_null_tuple_v<T_COMPONENTS>)), ... );
             }( xcore::types::null_tuple_v<parent_t::share_tuple_unfilter> );
         }
     }
@@ -69,14 +77,11 @@ namespace xecs::query
                         using       j_ptr           = xcore::types::decay_full_t<J>*;
 
                         auto&       EntityDetails   = ComponentMgr.getEntityDetails(FamilyShareDetails.m_Entity);
-                        const auto  ComponentIndex  = EntityDetails.m_pPool->findIndexComponentFromInfo(*Family.m_ShareInfos[RemapedIndex]);
+                        const auto  ComponentIndex  = parent_t::m_RemapIndices[Index];//EntityDetails.m_pPool->findIndexComponentFromInfo(*Family.m_ShareInfos[RemapedIndex]);
 
                         if constexpr( std::is_pointer_v<J> )
                         {
-                            if(-1 == ComponentIndex)
-                            {
-                            }
-                            else
+                            if(-1 != ComponentIndex)
                             {
                                 if constexpr ( std::is_pointer_v<j_uni> )
                                 {
@@ -84,7 +89,7 @@ namespace xecs::query
                                 }
                                 else
                                 {
-                                    std::get<j_ptr>(parent_t::m_CacheSharePointers) = &reinterpret_cast<j_uni>(EntityDetails.m_pPool->m_pComponent[ComponentIndex])[EntityDetails.m_PoolIndex.m_Value];
+                                    std::get<j_ptr>(parent_t::m_CacheSharePointers) = &reinterpret_cast<j_ptr>(EntityDetails.m_pPool->m_pComponent[ComponentIndex])[EntityDetails.m_PoolIndex.m_Value];
                                     std::get<j_uni>(parent_t::m_UniversalTuple)     = *std::get<j_ptr>(parent_t::m_CacheSharePointers);
                                 }
 
@@ -100,11 +105,11 @@ namespace xecs::query
                             }
                             else
                             {
-                                std::get<j_ptr>(parent_t::m_CacheSharePointers) = &reinterpret_cast<j_uni>(EntityDetails.m_pPool->m_pComponent[ComponentIndex])[EntityDetails.m_PoolIndex.m_Value];
+                                std::get<j_ptr>(parent_t::m_CacheSharePointers) = &reinterpret_cast<j_ptr>(EntityDetails.m_pPool->m_pComponent[ComponentIndex])[EntityDetails.m_PoolIndex.m_Value];
                                 std::get<j_uni>(parent_t::m_UniversalTuple)     = *std::get<j_ptr>(parent_t::m_CacheSharePointers);
                             }
 
-                            parent_t::m_CacheShareKeys[Index] = Family.m_ShareDetails[RemapedIndex];
+                            parent_t::m_CacheShareKeys[Index] = Family.m_ShareDetails[RemapedIndex].m_Key;
                         }
                     }
                 }(xcore::types::make_null_tuple_v<T>), ...));
@@ -115,8 +120,21 @@ namespace xecs::query
             //
             parent_t::m_KeyCheckSum = [&]<typename... T>(std::tuple<T...>*) constexpr noexcept
             {
-                return ((parent_t::m_CacheShareKeys[xcore::types::tuple_t2i_v<xcore::types::decay_full_t<T>, parent_t::share_tuple_full_decay>].m_Value ) + ... );
-            }(xcore::types::null_tuple_v<parent_t::share_tuple_pointers>);
+                return (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                {
+                    if constexpr( std::is_const_v<J> )
+                    {
+                        return 0;
+                    }
+                    else 
+                    {
+                        const int Index = xcore::types::tuple_t2i_v< J, parent_t::share_tuple_unfilter >;
+                        if constexpr (std::is_pointer_v<J>) if( -1 == parent_t::m_RemapIndices[Index] ) return 0;
+                        return parent_t::m_CacheShareKeys[Index].m_Value;
+                    }
+                }(xcore::types::make_null_tuple_v<T>)) + ...);
+
+            }( xcore::types::null_tuple_v<parent_t::share_tuple_unfilter> );
         }
     }
 
@@ -133,13 +151,16 @@ namespace xecs::query
         {
             parent_t::m_EntityIndex = 0;
         }
-        else
+
+        //
+        // Handle regular components, it runs in both modes shares+data/data only
+        //
         {
             [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
             {
                 (([&]<typename J>(std::tuple<J>*)
                 {
-                    using t = parent_t::template data_universal_t<J>;
+                    using t = parent_t::template universal_t<J>;
                     if constexpr (std::is_pointer_v<J>)
                     {
                         if( ArchetypeBits.getBit(xecs::component::type::info_v<t>.m_BitID) )
@@ -171,6 +192,8 @@ namespace xecs::query
     {
         if constexpr ( parent_t::has_shares_v )
         {
+            auto& GameMgr = Archetype.m_Mgr.m_GameMgr;
+
             //
             // Call the user function
             //
@@ -190,14 +213,21 @@ namespace xecs::query
                             }
                             else
                             {
-                                if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
-                                else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
+                                if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
+                                else                                   return std::get<univ>(parent_t::m_UniversalTuple);
                             }
                         }
                         else
                         {
-                            if constexpr (std::is_pointer_v<J>) return std::get<univ>(parent_t::m_UniversalTuple);
-                            else                                return *std::get<univ>(parent_t::m_UniversalTuple);
+                            auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
+
+                            if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
+
+                            auto p = MyP;                   // Back up the pointer
+                            MyP++;                         // Get ready for the next entity
+
+                            if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
+                            else                                return reinterpret_cast<J>(*p);
                         }
                     }( xcore::types::make_null_tuple_v<T> )
                     ...
@@ -216,18 +246,23 @@ namespace xecs::query
                 //
                 std::array<xecs::component::type::share::key, parent_t::nonconst_share_count_v >   UpdatedKeyArray;
                 std::uint64_t                                                                      NewKeySumGuid    {};
-                
-                (([&]<typename J>(J*) constexpr noexcept
-                {
-                    const auto Index        = xcore::types::tuple_t2i_v<xcore::types::decay_full_t<J>, parent_t::share_tuple_full_decay>;
-                    UpdatedKeyArray[Index]  = xecs::component::type::details::ComputeShareKey
-                                              ( Archetype.m_Guid
-                                              , xecs::component::type::info_v<J>
-                                              , reinterpret_cast<const std::byte*>(&std::get<xcore::types::decay_full_t<J>>(parent_t::m_UniversalTuple))
-                                              );
-                    NewKeySumGuid          += UpdatedKeyArray[Index].m_Value;
+                int                                                                                nNewEnties       {0};
 
-                }( reinterpret_cast<T*>(nullptr) )), ... );
+                (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                {
+                    if constexpr ( false == std::is_const_v<J> )
+                    {
+                        const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
+                        if constexpr (std::is_pointer_v<J>) if(-1 == parent_t::m_RemapIndices[Index]) return;
+
+                        UpdatedKeyArray[nNewEnties] = xecs::component::type::details::ComputeShareKey
+                        ( Archetype.getGuid()
+                        , xecs::component::type::info_v<J>
+                        , reinterpret_cast<const std::byte*>(&std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple))
+                        );
+                        NewKeySumGuid += UpdatedKeyArray[nNewEnties++].m_Value;
+                    }
+                }( xcore::types::make_null_tuple_v<T> )), ... );
 
                 //
                 // Check if we need to change family
@@ -238,14 +273,17 @@ namespace xecs::query
 
                     // Collect the rest of the data
                     int nCompactify = 0;
-                    (([&]<typename J>(J*) constexpr noexcept
+                    (([&]<typename J>(std::tuple<J>*) constexpr noexcept
                     {
-                        const auto Index = xcore::types::tuple_t2i_v<xcore::types::decay_full_t<J>, parent_t::share_tuple_full_decay>;
-                        PointersToShares[nCompactify] = &std::get<xcore::types::decay_full_t<J>>(parent_t::m_UniversalTuple);
-                        UpdatedKeyArray[nCompactify]  = UpdatedKeyArray[Index];
-                        nCompactify++;
-                    }(reinterpret_cast<T*>(nullptr))), ...);
-
+                        if constexpr (false == std::is_const_v<J>)
+                        {
+                            const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
+                            if constexpr (std::is_pointer_v<J>) if (-1 == parent_t::m_RemapIndices[Index]) return;
+                            PointersToShares[nCompactify] = reinterpret_cast<std::byte*>(&std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple));
+                            nCompactify++;
+                        }
+                    }(xcore::types::make_null_tuple_v<T>)), ...);
+                    assert( nCompactify == nNewEnties );
                     assert( nCompactify == parent_t::m_UpdatedComponentsBits.CountComponents() );
 
                     //
@@ -258,7 +296,7 @@ namespace xecs::query
                     , UpdatedKeyArray
                     )
                     .MoveIn
-                    ( *this
+                    ( GameMgr
                     , Family
                     , Pool
                     , { parent_t::m_EntityIndex }
@@ -267,14 +305,18 @@ namespace xecs::query
                     //
                     // Copy the memory for only share components that can change
                     //
-                    [&]<typename... T>(std::tuple<T...>*) constexpr noexcept
+                    (([&]<typename J>(std::tuple<J>*) constexpr noexcept
                     {
-                        ((std::get<xcore::types::decay_full_t<T>>(parent_t::m_UniversalTuple) = *std::get<T>(parent_t::m_CacheSharePointers)), ...);
-                    }(xcore::types::null_tuple_v<parent_t::share_tuple_pointers>);
-
+                        if constexpr (!std::is_const_v<J>)
+                        {
+                            const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
+                            if constexpr (std::is_pointer_v<J>) if (-1 == parent_t::m_RemapIndices[Index]) return;
+                            std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple) = *std::get<xcore::types::decay_full_t<J>*>(parent_t::m_CacheSharePointers);
+                        }
+                    }(xcore::types::make_null_tuple_v<T>)), ...);
                 }
 
-            }(xcore::types::null_tuple_v<parent_t::share_tuple_pointers>);
+            }(xcore::types::null_tuple_v<parent_t::share_tuple_unfilter>);
 
             //
             // Increase the entity index count
@@ -314,7 +356,7 @@ namespace xecs::query
                     Function
                     ( [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
                         {
-                            auto& MyP = std::get<parent_t::data_universal_t<J>>(parent_t::m_DataTuple);
+                            auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
 
                             if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
 

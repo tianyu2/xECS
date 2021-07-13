@@ -21,10 +21,10 @@ namespace xecs::query
             static constexpr bool   has_shares_v        = false;
             using                   data_tuple_unfilter = typename func::args_tuple;
             template< typename T >
-            using                   data_universal_t    = xcore::types::decay_full_t<T>*;
+            using                   universal_t         = xcore::types::decay_full_t<T>*;
             using                   data_tuple          = std::invoke_result_t
             < decltype
-                (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t< std::tuple<data_universal_t<T>> ... >{}
+                (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t< std::tuple<universal_t<T>> ... >{}
                 )
             , decltype(xcore::types::null_tuple_v<typename func::args_tuple>)
             >;
@@ -45,10 +45,10 @@ namespace xecs::query
 
             using share_tuple_unfilter = std::invoke_result_t
             < decltype
-                (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t
+                (   []<typename...T>(std::tuple<T...>*)->xcore::types::tuple_cat_t
                     <
                         std::conditional_t
-                        < T::typedef_v.id_v == xecs::component::type::id::SHARE
+                        < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::SHARE
                         , std::tuple<T>
                         , std::tuple<>
                         > ...
@@ -64,7 +64,7 @@ namespace xecs::query
                 (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t
                     <
                         std::conditional_t
-                        < std::is_const<T>
+                        < std::is_const_v<T>
                         , std::tuple<>
                         , std::tuple<T>
                         > ...
@@ -86,7 +86,7 @@ namespace xecs::query
                 (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t
                     <
                         std::conditional_t
-                        < T::typedef_v.id_v == xecs::component::type::id::DATA
+                        < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::DATA
                         , std::tuple<T>
                         , std::tuple<>
                         > ...
@@ -97,18 +97,18 @@ namespace xecs::query
 
             template< typename T >
             using universal_t = std::conditional_t
-            <   xecs::component::type::info_v<T>.m_TypeId == xecs::component::type::id::DATA
+            <   xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::DATA
             ,   xcore::types::decay_full_t<T>*
             ,   std::conditional_t
                 <   std::is_reference_v<T>
                 ,   std::conditional_t
                     <   std::is_const_v<T>
-                    ,   T*
+                    ,   std::remove_reference_t<T>*
                     ,   std::remove_reference_t<T>
                     >
                 ,   std::conditional_t
                     <   std::is_const_v<T>
-                    ,   T*
+                    ,   T
                     ,   std::remove_pointer_t<T>
                     >
                 >
@@ -126,8 +126,8 @@ namespace xecs::query
                 (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t
                     <
                         std::conditional_t
-                        < T::typedef_v.id_v == xecs::component::type::id::SHARE
-                        , std::tuple<std::tuple<universal_t<T>>>
+                        < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::SHARE
+                        , std::tuple<universal_t<T>>
                         , std::tuple<>
                         > ...
                     >{}
@@ -140,7 +140,7 @@ namespace xecs::query
                 (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t
                     <
                         std::conditional_t
-                        < T::typedef_v.id_v == xecs::component::type::id::SHARE && (false == std::is_pointer_v<universal_t<T>>)
+                        < xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::SHARE && (false == std::is_pointer_v<universal_t<T>>)
                         , std::tuple<xcore::types::decay_full_t<T>*>
                         , std::tuple<>
                         > ...
@@ -174,9 +174,22 @@ namespace xecs::query
         using func_t    = xcore::function::traits<T_FUNCTION>;
         using ret_t     = func_t::return_type;
 
-        void        ForeachArchetype                ( const xecs::archetype::instance& Archetype ) noexcept;
-        void        ForeachFamilyPool               ( const xecs::component::mgr& ComponentMgr, const xecs::pool::family& Family ) noexcept;
-        void        ForeachPool                     ( const xecs::tools::bits& ArchetypeBits, xecs::pool::instance& Pool ) noexcept;
-        ret_t       CallUserFunction                ( xecs::archetype::instance& Archetype, xecs::pool::family& Family, xecs::pool::instance& Pool, T_FUNCTION&& Function ) noexcept;
+        __inline
+        void        ForeachArchetype                ( const xecs::archetype::instance& Archetype 
+                                                    ) noexcept;
+        __inline
+        void        ForeachFamilyPool               ( const xecs::component::mgr&   ComponentMgr
+                                                    , const xecs::pool::family&     Family 
+                                                    ) noexcept;
+        __inline
+        void        ForeachPool                     ( const xecs::tools::bits&      ArchetypeBits
+                                                    , xecs::pool::instance&         Pool 
+                                                    ) noexcept;
+        __inline
+        ret_t       CallUserFunction                ( xecs::archetype::instance&    Archetype
+                                                    , xecs::pool::family&           Family
+                                                    , xecs::pool::instance&         Pool
+                                                    , T_FUNCTION&&                  Function 
+                                                    ) noexcept;
     };
 }

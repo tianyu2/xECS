@@ -55,6 +55,12 @@ namespace xecs::pool
     };
 }
 
+namespace xecs::query
+{
+    template< typename T_FUNCTION >
+    struct iterator;
+}
+
 //--------------------------------------------------------------
 // FILES
 //--------------------------------------------------------------
