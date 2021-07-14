@@ -1,22 +1,36 @@
-# xECS -Lesson 03, Events and Maps
+# xECS -Lesson 04, More component types
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
-* New types of system
-  * Updater 
-  * Notifiers
-  * Global Events delegates
-  * System Events delegates
-* Formalizing the event system
-  * Systems have many kinds of events now
-  * From overwriting the simple OnFrameStart
-  * to Sending events
-  * to reciving them
-* Allot more heavy usage of maps in the code
-  * Systems now can also cache references much more easily
-* Updated the example
-  * Shows new functinality
-  * Added a simple spatial data base
+* New types of components
+  * Tags
+  * Exclusive Tags
+  * Share components
+* New concepts in pools
+  * Families
+  * New way to handle Archetectural changes
+  * You can have unlimited entities
+* Archetypes
+  * Shift to deal with types bits rather than in type::info*
+  * Handle families for both shared and non-share
+  * New way to compute the guid
+* System
+  * New child_update system
+  * More types of events
+    * OnPostStructuralChanges
+    * OnGamePause
+  * Clean up
+* Queries
+  * Added the iterator
+* Tools::bits
+  * Added more helpers
+* Settings
+  * More details settings
+* Generally 
+  * Major rework in organization Game_Mgr becomes little by little a container for other Managers
+  * Major rework in the archetypes as PoolFamily are handle due to share components
+  * Major clean up on giving more responsability to Managers
+* Example updated to show new changes
 
 ## To build
 1. Go to the build directory 
