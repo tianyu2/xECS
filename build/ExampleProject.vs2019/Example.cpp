@@ -89,32 +89,31 @@ namespace grid
     constexpr __inline
     bool Foreach( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
-        using func1_arg_tuple = typename xcore::function::traits<T_FUNCTION>::args_tuple;
-        auto& GridCell = Grid[Y][X];
-        for( auto& ArchetypeCell : GridCell )
+        xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr);
+        for( auto& ArchetypeCell : Grid[Y][X] )
         {
             // Make sure this archetype matches are query
             if( Query.Compare(ArchetypeCell.m_pArchetype->getComponentBits()) == false )
                 continue;
 
-            // Every Family, Every pool
+            Iterator.ForeachArchetype(*ArchetypeCell.m_pArchetype);
+
             for( auto F : ArchetypeCell.m_ListOfFamilies )
-            for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
             {
-                // Every Entity
-                if( int i = p->Size(); i )
-                    for( auto CachePtrs = xecs::archetype::details::GetDataComponentPointerArray(*p, { 0 }, xcore::types::null_tuple_v<func1_arg_tuple>); i; --i )
+                Iterator.ForeachFamilyPool( *F );
+                for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
+                {
+                    if( p->Size() )
                     {
+                        Iterator.ForeachPool(*p);
+
+                        // Do all entities
                         if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
-                        {
-                            if (xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs)) 
-                                return true;
-                        }
+                            return Iterator.ForeachEntity( std::forward<T_FUNCTION&&>(Function));
                         else
-                        {
-                            xecs::archetype::details::CallFunction(std::forward<T_FUNCTION&&>(Function), CachePtrs);
-                        }
+                            Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function));
                     }
+                }
             }
         }
         return false;
@@ -528,7 +527,11 @@ struct on_destroy_count_dead_ships : xecs::system::instance
 
 struct render_begin : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::update{};
+    constexpr static auto typedef_v = xecs::system::type::update
+    {
+        .m_pName = "render_begin"
+    };
+
     void OnUpdate()
     {
         glClear(GL_COLOR_BUFFER_BIT);
@@ -567,7 +570,11 @@ void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
 
 struct render_grid : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::update{};
+    constexpr static auto typedef_v = xecs::system::type::update
+    {
+        .m_pName = "render_grid"
+    };
+
 
     grid::instance* m_pGrid;
 

@@ -28,8 +28,9 @@ namespace xecs::query
                 )
             , decltype(xcore::types::null_tuple_v<typename func::args_tuple>)
             >;
-            
-            data_tuple  m_DataTuple;
+
+            archetype::instance*    m_pArchetype;
+            data_tuple              m_DataTuple;
         };
 
         //------------------------------------------------------------------------------------
@@ -153,6 +154,10 @@ namespace xecs::query
 
             __inline data_pack() noexcept;
 
+            game_mgr::instance*                                                     m_pGameMgr;
+            archetype::instance*                                                    m_pArchetype;
+            pool::family*                                                           m_pFamily;
+            pool::instance*                                                         m_pPool;
             const xecs::tools::bits                                                 m_UpdatedComponentsBits;
             xecs::tools::bits                                                       m_ArchetypeShareBits;
             std::array<std::uint8_t,                        share_count_v>          m_RemapIndices;
@@ -175,21 +180,19 @@ namespace xecs::query
         using ret_t     = func_t::return_type;
 
         __inline
-        void        ForeachArchetype                ( const xecs::archetype::instance& Archetype 
+                    iterator                        ( xecs::game_mgr::instance&     GameMgr
                                                     ) noexcept;
         __inline
-        void        ForeachFamilyPool               ( const xecs::component::mgr&   ComponentMgr
-                                                    , const xecs::pool::family&     Family 
+        void        ForeachArchetype                ( xecs::archetype::instance&    Archetype 
                                                     ) noexcept;
         __inline
-        void        ForeachPool                     ( const xecs::tools::bits&      ArchetypeBits
-                                                    , xecs::pool::instance&         Pool 
+        void        ForeachFamilyPool               ( xecs::pool::family&           Family 
                                                     ) noexcept;
         __inline
-        ret_t       CallUserFunction                ( xecs::archetype::instance&    Archetype
-                                                    , xecs::pool::family&           Family
-                                                    , xecs::pool::instance&         Pool
-                                                    , T_FUNCTION&&                  Function 
+        void        ForeachPool                     ( xecs::pool::instance&         Pool 
+                                                    ) noexcept;
+        __inline
+        ret_t       ForeachEntity                   ( T_FUNCTION&&                  Function 
                                                     ) noexcept;
     };
 }

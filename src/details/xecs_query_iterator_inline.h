@@ -21,10 +21,23 @@ namespace xecs::query
     }
 
     //---------------------------------------------------------------------
+    template< typename T_FUNCTION >
+    iterator<T_FUNCTION>::iterator( xecs::game_mgr::instance& GameMgr ) noexcept
+    {
+        if constexpr (parent_t::has_shares_v)
+        {
+            parent_t::m_pGameMgr = &GameMgr;
+        }
+    }
+
+
+    //---------------------------------------------------------------------
 
     template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::ForeachArchetype( const xecs::archetype::instance& Archetype ) noexcept
+    void iterator<T_FUNCTION>::ForeachArchetype( xecs::archetype::instance& Archetype ) noexcept
     {
+        parent_t::m_pArchetype = &Archetype;
+
         if constexpr( parent_t::has_shares_v )
         {
             // Setup the share bits only
@@ -56,10 +69,12 @@ namespace xecs::query
     //---------------------------------------------------------------------
 
     template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::ForeachFamilyPool(const xecs::component::mgr& ComponentMgr, const xecs::pool::family& Family) noexcept
+    void iterator<T_FUNCTION>::ForeachFamilyPool(xecs::pool::family& Family) noexcept
     {
         if constexpr (parent_t::has_shares_v)
         {
+            parent_t::m_pFamily = &Family;
+
             //
             // Update pointers and keys in case something has change
             //
@@ -76,7 +91,7 @@ namespace xecs::query
                         using       j_uni           = parent_t::template universal_t<J>;
                         using       j_ptr           = xcore::types::decay_full_t<J>*;
 
-                        auto&       EntityDetails   = ComponentMgr.getEntityDetails(FamilyShareDetails.m_Entity);
+                        auto&       EntityDetails   = parent_t::m_pGameMgr->m_ComponentMgr.getEntityDetails(FamilyShareDetails.m_Entity);
                         const auto  ComponentIndex  = parent_t::m_RemapIndices[Index];//EntityDetails.m_pPool->findIndexComponentFromInfo(*Family.m_ShareInfos[RemapedIndex]);
 
                         if constexpr( std::is_pointer_v<J> )
@@ -141,7 +156,7 @@ namespace xecs::query
     //---------------------------------------------------------------------
 
     template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::ForeachPool( const xecs::tools::bits& ArchetypeBits, xecs::pool::instance& Pool ) noexcept
+    void iterator<T_FUNCTION>::ForeachPool( xecs::pool::instance& Pool ) noexcept
     {
         //
         // Set the data tuple for each pool
@@ -149,6 +164,7 @@ namespace xecs::query
         //
         if constexpr (parent_t::has_shares_v)
         {
+            parent_t::m_pPool = &Pool;
             parent_t::m_EntityIndex = 0;
         }
 
@@ -163,9 +179,9 @@ namespace xecs::query
                     using t = parent_t::template universal_t<J>;
                     if constexpr (std::is_pointer_v<J>)
                     {
-                        if( ArchetypeBits.getBit(xecs::component::type::info_v<t>.m_BitID) )
+                        if( parent_t::m_pArchetype->getComponentBits().getBit(xecs::component::type::info_v<t>.m_BitID) )
                         {
-                            const auto I = ArchetypeBits.getIndexOfComponent(xecs::component::type::info_v<t>.m_BitID);
+                            const auto I = parent_t::m_pArchetype->getComponentBits().getIndexOfComponent(xecs::component::type::info_v<t>.m_BitID);
                             std::get<t>(parent_t::m_DataTuple) = reinterpret_cast<t>(Pool.m_pComponent[I]);
                         }
                         else
@@ -175,8 +191,8 @@ namespace xecs::query
                     }
                     else
                     {
-                        assert(ArchetypeBits.getBit(xecs::component::type::info_v<t>.m_BitID));
-                        const auto I = ArchetypeBits.getIndexOfComponent(xecs::component::type::info_v<t>.m_BitID);
+                        assert(parent_t::m_pArchetype->getComponentBits().getBit(xecs::component::type::info_v<t>.m_BitID));
+                        const auto I = parent_t::m_pArchetype->getComponentBits().getIndexOfComponent(xecs::component::type::info_v<t>.m_BitID);
                         std::get<t>(parent_t::m_DataTuple) = reinterpret_cast<t>(Pool.m_pComponent[I]);
                     }
                 }( reinterpret_cast<std::tuple<T>*>(nullptr) )), ... );
@@ -188,11 +204,10 @@ namespace xecs::query
 
     template< typename T_FUNCTION >
     xcore::function::traits<T_FUNCTION>::return_type
-    iterator<T_FUNCTION>::CallUserFunction( xecs::archetype::instance& Archetype, xecs::pool::family& Family, xecs::pool::instance& Pool, T_FUNCTION&& Function) noexcept
+    iterator<T_FUNCTION>::ForeachEntity( T_FUNCTION&& Function ) noexcept
     {
         if constexpr ( parent_t::has_shares_v )
         {
-            auto& GameMgr = Archetype.m_Mgr.m_GameMgr;
             bool  bBreak  = false;
 
             //
@@ -299,7 +314,7 @@ namespace xecs::query
                         if constexpr (std::is_pointer_v<J>) if(-1 == parent_t::m_RemapIndices[Index]) return;
 
                         UpdatedKeyArray[nNewEnties] = xecs::component::type::details::ComputeShareKey
-                        ( Archetype.getGuid()
+                        ( parent_t::m_pArchetype->getGuid()
                         , xecs::component::type::info_v<J>
                         , reinterpret_cast<const std::byte*>(&std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple))
                         );
@@ -332,16 +347,16 @@ namespace xecs::query
                     //
                     // Get the new family and move the entity there
                     //
-                    Archetype.getOrCreatePoolFamilyFromSameArchetype
-                    ( Family
+                    parent_t::m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
+                    ( *parent_t::m_pFamily
                     , parent_t::m_UpdatedComponentsBits
                     , PointersToShares
                     , UpdatedKeyArray
                     )
                     .MoveIn
-                    ( GameMgr
-                    , Family
-                    , Pool
+                    ( *parent_t::m_pGameMgr
+                    , *parent_t::m_pFamily
+                    , *parent_t::m_pPool
                     , { parent_t::m_EntityIndex }
                     );
 
@@ -383,7 +398,7 @@ namespace xecs::query
                     return Function
                     ( [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
                         {
-                            auto& MyP = std::get<parent_t::data_universal_t<J>>(parent_t::m_DataTuple);
+                            auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
 
                             if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
 
