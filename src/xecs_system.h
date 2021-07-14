@@ -180,7 +180,6 @@ namespace xecs::system
                                         ) noexcept = delete;
 
         constexpr   instance            ( xecs::game_mgr::instance& GameMgr
-                                        , const type::info&         TypeInfo
                                         ) noexcept;
 
         template
@@ -195,7 +194,6 @@ namespace xecs::system
         static void SendEventFrom(T_CLASS* pThis, T_ARGS&&... Args) noexcept;
 
         xecs::game_mgr::instance&   m_GameMgr;
-        const type::info&           m_TypeInfo;
     };
 
     //-----------------------------------------------------------------
@@ -233,7 +231,7 @@ namespace xecs::system
         void                    OnNewArchetype      ( xecs::archetype::instance& Archetype
                                                     ) noexcept;
 
-        using system_list      = std::vector< std::unique_ptr<xecs::system::instance> >;
+        using system_list      = std::vector< std::pair<const xecs::system::type::info*, std::unique_ptr<xecs::system::instance>> >;
 
         std::unordered_map<type::guid, xecs::system::instance*> m_SystemMaps;
         system_list                                             m_UpdaterSystems;

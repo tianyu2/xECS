@@ -9,8 +9,8 @@ namespace xecs::system
             T_USER_SYSTEM::events m_Events;
 
             __inline
-            compleated( xecs::game_mgr::instance& GameMgr, const xecs::system::type::info& TypeInfo ) noexcept
-            : T_USER_SYSTEM{ { GameMgr, TypeInfo } }
+            compleated( xecs::game_mgr::instance& GameMgr ) noexcept
+            : T_USER_SYSTEM{ GameMgr }
             {}
             compleated( void ) noexcept = delete;
 
@@ -143,9 +143,8 @@ namespace xecs::system
 
     //-------------------------------------------------------------------------------------------
     constexpr
-    instance::instance( xecs::game_mgr::instance& G, const type::info& I ) noexcept
+    instance::instance( xecs::game_mgr::instance& G ) noexcept
     : m_GameMgr( G )
-    , m_TypeInfo( I )
     { }
 
     //-------------------------------------------------------------------------------------------
@@ -184,13 +183,13 @@ namespace xecs::system
         {
             if constexpr( real_system::typedef_v.is_notifier_v )
             {
-                m_NotifierSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
-                return m_NotifierSystems.back().get();
+                m_NotifierSystems.push_back({ &type::info_v<T_SYSTEM>, std::make_unique< real_system >(GameMgr) });
+                return m_NotifierSystems.back().second.get();
             }
             else
             {
-                m_UpdaterSystems.push_back(std::make_unique< real_system >(GameMgr, type::info_v<T_SYSTEM>));
-                return m_UpdaterSystems.back().get();
+                m_UpdaterSystems.push_back({ &type::info_v<T_SYSTEM>, std::make_unique< real_system >(GameMgr) });
+                return m_UpdaterSystems.back().second.get();
             }
         }());
 
@@ -313,10 +312,10 @@ namespace xecs::system
     {
         for( auto& E : m_NotifierSystems )
         {
-            auto& Entry = *E;
-            if( Entry.m_TypeInfo.m_Query.Compare(Archetype.m_ComponentBits) )
+            auto& Entry = *E.second;
+            if(E.first->m_Query.Compare(Archetype.m_ComponentBits) )
             {
-                Entry.m_TypeInfo.m_NotifierRegistration( Archetype, Entry );
+                E.first->m_NotifierRegistration( Archetype, Entry );
             }
         }
     }
