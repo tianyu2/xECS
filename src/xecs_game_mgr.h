@@ -117,8 +117,9 @@ namespace xecs::game_mgr
         template
         <   typename T_FUNCTION
         > requires
-        ( xecs::tools::function_return_v<T_FUNCTION, bool >
-            || xecs::tools::function_return_v<T_FUNCTION, void > 
+        ( xecs::tools::assert_is_callable_v<T_FUNCTION>
+            && (   xecs::tools::function_return_v<T_FUNCTION, bool >
+                || xecs::tools::function_return_v<T_FUNCTION, void > )
         ) __inline
         void                                Foreach                 (std::span<xecs::archetype::instance* const>    List
                                                                     , T_FUNCTION&&                                  Function 

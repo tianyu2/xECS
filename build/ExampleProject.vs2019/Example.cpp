@@ -96,16 +96,16 @@ namespace grid
             if( Query.Compare(ArchetypeCell.m_pArchetype->getComponentBits()) == false )
                 continue;
 
-            Iterator.ForeachArchetype(*ArchetypeCell.m_pArchetype);
+            Iterator.UpdateArchetype(*ArchetypeCell.m_pArchetype);
 
             for( auto F : ArchetypeCell.m_ListOfFamilies )
             {
-                Iterator.ForeachFamilyPool( *F );
+                Iterator.UpdateFamilyPool( *F );
                 for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
                 {
                     if( p->Size() )
                     {
-                        Iterator.ForeachPool(*p);
+                        Iterator.UpdatePool(*p);
 
                         // Do all entities
                         if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)

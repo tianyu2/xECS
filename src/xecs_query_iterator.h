@@ -183,13 +183,13 @@ namespace xecs::query
                     iterator                        ( xecs::game_mgr::instance&     GameMgr
                                                     ) noexcept;
         __inline
-        void        ForeachArchetype                ( xecs::archetype::instance&    Archetype 
+        void        UpdateArchetype                 ( xecs::archetype::instance&    Archetype 
                                                     ) noexcept;
         __inline
-        void        ForeachFamilyPool               ( xecs::pool::family&           Family 
+        void        UpdateFamilyPool                ( xecs::pool::family&           Family 
                                                     ) noexcept;
         __inline
-        void        ForeachPool                     ( xecs::pool::instance&         Pool 
+        void        UpdatePool                      ( xecs::pool::instance&         Pool 
                                                     ) noexcept;
         __inline
         ret_t       ForeachEntity                   ( T_FUNCTION&&                  Function 

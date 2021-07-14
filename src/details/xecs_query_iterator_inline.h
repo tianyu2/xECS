@@ -34,7 +34,7 @@ namespace xecs::query
     //---------------------------------------------------------------------
 
     template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::ForeachArchetype( xecs::archetype::instance& Archetype ) noexcept
+    void iterator<T_FUNCTION>::UpdateArchetype( xecs::archetype::instance& Archetype ) noexcept
     {
         parent_t::m_pArchetype = &Archetype;
 
@@ -69,7 +69,7 @@ namespace xecs::query
     //---------------------------------------------------------------------
 
     template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::ForeachFamilyPool(xecs::pool::family& Family) noexcept
+    void iterator<T_FUNCTION>::UpdateFamilyPool(xecs::pool::family& Family) noexcept
     {
         if constexpr (parent_t::has_shares_v)
         {
@@ -156,7 +156,7 @@ namespace xecs::query
     //---------------------------------------------------------------------
 
     template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::ForeachPool( xecs::pool::instance& Pool ) noexcept
+    void iterator<T_FUNCTION>::UpdatePool( xecs::pool::instance& Pool ) noexcept
     {
         //
         // Set the data tuple for each pool

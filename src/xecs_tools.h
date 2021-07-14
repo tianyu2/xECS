@@ -4,6 +4,11 @@ namespace xecs::tools
 
     //------------------------------------------------------------------------------
 
+    template<typename T>
+    concept assert_is_callable_v = []{ static_assert( xcore::function::is_callable_v<T>, "This is not callable (not a function or an object with operator())" ); return true; }();
+    
+    //------------------------------------------------------------------------------
+
     template
     < typename T_CALLABLE
     , typename T_RETURN_TYPE
