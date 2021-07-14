@@ -20,7 +20,8 @@ namespace xecs::system
                 //
                 // Call the user OnUpdate or process directly
                 //
-                if constexpr ( T_USER_SYSTEM::typedef_v.id_v == xecs::system::type::id::UPDATE )
+                if constexpr ( T_USER_SYSTEM::typedef_v.id_v == xecs::system::type::id::UPDATE 
+                              || xcore::types::is_specialized_v<xecs::system::type::child_update, std::decay_t<decltype(T_USER_SYSTEM::typedef_v)> > )
                 {
                     XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
                     if constexpr (&T_USER_SYSTEM::OnUpdate != &instance::OnUpdate)
@@ -243,13 +244,26 @@ namespace xecs::system
         {
             static_assert( xcore::types::tuple_t2i_v<typedef_t::event_t, typedef_t::system_t::events > + 1 );
 
-            std::get<typedef_t::event_t>
-            ( 
-                reinterpret_cast< details::compleated<typedef_t::system_t>* >
-                ( find<typedef_t::system_t>()
-                )->m_Events 
-            )
-            .Register<&T_SYSTEM::OnEvent>(System);
+            if constexpr( xcore::types::is_specialized_v<xecs::system::type::child_update, typedef_t > )
+            {
+                std::get<typedef_t::event_t>
+                ( 
+                    reinterpret_cast< details::compleated<typedef_t::system_t>* >
+                    ( find<typedef_t::system_t>()
+                    )->m_Events 
+                )
+                .Register<&real_system::Run>(System);
+            }
+            else
+            {
+                std::get<typedef_t::event_t>
+                ( 
+                    reinterpret_cast< details::compleated<typedef_t::system_t>* >
+                    ( find<typedef_t::system_t>()
+                    )->m_Events 
+                )
+                .Register<&T_SYSTEM::OnEvent>(System);
+            }
         }
 
         //

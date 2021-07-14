@@ -111,6 +111,20 @@ namespace xecs::system
             guid                         m_Guid             {};
         };
 
+        template< typename T_SYSTEM, typename T_EVENT >
+        requires( std::derived_from< T_SYSTEM, xecs::system::instance>
+                  && ( xcore::types::is_specialized_v<xecs::event::instance, T_EVENT>
+                       || std::derived_from< T_EVENT, xecs::event::overrides>) )
+        struct child_update
+        {
+            using                        system_t           = T_SYSTEM;
+            using                        event_t            = T_EVENT;
+            static constexpr auto        id_v               = id::SYSTEM_EVENT;
+            static constexpr auto        is_notifier_v      = false;
+            const char*                  m_pName            = "Unnamed Child Update Delegate";
+            guid                         m_Guid             {};
+        };
+
         struct info
         {
             using notifier_registration = void( xecs::archetype::instance&, xecs::system::instance&);

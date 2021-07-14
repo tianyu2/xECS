@@ -447,62 +447,6 @@ struct space_ship_logic : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-struct render_bullets : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::update
-    {
-        .m_pName = "render_bullets"
-    };
-
-    using query = std::tuple
-    <
-        xecs::query::must<bullet>
-    >;
-
-    void operator()( position& Position, velocity& Velocity ) const noexcept
-    {
-        constexpr auto SizeX = 1;
-        constexpr auto SizeY = SizeX*3;
-        glBegin(GL_TRIANGLES);
-        glColor3f(1.0, 0.5, 0.0);
-        glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_X * SizeY, Position.m_Value.m_Y + Velocity.m_Value.m_Y * SizeY);
-        glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y - Velocity.m_Value.m_X * SizeX);
-        glVertex2i(Position.m_Value.m_X - Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y + Velocity.m_Value.m_X * SizeX);
-        glEnd();
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
-struct render_ships : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::update
-    {
-        .m_pName = "render_ships"
-    };
-
-    using query = std::tuple
-    <
-        xecs::query::none_of<bullet>
-    ,   xecs::query::one_of<entity>
-    >;
-
-    void operator()( position& Position, timer* pTimer ) const noexcept
-    {
-        constexpr auto Size = 3;
-        glBegin(GL_QUADS);
-        if(pTimer) glColor3f(1.0, 1.0, 1.0);
-        else       glColor3f(0.5, 1.0, 0.5);
-        glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y - Size);
-        glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y + Size);
-        glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y + Size);
-        glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y - Size);
-        glEnd();                                         
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
 struct on_destroy_count_dead_ships : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::notify_destroy
@@ -525,16 +469,36 @@ struct on_destroy_count_dead_ships : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-struct render_begin : xecs::system::instance
+struct renderer : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::update
     {
         .m_pName = "render_begin"
     };
 
+    using update = xecs::event::instance<>;
+
+    using events = std::tuple
+    < update
+    >;
+
     void OnUpdate()
     {
+        //
+        // Begin of the rendering
+        //
         glClear(GL_COLOR_BUFFER_BIT);
+
+        //
+        // Let all the system that depends on me
+        //
+        SendEventFrom<update>(this);
+
+        //
+        // Page Flip
+        //
+        glFlush();
+        glutSwapBuffers();
     }
 };
 
@@ -568,13 +532,69 @@ void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
 
 //---------------------------------------------------------------------------------------
 
+struct render_bullets : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::child_update<renderer, renderer::update>
+    {
+        .m_pName = "render_bullets"
+    };
+
+    using query = std::tuple
+    <
+        xecs::query::must<bullet>
+    >;
+
+    void operator()( position& Position, velocity& Velocity ) const noexcept
+    {
+        constexpr auto SizeX = 1;
+        constexpr auto SizeY = SizeX*3;
+        glBegin(GL_TRIANGLES);
+        glColor3f(1.0, 0.5, 0.0);
+        glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_X * SizeY, Position.m_Value.m_Y + Velocity.m_Value.m_Y * SizeY);
+        glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y - Velocity.m_Value.m_X * SizeX);
+        glVertex2i(Position.m_Value.m_X - Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y + Velocity.m_Value.m_X * SizeX);
+        glEnd();
+    }
+};
+
+//---------------------------------------------------------------------------------------
+
+struct render_ships : xecs::system::instance
+{
+    constexpr static auto typedef_v = xecs::system::type::child_update<renderer, renderer::update>
+    {
+        .m_pName = "render_ships"
+    };
+
+    using query = std::tuple
+    <
+        xecs::query::none_of<bullet>
+    ,   xecs::query::one_of<entity>
+    >;
+
+    void operator()( position& Position, timer* pTimer ) const noexcept
+    {
+        constexpr auto Size = 3;
+        glBegin(GL_QUADS);
+        if(pTimer) glColor3f(1.0, 1.0, 1.0);
+        else       glColor3f(0.5, 1.0, 0.5);
+        glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y - Size);
+        glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y + Size);
+        glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y + Size);
+        glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y - Size);
+        glEnd();                                         
+    }
+};
+
+
+//---------------------------------------------------------------------------------------
+
 struct render_grid : xecs::system::instance
 {
-    constexpr static auto typedef_v = xecs::system::type::update
+    constexpr static auto typedef_v = xecs::system::type::child_update<renderer, renderer::update>
     {
         .m_pName = "render_grid"
     };
-
 
     grid::instance* m_pGrid;
 
@@ -661,23 +681,6 @@ struct render_grid : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-struct page_flip : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::update
-    {
-        .m_pName = "page_flip"
-    };
-
-    __inline
-    void OnUpdate( void ) noexcept
-    {
-        glFlush();
-        glutSwapBuffers();
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
 void InitializeGame( void ) noexcept
 {
     //
@@ -706,11 +709,10 @@ void InitializeGame( void ) noexcept
     ,   update_movement         // Structural: No
     ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
     ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
-    ,   render_begin            // Structural: No
+    ,   renderer                // Structural: No
     ,       render_grid         // Structural: No
     ,       render_ships        // Structural: No
     ,       render_bullets      // Structural: No
-    ,   page_flip               // Structural: No
     >();
 
     // Register Reactive Systems. Note that the order for this system are not related with the update systems
