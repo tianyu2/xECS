@@ -10,7 +10,8 @@ Each of the lessons will be place at different branches. Please read the README.
 
 1. [Lesson01 basic ECS](https://github.com/LIONant-depot/xECS/tree/Lesson01_Basic_ECS)
 2. [Lesson02 pulish the basics](https://github.com/LIONant-depot/xECS/tree/Lesson02_Pulish_the_basics)
-3. [Lesson03 Events and Maps](https://github.com/LIONant-depot/xECS/tree/Lesson03_Events_n_Maps)
+3. [Lesson03 events and maps](https://github.com/LIONant-depot/xECS/tree/Lesson03_Events_n_Maps)
+4. [Lesson04 more component types](https://github.com/LIONant-depot/xECS/tree/Lesson04_More_Components_Types)
 
 ## To use in your projects
 Any of the versions could be a good starting point.
