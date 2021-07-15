@@ -87,7 +87,7 @@ namespace grid
 
     template<typename T_FUNCTION>
     constexpr __inline
-    bool Foreach( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    bool Foreach( instance& Grid, int X, int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
         xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr);
         for( auto& ArchetypeCell : Grid[Y][X] )
@@ -159,7 +159,8 @@ struct update_movement : xecs::system::instance
         .m_pName = "update_movement"
     };
 
-    void operator()( position& Position, velocity& Velocity, grid_cell& GridCell ) noexcept
+    __inline
+    void operator()( position& Position, velocity& Velocity, grid_cell& GridCell ) const noexcept
     {
         Position.m_Value += Velocity.m_Value;
 
@@ -207,35 +208,12 @@ struct grid_system_pool_family_create : xecs::system::instance
 
     std::shared_ptr<grid::instance> m_Grid = std::make_shared<grid::instance>();
 
-    void OnPoolFamily( xecs::archetype::instance& Archetype, xecs::pool::family& PoolFamily ) noexcept
+    __inline
+    void OnPoolFamily( xecs::archetype::instance& Archetype, xecs::pool::family& PoolFamily ) const noexcept
     {
         assert(PoolFamily.m_ShareInfos.size() == 1);
 
-        auto& Cell = Archetype.getShareComponent<grid_cell>(PoolFamily);
-#if _DEBUG
-
-        m_GameMgr.getEntity( PoolFamily.m_ShareDetails[0].m_Entity, [&](grid_cell& TheCell)
-        {
-            assert(TheCell.m_X == Cell.m_X);
-            assert(TheCell.m_Y == Cell.m_Y);
-            auto Key = xecs::component::type::details::ComputeShareKey(PoolFamily.m_pArchetypeInstance->getGuid(), *PoolFamily.m_ShareInfos[0], reinterpret_cast<std::byte*>(&TheCell) );
-            assert( PoolFamily.m_ShareDetails[0].m_Key == Key );
-
-            for( auto& E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
-            {
-                for( auto& F : E.m_ListOfFamilies )
-                {
-                    assert(F->m_ShareDetails[0].m_Entity == PoolFamily.m_ShareDetails[0].m_Entity);
-                    assert(F->m_ShareDetails[0].m_Key == Key);
-                }
-            }
-        });
-
-        for( auto& E : (*m_Grid)[Cell.m_Y][Cell.m_X] )
-        {
-            assert( E.m_pArchetype != &Archetype );
-        }
-#endif
+        auto& Cell      = Archetype.getShareComponent<grid_cell>(PoolFamily);
         auto& GridCell  = (*m_Grid)[Cell.m_Y][Cell.m_X];
         for( auto& E : GridCell )
         {
@@ -263,7 +241,8 @@ struct update_timer : xecs::system::instance
         .m_pName = "update_timer"
     };
 
-    void operator()( entity& Entity, timer& Timer ) noexcept
+    __inline
+    void operator()( entity& Entity, timer& Timer ) const noexcept
     {
         Timer.m_Value -= 0.01f;
         if( Timer.m_Value <= 0 )
@@ -294,6 +273,7 @@ struct bullet_logic : xecs::system::instance
         xecs::query::must<bullet>
     >;
 
+    __inline
     void OnUpdate() noexcept
     {
         xecs::query::instance QueryBullets;
@@ -353,7 +333,8 @@ struct destroy_bullet_on_remove_timer : xecs::system::instance
         xecs::query::must<bullet, timer>
     >;
 
-    void operator()(entity& Entity) noexcept
+    __inline
+    void operator()(entity& Entity) const noexcept
     {
         m_GameMgr.DeleteEntity(Entity);
     }
@@ -383,6 +364,7 @@ struct space_ship_logic : xecs::system::instance
     ,   xecs::query::none_of<bullet, timer>
     >;
 
+    __inline
     void OnUpdate() noexcept
     {
         xecs::query::instance QueryThinkingShipsOnly;
@@ -460,7 +442,8 @@ struct on_destroy_count_dead_ships : xecs::system::instance
     , xecs::query::must<position>
     >;
 
-    void operator()(timer* pTimer) noexcept
+    __inline
+    void operator()(timer* pTimer) const noexcept
     {
         if (pTimer) s_Game.m_nEntityWaitingDead++;
         else        s_Game.m_nEntityThinkingDead++;
@@ -473,7 +456,7 @@ struct renderer : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::update
     {
-        .m_pName = "render_begin"
+        .m_pName = "renderer"
     };
 
     using update = xecs::event::instance<>;
@@ -482,7 +465,8 @@ struct renderer : xecs::system::instance
     < update
     >;
 
-    void OnUpdate()
+    __inline
+    void OnUpdate() noexcept
     {
         //
         // Begin of the rendering
@@ -544,6 +528,7 @@ struct render_bullets : xecs::system::instance
         xecs::query::must<bullet>
     >;
 
+    __inline
     void operator()( position& Position, velocity& Velocity ) const noexcept
     {
         constexpr auto SizeX = 1;
@@ -572,6 +557,7 @@ struct render_ships : xecs::system::instance
     ,   xecs::query::one_of<entity>
     >;
 
+    __inline
     void operator()( position& Position, timer* pTimer ) const noexcept
     {
         constexpr auto Size = 3;
@@ -598,12 +584,13 @@ struct render_grid : xecs::system::instance
 
     grid::instance* m_pGrid;
 
-    void OnGameStart()
+    void OnGameStart() noexcept
     {
         m_pGrid = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
-    void OnUpdate()
+    __inline
+    void OnUpdate() noexcept
     {
         for( int y=0; y<grid::cell_y_count; y++ )
         for( int x=0; x<grid::cell_x_count; x++ )
@@ -729,7 +716,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)

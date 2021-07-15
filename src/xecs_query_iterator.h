@@ -44,7 +44,7 @@ namespace xecs::query
 
             static constexpr bool has_shares_v = true;
 
-            using share_tuple_unfilter = std::invoke_result_t
+            using share_tuple_unfilter              = std::invoke_result_t
             < decltype
                 (   []<typename...T>(std::tuple<T...>*)->xcore::types::tuple_cat_t
                     <
@@ -58,9 +58,9 @@ namespace xecs::query
             , decltype(xcore::types::null_tuple_v<typename func::args_tuple>)
             >;
 
-            using share_tuple_full_decay = xcore::types::tuple_decay_full_t<share_tuple_unfilter>;
+            using share_tuple_full_decay            = xcore::types::tuple_decay_full_t<share_tuple_unfilter>;
             
-            using share_tuple_changables_unfilter = std::invoke_result_t
+            using share_tuple_changables_unfilter   = std::invoke_result_t
             < decltype
                 (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t
                     <
@@ -136,7 +136,7 @@ namespace xecs::query
             , decltype(xcore::types::null_tuple_v<typename func::args_tuple>)
             >;
 
-            using share_tuple_pointers =std::invoke_result_t
+            using share_tuple_pointers = std::invoke_result_t
             < decltype
                 (   []<typename...T>(std::tuple<T...>*) -> xcore::types::tuple_cat_t
                     <
