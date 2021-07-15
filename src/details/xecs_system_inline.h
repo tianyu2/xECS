@@ -24,6 +24,12 @@ namespace xecs::system
                               || xcore::types::is_specialized_v<xecs::system::type::child_update, std::decay_t<decltype(T_USER_SYSTEM::typedef_v)> > )
                 {
                     XCORE_PERF_ZONE_SCOPED_N(xecs::system::type::info_v<T_USER_SYSTEM>.m_pName)
+                    
+                    if constexpr (&T_USER_SYSTEM::OnPreUpdate != &instance::OnPreUpdate)
+                    {
+                        T_USER_SYSTEM::OnPreUpdate();
+                    }
+
                     if constexpr (&T_USER_SYSTEM::OnUpdate != &instance::OnUpdate)
                     {
                         T_USER_SYSTEM::OnUpdate();
@@ -36,6 +42,11 @@ namespace xecs::system
                             ArchetypeList
                         ,   *this
                         );
+                    }
+
+                    if constexpr (&T_USER_SYSTEM::OnPostUpdate != &instance::OnPostUpdate)
+                    {
+                        T_USER_SYSTEM::OnPostUpdate();
                     }
 
                     //

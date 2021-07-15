@@ -17,6 +17,8 @@ We cover.
 * System
   * New child_update system
   * More types of events
+    * OnPreUpdate
+    * OnPostUpdate
     * OnPostStructuralChanges
     * OnGamePause
   * Clean up

@@ -528,17 +528,25 @@ struct render_bullets : xecs::system::instance
         xecs::query::must<bullet>
     >;
 
+    void OnPreUpdate()
+    {
+        glBegin(GL_TRIANGLES);
+    }
+
+    void OnPostUpdate()
+    {
+        glEnd();
+    }
+
     __inline
     void operator()( position& Position, velocity& Velocity ) const noexcept
     {
         constexpr auto SizeX = 1;
         constexpr auto SizeY = SizeX*3;
-        glBegin(GL_TRIANGLES);
         glColor3f(1.0, 0.5, 0.0);
         glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_X * SizeY, Position.m_Value.m_Y + Velocity.m_Value.m_Y * SizeY);
         glVertex2i(Position.m_Value.m_X + Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y - Velocity.m_Value.m_X * SizeX);
         glVertex2i(Position.m_Value.m_X - Velocity.m_Value.m_Y * SizeX, Position.m_Value.m_Y + Velocity.m_Value.m_X * SizeX);
-        glEnd();
     }
 };
 
@@ -557,18 +565,26 @@ struct render_ships : xecs::system::instance
     ,   xecs::query::one_of<entity>
     >;
 
+    void OnPreUpdate()
+    {
+        glBegin(GL_QUADS);
+    }
+
+    void OnPostUpdate()
+    {
+        glEnd();
+    }
+
     __inline
     void operator()( position& Position, timer* pTimer ) const noexcept
     {
         constexpr auto Size = 3;
-        glBegin(GL_QUADS);
         if(pTimer) glColor3f(1.0, 1.0, 1.0);
         else       glColor3f(0.5, 1.0, 0.5);
         glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y - Size);
         glVertex2i(Position.m_Value.m_X - Size, Position.m_Value.m_Y + Size);
         glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y + Size);
         glVertex2i(Position.m_Value.m_X + Size, Position.m_Value.m_Y - Size);
-        glEnd();                                         
     }
 };
 

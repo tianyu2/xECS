@@ -162,7 +162,9 @@ namespace xecs::system
         void    OnCreate                ( void )                noexcept {} // All Systems:         When the system is created
         void    OnGameStart             ( void )                noexcept {} // All Systems:         When the game starts or when it becomes unpaused
         void    OnFrameStart            ( void )                noexcept {} // All Systems:         At the begging of a frame
+        void    OnPreUpdate             ( void )                noexcept {} // Update Systems:      Is call just before the OnUpdate gets call
         void    OnUpdate                ( void )                noexcept {} // Update Systems:      If you want full control of the query
+        void    OnPostUpdate            ( void )                noexcept {} // Update Systems:      Is call just after the OnUpdate gets call and before structural changes happen
         void    OnPostStructuralChanges ( void )                noexcept {} // Update Systems:      After the Structural changes has taken place (applies only to )
         void    OnFrameEnd              ( void )                noexcept {} // All Systems:         Beginning of every frame
         void    OnGameEnd               ( void )                noexcept {} // All Systems:         When the game is done
