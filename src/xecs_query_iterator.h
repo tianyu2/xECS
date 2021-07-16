@@ -154,10 +154,10 @@ namespace xecs::query
 
             __inline data_pack() noexcept;
 
-            game_mgr::instance*                                                     m_pGameMgr;
-            archetype::instance*                                                    m_pArchetype;
-            pool::family*                                                           m_pFamily;
-            pool::instance*                                                         m_pPool;
+            game_mgr::instance*                                                     m_pGameMgr                  {};
+            archetype::instance*                                                    m_pArchetype                {};
+            pool::family*                                                           m_pFamily                   {};
+            pool::instance*                                                         m_pPool                     {};
             const xecs::tools::bits                                                 m_UpdatedComponentsBits;
             xecs::tools::bits                                                       m_ArchetypeShareBits;
             std::array<std::uint8_t,                        share_count_v>          m_RemapIndices;

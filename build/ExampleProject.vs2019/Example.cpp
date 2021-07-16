@@ -89,8 +89,7 @@ namespace grid
     constexpr __inline
     bool Foreach( instance& Grid, int X, int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
-        xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr);
-        for( auto& ArchetypeCell : Grid[Y][X] )
+        for( xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr); auto& ArchetypeCell : Grid[Y][X] )
         {
             // Make sure this archetype matches are query
             if( Query.Compare(ArchetypeCell.m_pArchetype->getComponentBits()) == false )
@@ -147,8 +146,8 @@ namespace grid
     grid_cell ComputeGridCellFromWorldPosition( xcore::vector2 Position) noexcept
     {
         return
-        { static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  (float)cell_x_count - 1)))
-        , static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, (float)cell_y_count - 1)))
+        { static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  static_cast<float>(cell_x_count) - 1)))
+        , static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, static_cast<float>(cell_y_count) - 1)))
         };
     }
 }
@@ -309,8 +308,7 @@ struct bullet_logic : xecs::system::instance
                     // If so lets just continue
                     if( Bullet.m_ShipOwner == E ) return false;
 
-                    constexpr auto distance_v = 3;
-                    if ((Pos.m_Value - Position.m_Value).getLengthSquared() < distance_v * distance_v)
+                    if (constexpr auto distance_v = 3; (Pos.m_Value - Position.m_Value).getLengthSquared() < distance_v * distance_v)
                     {
                         m_GameMgr.DeleteEntity(Entity);
                         m_GameMgr.DeleteEntity(E);
@@ -394,8 +392,7 @@ struct space_ship_logic : xecs::system::instance
                     const auto  DistanceSquare   = Direction.getLengthSquared();
 
                     // Shoot a bullet if close enough
-                    constexpr auto min_distance_v = 60;
-                    if( DistanceSquare < min_distance_v*min_distance_v )
+                    if(constexpr auto min_distance_v = 60; DistanceSquare < min_distance_v*min_distance_v )
                     {
                         auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
                         {
@@ -619,11 +616,11 @@ struct render_grid : xecs::system::instance
             auto& GridCell = (*m_pGrid)[y][x];
 
             // If we don't have any archetypes then move on
-            int Count = (int)(GridCell.size());
+            int Count = static_cast<int>(GridCell.size());
             if( 0 == Count) continue;
 
-            float X = (x + 0.5f) * grid::cell_width_v;
-            float Y = (y + 0.5f) * grid::cell_width_v;
+            const float X = (x + 0.5f) * grid::cell_width_v;
+            const float Y = (y + 0.5f) * grid::cell_width_v;
             constexpr auto SizeX = grid::cell_width_v/2.0f - 1;
             constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
             
@@ -656,7 +653,7 @@ struct render_grid : xecs::system::instance
                 {
                     int nFamilies = 0;
                     for (auto& ArchetypeCell : GridCell)
-                        nFamilies += (int)ArchetypeCell.m_ListOfFamilies.size();
+                        nFamilies += static_cast<int>(ArchetypeCell.m_ListOfFamilies.size());
 
                     glColor3f(1.0f, 1.0f, 1.0f);
                     GlutPrint(X, Y - 15, "%d", nFamilies);
@@ -667,7 +664,7 @@ struct render_grid : xecs::system::instance
                     int nEntities = 0;
                     for (auto& ArchetypeCell : GridCell)
                         for (auto& Family : ArchetypeCell.m_ListOfFamilies)
-                            nEntities += (int)Family->m_DefaultPool.Size();
+                            nEntities += static_cast<int>(Family->m_DefaultPool.Size());
 
                     glColor3f(1.0f, 1.0f, 1.0f);
                     GlutPrint(X, Y - 15, "%d", nEntities);
@@ -679,7 +676,7 @@ struct render_grid : xecs::system::instance
         //
         // Print how many archetypes we have so far
         //
-        if(false)
+        if constexpr (false)
         {
             glColor3f(1.0f, 1.0f, 1.0f);
             GlutPrint(0, 0, "#Archetypes: %d", s_Game.m_GameMgr->m_ArchetypeMgr.m_lArchetype.size());
@@ -745,11 +742,11 @@ void InitializeGame( void ) noexcept
 
             Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
 
-            Velocity.m_Value.m_X = (std::rand() / (float)RAND_MAX) - 0.5f;
-            Velocity.m_Value.m_Y = (std::rand() / (float)RAND_MAX) - 0.5f;
+            Velocity.m_Value.m_X = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
+            Velocity.m_Value.m_Y = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
             Velocity.m_Value.Normalize();
 
-            Timer.m_Value        = (std::rand() / (float)RAND_MAX) * 8;
+            Timer.m_Value        = std::rand() / static_cast<float>(RAND_MAX) * 8;
         });
 }
 

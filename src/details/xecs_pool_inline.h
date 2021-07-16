@@ -191,7 +191,7 @@ namespace xecs::pool
         {
             assert(m_ComponentInfos[i]->m_Size <= xecs::settings::virtual_page_size_v);
             auto nPages     = getPageFromIndex( *m_ComponentInfos[i], xecs::settings::max_entity_count_per_pool_v ) + 1;
-            m_pComponent[i] = reinterpret_cast<std::byte*>(VirtualAlloc(nullptr, nPages * xecs::settings::virtual_page_size_v, MEM_RESERVE, PAGE_NOACCESS));
+            m_pComponent[i] = reinterpret_cast<std::byte*>(VirtualAlloc(nullptr, nPages * static_cast<std::size_t>(xecs::settings::virtual_page_size_v), MEM_RESERVE, PAGE_NOACCESS));
             assert(m_pComponent[i]);
         }
     }
@@ -229,7 +229,7 @@ namespace xecs::pool
             {
                 if( m_Size == 0 ) Cur--;
                 auto pNewPagePtr = m_pComponent[i] + xecs::settings::virtual_page_size_v * (Cur+1);
-                auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, (NexPage - Cur) * xecs::settings::virtual_page_size_v, MEM_COMMIT, PAGE_READWRITE));
+                auto p           = reinterpret_cast<std::byte*>(VirtualAlloc(pNewPagePtr, (NexPage - Cur) * static_cast<std::size_t>(xecs::settings::virtual_page_size_v), MEM_COMMIT, PAGE_READWRITE));
                 assert(p == pNewPagePtr);
             }
 
@@ -454,7 +454,7 @@ namespace xecs::pool
                     auto pRaw   = &m_pComponent[i][xecs::settings::virtual_page_size_v * (Cur + 1) ];
                     auto nPages = LastEntryPage - Cur;
                     assert(nPages > 0);
-                    auto b      = VirtualFree(pRaw, xecs::settings::virtual_page_size_v * nPages, MEM_DECOMMIT);
+                    auto b      = VirtualFree(pRaw, nPages * static_cast<std::size_t>(xecs::settings::virtual_page_size_v), MEM_DECOMMIT);
                     assert(b);
                 }
             }

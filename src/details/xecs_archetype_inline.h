@@ -168,45 +168,6 @@ namespace xecs::archetype
                 ...);
             }(xcore::types::null_tuple_v<func_traits::args_tuple>);
         }
-
-        //-------------------------------------------------------------------------------------------------
-        inline
-        int
-    ComputeIndexRemaps
-        ( std::span<int>                                            To2From
-        , std::span<const xecs::component::type::info*>             FinalInfos
-        , const std::span<const xecs::component::type::info* const> To
-        , const std::span<const xecs::component::type::info* const> From
-        ) noexcept
-        {
-            assert( To2From.size() == To.size() );
-            int FinalCount = 0;
-            for( std::size_t iFrom = 0, iTo = 0; ; )
-            {
-                if( From[iFrom]->m_Guid.m_Value == To[iTo]->m_Guid.m_Value )
-                {
-                    FinalInfos[FinalCount] = From[iFrom];
-                    To2From[FinalCount++]  = static_cast<int>(iFrom);
-
-                    iFrom++;
-                    if (iFrom == From.size()) break;
-
-                    iTo++;
-                    if( iTo == To.size() ) break;
-                }
-                else if( xecs::component::type::details::CompareTypeInfos( To[iTo], From[iFrom] ) )
-                {
-                    iFrom++;
-                    if (iFrom == From.size()) break;
-                }
-                else
-                {
-                    iTo++;
-                    if (iTo == To2From.size()) break;
-                }
-            }
-            return FinalCount;
-        }
     }
 
     //--------------------------------------------------------------------------------------------
