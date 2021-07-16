@@ -29,8 +29,6 @@ namespace xecs::component
         assert( s_isLocked == false );
         if (component::type::info_v<T_COMPONENT>.m_BitID == type::info::invalid_bit_id_v)
         {
-            component::type::info_v<T_COMPONENT>.m_BitID = s_UniqueID++;
-
             if constexpr( component::type::info_v<T_COMPONENT>.m_TypeID == xecs::component::type::id::SHARE )
             {
                 T_COMPONENT X{};

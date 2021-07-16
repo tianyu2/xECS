@@ -109,9 +109,14 @@ namespace grid
 
                         // Do all entities
                         if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
-                            return Iterator.ForeachEntity( std::forward<T_FUNCTION&&>(Function));
+                        {
+                            if (Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function))) return true;
+                        }
                         else
+                        {
                             Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function));
+                        }
+                            
                     }
                 }
             }
@@ -412,7 +417,7 @@ struct space_ship_logic : xecs::system::instance
 
                             Bullet.m_ShipOwner = NewEntity;
 
-                            Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
+                            Cell = grid::ComputeGridCellFromWorldPosition(Pos.m_Value);
 
                             Timer.m_Value      = 10;
                         });
@@ -732,7 +737,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
