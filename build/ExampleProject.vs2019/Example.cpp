@@ -83,8 +83,8 @@ namespace grid
 {
     constexpr int cell_width_v               = 64; // Keep this divisible by 2
     constexpr int cell_height_v              = 42; // Keep this divisible by 2
-    constexpr int max_resolution_width_v     = 1280;
-    constexpr int max_resolution_height_v    = 1024;
+    constexpr int max_resolution_width_v     = 1024;
+    constexpr int max_resolution_height_v    = 800;
     constexpr int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
     constexpr int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
 
@@ -115,20 +115,19 @@ namespace grid
                 Iterator.UpdateFamilyPool( *F );
                 for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
                 {
-                    if( p->Size() )
-                    {
-                        Iterator.UpdatePool(*p);
+                    if( 0 == p->Size() ) continue;
 
-                        // Do all entities
-                        if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
-                        {
-                            if (Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function))) return true;
-                        }
-                        else
-                        {
-                            Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function));
-                        }
-                            
+                    // Update the pool
+                    Iterator.UpdatePool(*p);
+
+                    // Do all entities
+                    if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
+                    {
+                        if (Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function))) return true;
+                    }
+                    else
+                    {
+                        Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function));
                     }
                 }
             }
@@ -202,9 +201,9 @@ struct update_movement : xecs::system::instance
             Position.m_Value.m_X = 0;
             Velocity.m_Value.m_X = -Velocity.m_Value.m_X;
         }
-        else if (Position.m_Value.m_X >= s_Game.m_W)
+        else if (Position.m_Value.m_X >= grid::max_resolution_width_v )
         {
-            Position.m_Value.m_X = s_Game.m_W - 1;
+            Position.m_Value.m_X = grid::max_resolution_width_v - 1;
             Velocity.m_Value.m_X = -Velocity.m_Value.m_X;
         }
 
@@ -213,9 +212,9 @@ struct update_movement : xecs::system::instance
             Position.m_Value.m_Y = 0;
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
-        else if (Position.m_Value.m_Y >= s_Game.m_H)
+        else if (Position.m_Value.m_Y >= grid::max_resolution_height_v )
         {
-            Position.m_Value.m_Y = s_Game.m_H - 1;
+            Position.m_Value.m_Y = grid::max_resolution_height_v - 1;
             Velocity.m_Value.m_Y = -Velocity.m_Value.m_Y;
         }
 
@@ -511,7 +510,7 @@ struct renderer : xecs::system::instance
         //
         // Page Flip
         //
-        glFlush();
+//        glFlush();
         glutSwapBuffers();
     }
 };
@@ -735,7 +734,7 @@ void InitializeGame( void ) noexcept
     //
     // Initialize global elements
     //
-    std::srand(100);
+    std::srand(101);
 
     //
     // Register Components (They should always be first)
@@ -754,15 +753,16 @@ void InitializeGame( void ) noexcept
 
     // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
-    < //  update_timer            // Structural: Yes, RemoveComponent(Timer)
-       update_movement         // Structural: No
- //   ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-  //  ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+    <   update_timer            // Structural: Yes, RemoveComponent(Timer)
+    ,   update_movement         // Structural: No
+    ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
+    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   renderer                // Structural: No
     ,       render_grid         // Structural: No
     ,       render_ships        // Structural: No
     ,       render_bullets      // Structural: No
     >();
+
 
     // Register Reactive Systems. Note that the order for this system are not related with the update systems
     // Since these are event base they can happen at any time. But if many of them are going to get the
@@ -778,13 +778,11 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 10, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
                                                  };
-
-            //Position.m_Value = xcore::vector2{ 0,grid::cell_height_v + 3 };
 
             Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
 

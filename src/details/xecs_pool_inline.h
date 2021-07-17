@@ -137,8 +137,8 @@ namespace xecs::pool
         {
             assert( &FromPool != &ToPool );
 
-            auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
-            auto& Details = GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+            const auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
+            auto&       Details = GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
 
             // Move the entity
             ToPool.MoveInFromPool( ToIndex, FromIndex, FromPool );
@@ -258,11 +258,18 @@ namespace xecs::pool
 
         // Subtract one to the total count if we can.
         // If the last entry then happens to be a zombie then keep subtracting since these entries will get deleted later
-        // This should make things faster and allow for the moved entries to be deleted properly 
-        while(m_Size)
+        // This should make things faster and allow for the moved entries to be deleted properly
+        if( Index.m_Value < m_Size )
         {
-            m_Size--;
-            if(reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false ) break;
+            while(m_Size)
+            {
+                m_Size--;
+                if(reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false )
+                {
+                    m_Size++;
+                    break;
+                }
+            }
         }
 
         // Check if we have any entry to move
@@ -282,6 +289,7 @@ namespace xecs::pool
         }
         else
         {
+            m_Size--;
             for (int i = 0; i < m_ComponentInfos.size(); ++i)
             {
                 const auto& MyInfo = *m_ComponentInfos[i];

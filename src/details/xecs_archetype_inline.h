@@ -894,7 +894,7 @@ instance::_CreateEntities
     ) xecs::component::entity
 instance::_MoveInEntity
     ( xecs::component::entity&  Entity
-    , xecs::pool::family&       PoolFamily
+    , xecs::pool::family&       ToPoolFamily
     , T_FUNCTION&&              Function
     ) noexcept
     {
@@ -911,24 +911,24 @@ instance::_MoveInEntity
         // Move entity
         //
         xecs::component::entity NewEntity{ Entity };
-        PoolFamily.AppendEntities( 1, m_Mgr, [&]( xecs::pool::instance& Pool, xecs::pool::index Index, int ) noexcept
+        ToPoolFamily.AppendEntities( 1, m_Mgr, [&]( xecs::pool::instance& ToPool, xecs::pool::index ToIndex, int ) noexcept
         {
             //
             // Ok time to work
             //
             m_Mgr.AddToStructuralPendingList(FromPool);
-            const auto  NewPoolIndex = Pool.MoveInFromPool( Index, GlobalEntity.m_PoolIndex, FromPool );
+            const auto  NewPoolIndex = ToPool.MoveInFromPool( ToIndex, GlobalEntity.m_PoolIndex, FromPool );
 
             GlobalEntity.m_pArchetype = this;
             GlobalEntity.m_PoolIndex  = NewPoolIndex;
-            GlobalEntity.m_pPool      = &Pool;
+            GlobalEntity.m_pPool      = &ToPool;
 
             if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda> )
             {
                 // Notify any that cares
                 if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
                 {
-                    auto& PoolEntity = Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                    auto& PoolEntity = ToPool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
                     m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
                     if (GlobalEntity.m_Validation.m_bZombie) NewEntity = xecs::component::entity{ 0xffffffffffffffff };
                 }
@@ -936,7 +936,7 @@ instance::_MoveInEntity
             else
             {
                 auto CachedPointer = details::GetDataComponentPointerArray
-                ( Pool
+                ( ToPool
                 , NewPoolIndex
                 , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>
                 );
@@ -949,7 +949,7 @@ instance::_MoveInEntity
                 // Notify any that cares
                 if (m_Events.m_OnEntityMovedIn.m_Delegates.size())
                 {
-                    auto&   PoolEntity  = Pool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
+                    auto&   PoolEntity  = ToPool.getComponent<xecs::component::entity>(GlobalEntity.m_PoolIndex);
                     m_Events.m_OnEntityMovedIn.NotifyAll(PoolEntity);
                     if (GlobalEntity.m_Validation.m_bZombie) NewEntity = xecs::component::entity{ 0xffffffffffffffff };
                 }
