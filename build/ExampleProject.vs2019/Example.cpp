@@ -56,8 +56,8 @@ struct grid_cell
 {
     constexpr static auto typedef_v = xecs::component::type::share {};
 
-    std::uint16_t m_X;
-    std::uint16_t m_Y;
+    std::int16_t m_X;
+    std::int16_t m_Y;
 };
 
 using bullet_tuple = std::tuple<position, velocity, timer, bullet, grid_cell>;
@@ -65,15 +65,28 @@ using bullet_tuple = std::tuple<position, velocity, timer, bullet, grid_cell>;
 //---------------------------------------------------------------------------------------
 // TOOLS
 //---------------------------------------------------------------------------------------
+//
+// ----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+//     |    :    |    : 0,1| 1,1:    |  -1,-1  |   0,-1  |   1,-1  |    :    |
+// ---------+---------+---------+---------+---------+---------+---------+
+//     :    |    :    | 0,0: 1,0|    :    |   0,0   |   1,0   |    :    |
+// ----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+//     |    :    |    : 0,1| 1,1:    |  -1,1   |   0,1   |   1,1   |    :    |
+// ----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+//     :    |    :    |    :    |  -1,2   |   0,2   |   1,2   |  2,2   |
+// ----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+
+//     |    :    |    :    |    :    |  -1,3   |   0,3   |   1,3   |    :    |
+// ----+----+----+----+----+----+----+----+----+----+----+----+----+----+----+//
+//
 
 namespace grid
 {
-    constexpr static int cell_width_v               = 30;
-    constexpr static int cell_height_v              = 30;
-    constexpr static int max_resolution_width_v     = 1280;
-    constexpr static int max_resolution_height_v    = 1024;
-    constexpr static int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
-    constexpr static int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
+    constexpr int cell_width_v               = 64; // Keep this divisible by 2
+    constexpr int cell_height_v              = 42; // Keep this divisible by 2
+    constexpr int max_resolution_width_v     = 1280;
+    constexpr int max_resolution_height_v    = 1024;
+    constexpr int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
+    constexpr int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
 
     struct archetype_entry
     {
@@ -129,25 +142,40 @@ namespace grid
     constexpr __inline
     bool Search( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
-        const auto XStart = std::max(0, X - 1);
-        const auto XEnd   = std::min(cell_x_count - 1, X + 1);
+        static constexpr auto Table = std::array
+        { -1, 0 + 1
+        , -1, 1 + 1
+        , -1, 0 + 1
+        ,  0, 1 + 1
+        , -1, 1 + 1
+        ,  0, 1 + 1
+        };
+        int i = (Y&1)*(3*2);
         for( int y = std::max(0,Y-1), end_y = std::min(cell_y_count-1, Y+1); y != end_y; ++y )
+        {
+            const auto XStart = std::max(0,                X + Table[i+0]);
+            const auto XEnd   = std::min(cell_x_count - 1, X + Table[i+1] );
+            i+=2;
             for (int x = XStart; x != XEnd; ++x)
             {
                 if( Foreach( Grid, x,y, Query, std::forward<T_FUNCTION&&>(Function) ) ) 
                     return true;
             }
+        }
         return false;
     }
 
     //---------------------------------------------------------------------------------------
 
-    constexpr __inline
+    __inline
     grid_cell ComputeGridCellFromWorldPosition( xcore::vector2 Position) noexcept
     {
+        const auto X = static_cast<int>(Position.m_X / (cell_width_v /2.0f));
+        const auto Y = std::max(0, std::min(static_cast<int>(Position.m_Y / cell_height_v), cell_y_count - 1));
+        const auto x = 1 & ((X ^ Y) & Y);
         return
-        { static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_X / cell_width_v,  static_cast<float>(cell_x_count) - 1)))
-        , static_cast<std::uint16_t>(std::max(0.0f, std::min(Position.m_Y / cell_height_v, static_cast<float>(cell_y_count) - 1)))
+        { static_cast<std::int16_t>(std::max(0, std::min( 1 + ((X - x) >> 1), cell_x_count - 1 )))
+        , static_cast<std::int16_t>(Y)
         };
     }
 }
@@ -590,7 +618,6 @@ struct render_ships : xecs::system::instance
     }
 };
 
-
 //---------------------------------------------------------------------------------------
 
 struct render_grid : xecs::system::instance
@@ -619,9 +646,18 @@ struct render_grid : xecs::system::instance
             int Count = static_cast<int>(GridCell.size());
             if( 0 == Count) continue;
 
-            const float X = (x + 0.5f) * grid::cell_width_v;
-            const float Y = (y + 0.5f) * grid::cell_width_v;
-            constexpr auto SizeX = grid::cell_width_v/2.0f - 1;
+            if(false)
+            {
+                int nEntities = 0;
+                for (auto& ArchetypeCell : GridCell)
+                    for (auto& Family : ArchetypeCell.m_ListOfFamilies)
+                        nEntities += static_cast<int>(Family->m_DefaultPool.Size());
+                if(nEntities == 0 ) continue;
+            }
+            
+            const float X = ((x-1) + 0.5f + (y & 1) * 0.5f) * grid::cell_width_v;
+            const float Y = (y + 0.5f                     ) * grid::cell_height_v;
+            constexpr auto SizeX = grid::cell_width_v  / 2.0f - 1;
             constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
             
             glBegin(GL_QUADS);
@@ -638,10 +674,11 @@ struct render_grid : xecs::system::instance
             ,   FAMILIES
             ,   ARCHETYPES
             ,   ENTITIES
+            ,   GRIDCELL_XY
             };
 
             // What are we printing?
-            switch( print::NONE )
+            switch( print::NONE)
             {
                 case print::ARCHETYPES: 
                 {
@@ -668,6 +705,13 @@ struct render_grid : xecs::system::instance
 
                     glColor3f(1.0f, 1.0f, 1.0f);
                     GlutPrint(X, Y - 15, "%d", nEntities);
+                    break;
+                }
+                case print::GRIDCELL_XY:
+                {
+                    auto& C = GridCell[0].m_pArchetype->getShareComponent<grid_cell>(*GridCell[0].m_ListOfFamilies[0]);
+                    glColor3f(1.0f, 1.0f, 1.0f);
+                    GlutPrint(X-23, Y - 15, "%d,%d", C.m_X, C.m_Y );
                     break;
                 }
             }
@@ -710,10 +754,10 @@ void InitializeGame( void ) noexcept
 
     // Register updated systems (the update system should be before the delegate systems)
     s_Game.m_GameMgr->RegisterSystems
-    <   update_timer            // Structural: Yes, RemoveComponent(Timer)
-    ,   update_movement         // Structural: No
-    ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
-    ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
+    < //  update_timer            // Structural: Yes, RemoveComponent(Timer)
+       update_movement         // Structural: No
+ //   ,   bullet_logic            // Structural: Yes, Destroy(Bullets || Ships)
+  //  ,   space_ship_logic        // Structural: Yes, AddShipComponent(Timer), Create(Bullets)
     ,   renderer                // Structural: No
     ,       render_grid         // Structural: No
     ,       render_ships        // Structural: No
@@ -734,11 +778,13 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 10000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 10, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
                                                  };
+
+            //Position.m_Value = xcore::vector2{ 0,grid::cell_height_v + 3 };
 
             Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
 
