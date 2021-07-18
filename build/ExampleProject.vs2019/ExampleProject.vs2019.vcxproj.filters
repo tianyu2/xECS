@@ -261,6 +261,12 @@
     <ClInclude Include="..\..\src\details\xecs_query_iterator_inline.h">
       <Filter>xECS\Details</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\xecs_system_mgr.h">
+      <Filter>xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\details\xecs_system_mgr_inline.h">
+      <Filter>xECS\Details</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

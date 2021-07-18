@@ -150,7 +150,7 @@ namespace xecs::system
     }
 
     //-----------------------------------------------------------------
-    // ECS USER DEFINITIONS
+    // SYSTEM OVERRIDES
     //-----------------------------------------------------------------
     struct overrides
     {
@@ -176,13 +176,16 @@ namespace xecs::system
                                         , pool::family&       ) noexcept {}
     };
 
+    //-----------------------------------------------------------------
+    // SYSTEM INSTANCE
+    //-----------------------------------------------------------------
     struct instance : overrides
     {
-                    instance            ( const instance&
-                                        ) noexcept = delete;
+                                            instance                ( const instance&
+                                                                    ) noexcept = delete;
 
-        constexpr   instance            ( xecs::game_mgr::instance& GameMgr
-                                        ) noexcept;
+        constexpr                           instance                ( xecs::game_mgr::instance& GameMgr
+                                                                    ) noexcept;
 
         template
         < typename   T_EVENT
@@ -193,51 +196,83 @@ namespace xecs::system
             && (false == std::is_same_v<typename T_CLASS::events, xecs::system::overrides::events>)
             && !!(xcore::types::tuple_t2i_v<T_EVENT, typename T_CLASS::events > +1)
         ) __inline
-        static void SendEventFrom(T_CLASS* pThis, T_ARGS&&... Args) noexcept;
-
-        xecs::game_mgr::instance&   m_GameMgr;
-    };
-
-    //-----------------------------------------------------------------
-    // ECS SYSTEM DEFINITIONS
-    //-----------------------------------------------------------------
-    struct mgr final
-    {
-        struct events
-        {
-            xecs::event::instance<>     m_OnGameStart;
-            xecs::event::instance<>     m_OnGameEnd;
-            xecs::event::instance<>     m_OnUpdate;
-            xecs::event::instance<>     m_OnFrameStart;
-            xecs::event::instance<>     m_OnFrameEnd;
-        };
-
-                                mgr                 ( const mgr&
-                                                    ) noexcept = delete;
-                                mgr                 ( void
-                                                    ) noexcept = default;
+        static void                         SendEventFrom           ( T_CLASS* pThis
+                                                                    , T_ARGS&&... Args
+                                                                    ) noexcept;
+        template
+        < typename      T_GLOBAL_EVENT
+        > requires
+        ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
+        ) __inline
+        T_GLOBAL_EVENT&                     getGlobalEvent          ( void
+                                                                    ) noexcept;
+        template
+        < typename      T_GLOBAL_EVENT
+        , typename...   T_ARGS
+        > requires 
+        ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
+        ) __inline
+        void                                SendGlobalEvent         ( T_ARGS&&... Args 
+                                                                    ) const noexcept;
+        template
+        < typename... T_TUPLES_OF_COMPONENTS_OR_COMPONENTS
+        > requires
+        ( 
+            (   (  xecs::tools::valid_tuple_components_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS>
+                || xecs::component::type::is_valid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS> 
+                ) &&... )
+        ) __inline
+        archetype::instance&                getOrCreateArchetype    ( void 
+                                                                    ) noexcept;
+        template
+        < typename... T_COMPONENTS
+        > __inline
+        [[nodiscard]] std::vector<archetype::instance*>
+                                            Search                  ( const xecs::query::instance& Query
+                                                                    ) const noexcept;
+        template
+        <   typename T_TUPLE_ADD
+        ,   typename T_TUPLE_SUBTRACT   = std::tuple<>
+        ,   typename T_FUNCTION         = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_FUNCTION>
+        && xcore::types::is_specialized_v<std::tuple, T_TUPLE_ADD>
+        && xcore::types::is_specialized_v<std::tuple, T_TUPLE_SUBTRACT>
+        ) __inline
+        [[nodiscard]] xecs::component::entity
+                                            AddOrRemoveComponents   ( xecs::component::entity   Entity
+                                                                    , T_FUNCTION&&              Function = xecs::tools::empty_lambda{}
+                                                                    ) const noexcept;
+        __inline
+        void                                DeleteEntity            ( xecs::component::entity& Entity 
+                                                                    ) const noexcept;
+        template
+        <   typename T_FUNCTION
+        > requires
+        ( xecs::tools::assert_is_callable_v<T_FUNCTION>
+            && (   xecs::tools::function_return_v<T_FUNCTION, bool >
+                || xecs::tools::function_return_v<T_FUNCTION, void > )
+        ) __inline
+        void                                Foreach                 (std::span<xecs::archetype::instance* const>    List
+                                                                    , T_FUNCTION&&                                  Function 
+                                                                    ) noexcept;
         template
         < typename T_SYSTEM
-        > requires
-        ( std::derived_from< T_SYSTEM, xecs::system::instance>
-        )
-        T_SYSTEM&               RegisterSystem      ( xecs::game_mgr::instance& GameMgr 
-                                                    ) noexcept;
-        inline 
-        void                    Run                 ( void 
-                                                    ) noexcept;
-        template< typename T_SYSTEM >
-        T_SYSTEM*               find                ( void
-                                                    ) noexcept;
-        inline
-        void                    OnNewArchetype      ( xecs::archetype::instance& Archetype
-                                                    ) noexcept;
+        > __inline
+        T_SYSTEM*                           findSystem              ( void
+                                                                    ) noexcept;
+        template
+        < typename T_SYSTEM
+        > __inline
+        T_SYSTEM&                           getSystem               ( void
+                                                                    ) noexcept;
 
-        using system_list      = std::vector< std::pair<const xecs::system::type::info*, std::unique_ptr<xecs::system::instance>> >;
+    private:
 
-        std::unordered_map<type::guid, xecs::system::instance*> m_SystemMaps;
-        system_list                                             m_UpdaterSystems;
-        system_list                                             m_NotifierSystems;
-        events                                                  m_Events;
+        xecs::game_mgr::instance&   m_GameMgr;
+
+        template< typename T_USER_SYSTEM >
+        requires( std::derived_from< T_USER_SYSTEM, xecs::system::instance > )
+        friend struct details::compleated;
     };
 }

@@ -36,6 +36,13 @@ namespace xecs::system
 {
     struct instance;
     struct mgr;
+
+    namespace details
+    {
+        template< typename T_USER_SYSTEM >
+        requires( std::derived_from< T_USER_SYSTEM, xecs::system::instance > )
+        struct compleated;
+    }
 }
 
 namespace xecs::archetype
@@ -75,6 +82,7 @@ namespace xecs::query
 #include "xecs_query.h"
 #include "xecs_query_iterator.h"
 #include "xecs_system.h"
+#include "xecs_system_mgr.h"
 #include "xecs_game_mgr.h"
 
 //--------------------------------------------------------------
@@ -86,6 +94,7 @@ namespace xecs::query
 #include "details/xecs_archetype_inline.h"
 #include "details/xecs_archetype_mgr_inline.h"
 #include "details/xecs_system_inline.h"
+#include "details/xecs_system_mgr_inline.h"
 #include "details/xecs_query_iterator_inline.h"
 #include "details/xecs_game_mgr_inline.h"
 #include "details/xecs_query_inline.h"

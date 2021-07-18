@@ -279,7 +279,7 @@ struct update_timer : xecs::system::instance
         Timer.m_Value -= 0.01f;
         if( Timer.m_Value <= 0 )
         {
-            (void)m_GameMgr.AddOrRemoveComponents<std::tuple<>, std::tuple<timer>>(Entity);
+            (void)AddOrRemoveComponents<std::tuple<>, std::tuple<timer>>(Entity);
         }
     }
 };
@@ -295,9 +295,9 @@ struct bullet_logic : xecs::system::instance
 
     grid::instance* m_pGrid;
 
-    void OnGameStart()
+    void OnGameStart() noexcept
     {
-        m_pGrid = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
+        m_pGrid = getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
     using query = std::tuple
@@ -338,8 +338,8 @@ struct bullet_logic : xecs::system::instance
 
                     if (constexpr auto distance_v = 3; (Pos.m_Value - Position.m_Value).getLengthSquared() < distance_v * distance_v)
                     {
-                        m_GameMgr.DeleteEntity(Entity);
-                        m_GameMgr.DeleteEntity(E);
+                        DeleteEntity(Entity);
+                        DeleteEntity(E);
                         return true;
                     }
 
@@ -367,7 +367,7 @@ struct destroy_bullet_on_remove_timer : xecs::system::instance
     __inline
     void operator()(entity& Entity) const noexcept
     {
-        m_GameMgr.DeleteEntity(Entity);
+        DeleteEntity(Entity);
     }
 };
 
@@ -383,10 +383,10 @@ struct space_ship_logic : xecs::system::instance
     xecs::archetype::instance*  m_pBulletArchetype  {};
     grid::instance*             m_pGrid             {};
 
-    void OnGameStart()
+    void OnGameStart( void ) noexcept
     {
-        m_pBulletArchetype  = &m_GameMgr.getOrCreateArchetype<bullet_tuple>();
-        m_pGrid             = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
+        m_pBulletArchetype  = &getOrCreateArchetype<bullet_tuple>();
+        m_pGrid             = getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
     using query = std::tuple
@@ -422,7 +422,7 @@ struct space_ship_logic : xecs::system::instance
                     // Shoot a bullet if close enough
                     if(constexpr auto min_distance_v = 60; DistanceSquare < min_distance_v*min_distance_v )
                     {
-                        auto NewEntity = m_GameMgr.AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
+                        auto NewEntity = AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
                         {
                             Timer.m_Value = 8;
                         });
@@ -631,7 +631,7 @@ struct render_grid : xecs::system::instance
 
     void OnGameStart() noexcept
     {
-        m_pGrid = m_GameMgr.getSystem<grid_system_pool_family_create>().m_Grid.get();
+        m_pGrid = getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
     __inline
