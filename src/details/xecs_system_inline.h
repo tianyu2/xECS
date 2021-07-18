@@ -165,7 +165,7 @@ namespace xecs::system
     requires( std::derived_from<T_CLASS, xecs::system::instance>
                 && (false == std::is_same_v<typename T_CLASS::events, xecs::system::overrides::events>)
                 && !!(xcore::types::tuple_t2i_v<T_EVENT, typename T_CLASS::events > +1) 
-                )
+                ) constexpr
     void instance::SendEventFrom(T_CLASS* pThis, T_ARGS&&... Args) noexcept
     {
         std::get<T_EVENT>
@@ -181,8 +181,8 @@ namespace xecs::system
     < typename      T_GLOBAL_EVENT
     > requires
     ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
-    )
-    T_GLOBAL_EVENT& instance::getGlobalEvent( void ) noexcept
+    ) constexpr
+    T_GLOBAL_EVENT& instance::getGlobalEvent( void ) const noexcept
     {
         return m_GameMgr.getGlobalEvent<T_GLOBAL_EVENT>();
     }
@@ -194,7 +194,7 @@ namespace xecs::system
     , typename...   T_ARGS
     > requires
     ( std::derived_from< T_GLOBAL_EVENT, xecs::event::overrides>
-    )
+    ) constexpr
     void instance::SendGlobalEvent( T_ARGS&&... Args ) const noexcept
     {
         m_GameMgr.SendGlobalEvent<T_GLOBAL_EVENT, T_ARGS...>( std::forward<T_ARGS&&>(Args) ... );
@@ -208,8 +208,8 @@ namespace xecs::system
         (   (  xecs::tools::valid_tuple_components_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS>
             || xecs::component::type::is_valid_v<T_TUPLES_OF_COMPONENTS_OR_COMPONENTS> 
             ) &&... )
-    )
-    archetype::instance& instance::getOrCreateArchetype( void ) noexcept
+    ) constexpr
+    archetype::instance& instance::getOrCreateArchetype( void ) const noexcept
     {
         return m_GameMgr.getOrCreateArchetype< T_TUPLES_OF_COMPONENTS_OR_COMPONENTS...>();
     }
@@ -217,7 +217,8 @@ namespace xecs::system
     //-------------------------------------------------------------------------------------------
     template
     < typename... T_COMPONENTS
-    > [[nodiscard]] std::vector<archetype::instance*>
+    > constexpr
+    [[nodiscard]] std::vector<archetype::instance*>
     instance::Search( const xecs::query::instance& Query ) const noexcept
     {
         return m_GameMgr.Search(Query);
@@ -233,7 +234,7 @@ namespace xecs::system
     ( xcore::function::is_callable_v<T_FUNCTION>
     && xcore::types::is_specialized_v<std::tuple, T_TUPLE_ADD>
     && xcore::types::is_specialized_v<std::tuple, T_TUPLE_SUBTRACT>
-    ) __inline
+    ) constexpr
     [[nodiscard]] xecs::component::entity
 instance::AddOrRemoveComponents
     ( xecs::component::entity   Entity
@@ -244,7 +245,7 @@ instance::AddOrRemoveComponents
     }
 
     //-------------------------------------------------------------------------------------------
-
+    
     void instance::DeleteEntity( xecs::component::entity& Entity ) const noexcept
     {
         return m_GameMgr.DeleteEntity(Entity);
@@ -258,11 +259,12 @@ instance::AddOrRemoveComponents
     ( xecs::tools::assert_is_callable_v<T_FUNCTION>
         && (   xecs::tools::function_return_v<T_FUNCTION, bool >
             || xecs::tools::function_return_v<T_FUNCTION, void > )
-    ) void
+    ) constexpr
+    void
 instance::Foreach
     ( std::span<xecs::archetype::instance* const>    List
     , T_FUNCTION&&                                   Function 
-    ) noexcept
+    ) const noexcept
     {
         return m_GameMgr.Foreach( List, std::forward<T_FUNCTION&&>(Function) );
     }
@@ -270,8 +272,8 @@ instance::Foreach
     //-------------------------------------------------------------------------------------------
     template
     < typename T_SYSTEM
-    > __inline
-    T_SYSTEM* instance::findSystem( void ) noexcept
+    > constexpr
+    T_SYSTEM* instance::findSystem( void ) const noexcept
     {
         return m_GameMgr.findSystem<T_SYSTEM>();
     }
@@ -279,8 +281,8 @@ instance::Foreach
     //-------------------------------------------------------------------------------------------
     template
     < typename T_SYSTEM
-    > __inline
-    T_SYSTEM& instance::getSystem( void ) noexcept
+    > constexpr
+    T_SYSTEM& instance::getSystem( void ) const noexcept
     {
         return m_GameMgr.getSystem<T_SYSTEM>();
     }
