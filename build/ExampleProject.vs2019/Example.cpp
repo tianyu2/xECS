@@ -101,9 +101,9 @@ namespace grid
 
     template<typename T_FUNCTION>
     constexpr __inline
-    bool Foreach( instance& Grid, int X, int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    bool Foreach( const instance& Grid, const int X, const int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
-        for( xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr); auto& ArchetypeCell : Grid[Y][X] )
+        for( xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr); const auto& ArchetypeCell : Grid[Y][X] )
         {
             // Make sure this archetype matches are query
             if( Query.Compare(ArchetypeCell.m_pArchetype->getComponentBits()) == false )
@@ -140,7 +140,7 @@ namespace grid
 
     template<typename T_FUNCTION>
     constexpr __inline
-    bool Search( instance& Grid, int X, int Y, xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    bool Search( const instance& Grid, const int X, const int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
         static constexpr auto Table = std::array
         { -1, 0 + 1
@@ -167,8 +167,8 @@ namespace grid
 
     //---------------------------------------------------------------------------------------
 
-    __inline
-    grid_cell ComputeGridCellFromWorldPosition( xcore::vector2 Position) noexcept
+    __inline constexpr
+    grid_cell ComputeGridCellFromWorldPosition( const xcore::vector2 Position ) noexcept
     {
         const auto X = static_cast<int>(Position.m_X / (cell_width_v /2.0f));
         const auto Y = std::max(0, std::min(static_cast<int>(Position.m_Y / cell_height_v), cell_y_count - 1));
@@ -293,39 +293,37 @@ struct bullet_logic : xecs::system::instance
         .m_pName = "bullet_logic"
     };
 
-    grid::instance* m_pGrid;
-
-    void OnGameStart() noexcept
-    {
-        m_pGrid = getSystem<grid_system_pool_family_create>().m_Grid.get();
-    }
+    const grid::instance* m_pGrid;
+    xecs::query::instance m_QueryBullets;
+    xecs::query::instance m_QueryAny;
 
     using query = std::tuple
     <
         xecs::query::must<bullet>
     >;
 
-    __inline 
-    void OnUpdate() noexcept
+    void OnGameStart( void ) noexcept
     {
-        xecs::query::instance QueryBullets;
-        xecs::query::instance QueryAny;
+        m_pGrid = getSystem<grid_system_pool_family_create>().m_Grid.get();
+        m_QueryBullets.AddQueryFromTuple<query>();
+        m_QueryAny.m_Must.AddFromComponents<position>();
+    }
 
-        QueryBullets.AddQueryFromTuple<query>();
-        QueryAny.m_Must.AddFromComponents<position>();
-
+    __inline 
+    void OnUpdate( void ) noexcept
+    {
         //
         // Update all the bullets
         //
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( *m_pGrid, X, Y, QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
+            grid::Foreach( *m_pGrid, X, Y, m_QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
             {
                 // If I am dead because some other bullet killed me then there is nothing for me to do...
                 if (Entity.isZombie()) return;
 
-                grid::Search( *m_pGrid, X, Y, QueryAny, [&]( entity& E, const position& Pos )  constexpr noexcept
+                grid::Search( *m_pGrid, X, Y, m_QueryAny, [&]( entity& E, const position& Pos )  constexpr noexcept
                 {
                     if (E.isZombie()) return false;
 
@@ -380,13 +378,19 @@ struct space_ship_logic : xecs::system::instance
         .m_pName = "space_ship_logic"
     };
 
-    xecs::archetype::instance*  m_pBulletArchetype  {};
-    grid::instance*             m_pGrid             {};
+    xecs::archetype::instance*  m_pBulletArchetype          {};
+    const grid::instance*       m_pGrid                     {};
+    xecs::query::instance       m_QueryThinkingShipsOnly    {};
+    xecs::query::instance       m_QueryAnyShips             {};
 
     void OnGameStart( void ) noexcept
     {
         m_pBulletArchetype  = &getOrCreateArchetype<bullet_tuple>();
         m_pGrid             = getSystem<grid_system_pool_family_create>().m_Grid.get();
+        m_QueryThinkingShipsOnly.AddQueryFromTuple<query>();
+
+        m_QueryAnyShips.m_Must.AddFromComponents<position>();
+        m_QueryAnyShips.m_NoneOf.AddFromComponents<bullet>();
     }
 
     using query = std::tuple
@@ -396,22 +400,14 @@ struct space_ship_logic : xecs::system::instance
     >;
 
     __inline
-    void OnUpdate() noexcept
+    void OnUpdate( void ) noexcept
     {
-        xecs::query::instance QueryThinkingShipsOnly;
-        xecs::query::instance QueryAnyShips;
-
-        QueryThinkingShipsOnly.AddQueryFromTuple<query>();
-
-        QueryAnyShips.m_Must.AddFromComponents<position>();
-        QueryAnyShips.m_NoneOf.AddFromComponents<bullet>();
-
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( *m_pGrid, X, Y, QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
+            grid::Foreach( *m_pGrid, X, Y, m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
             {
-                grid::Search( *m_pGrid, X, Y, QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
+                grid::Search( *m_pGrid, X, Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
                 {
                     // Don't shoot myself
                     if ( Entity == E ) return false;
@@ -627,7 +623,7 @@ struct render_grid : xecs::system::instance
         .m_pName = "render_grid"
     };
 
-    grid::instance* m_pGrid;
+    const grid::instance* m_pGrid;
 
     void OnGameStart( void ) noexcept
     {
@@ -640,7 +636,7 @@ struct render_grid : xecs::system::instance
         for( int y=0; y<grid::cell_y_count; y++ )
         for( int x=0; x<grid::cell_x_count; x++ )
         {
-            auto& GridCell = (*m_pGrid)[y][x];
+            const auto& GridCell = (*m_pGrid)[y][x];
 
             // If we don't have any archetypes then move on
             int Count = static_cast<int>(GridCell.size());

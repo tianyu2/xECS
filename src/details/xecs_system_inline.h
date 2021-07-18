@@ -8,11 +8,15 @@ namespace xecs::system
         {
             T_USER_SYSTEM::events m_Events;
 
+            //---------------------------------------------------------------------------------------
+
             __inline
             compleated( xecs::game_mgr::instance& GameMgr ) noexcept
             : T_USER_SYSTEM{ GameMgr }
             {}
             compleated( void ) noexcept = delete;
+
+            //---------------------------------------------------------------------------------------
 
             __inline
             void Run( void ) noexcept
@@ -67,6 +71,9 @@ namespace xecs::system
                 }
             }
 
+            //---------------------------------------------------------------------------------------
+
+            __inline
             void Notify( xecs::component::entity& Entity ) noexcept
             {
                 if constexpr (T_USER_SYSTEM::typedef_v.is_notifier_v )
