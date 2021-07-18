@@ -135,7 +135,7 @@ protected:
             && xecs::tools::assert_function_args_have_only_non_const_references_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity
                                 _MoveInEntity           ( xecs::component::entity&  Entity
-                                                        , xecs::pool::family&       PoolFamily
+                                                        , xecs::pool::family&       ToPoolFamily
                                                         , T_FUNCTION&&              Function = xecs::tools::empty_lambda{} 
                                                         ) noexcept;
         template

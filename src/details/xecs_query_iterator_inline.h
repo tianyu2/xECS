@@ -27,6 +27,17 @@ namespace xecs::query
         if constexpr (parent_t::has_shares_v)
         {
             parent_t::m_pGameMgr = &GameMgr;
+
+            //
+            // Set all the keys to zero
+            //
+            [&] <typename...T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
+            {
+                (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                {
+                    parent_t::m_CacheShareKeys[xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>].m_Value = 0;
+                }(xcore::types::make_null_tuple_v<T_COMPONENTS>)), ...);
+            }(xcore::types::null_tuple_v<parent_t::share_tuple_unfilter>);
         }
     }
 
@@ -92,7 +103,7 @@ namespace xecs::query
                         using       j_ptr           = xcore::types::decay_full_t<J>*;
 
                         auto&       EntityDetails   = parent_t::m_pGameMgr->m_ComponentMgr.getEntityDetails(FamilyShareDetails.m_Entity);
-                        const auto  ComponentIndex  = parent_t::m_RemapIndices[Index];//EntityDetails.m_pPool->findIndexComponentFromInfo(*Family.m_ShareInfos[RemapedIndex]);
+                        const auto  ComponentIndex  = EntityDetails.m_pPool->findIndexComponentFromInfo(*Family.m_ShareInfos[RemapedIndex]);
 
                         if constexpr( std::is_pointer_v<J> )
                         {
@@ -159,14 +170,9 @@ namespace xecs::query
     void iterator<T_FUNCTION>::UpdatePool( xecs::pool::instance& Pool ) noexcept
     {
         //
-        // Set the data tuple for each pool
-        // Handles references and pointers const and non-const
+        // Set the pool
         //
-        if constexpr (parent_t::has_shares_v)
-        {
-            parent_t::m_pPool = &Pool;
-            parent_t::m_EntityIndex = 0;
-        }
+        parent_t::m_pPool = &Pool;
 
         //
         // Handle regular components, it runs in both modes shares+data/data only
@@ -206,233 +212,239 @@ namespace xecs::query
     xcore::function::traits<T_FUNCTION>::return_type
     iterator<T_FUNCTION>::ForeachEntity( T_FUNCTION&& Function ) noexcept
     {
+        assert(parent_t::m_pPool->Size());
+
         if constexpr ( parent_t::has_shares_v )
         {
-            bool  bBreak  = false;
-
-            //
-            // Call the user function
-            //
-            if constexpr (std::is_same_v<bool, ret_t>)
-            {
-                bBreak = [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
-                {
-                    return Function
-                    (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
-                        {
-                            using univ = parent_t::template universal_t<J>;
-
-                            if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE)
-                            {
-                                if constexpr (std::is_pointer_v<J>)
-                                {
-                                    if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
-                                    else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
-                                }
-                                else
-                                {
-                                    if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
-                                    else                                   return std::get<univ>(parent_t::m_UniversalTuple);
-                                }
-                            }
-                            else
-                            {
-                                auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
-
-                                if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
-
-                                auto p = MyP;                   // Back up the pointer
-                                MyP++;                         // Get ready for the next entity
-
-                                if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
-                                else                                return reinterpret_cast<J>(*p);
-                            }
-                        }( xcore::types::make_null_tuple_v<T> )
-                        ...
-                    );
-
-                }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
-            }
-            else
-            {
-                [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
-                {
-                    Function
-                    (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
-                        {
-                            using univ = parent_t::template universal_t<J>;
-
-                            if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE)
-                            {
-                                if constexpr (std::is_pointer_v<J>)
-                                {
-                                    if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
-                                    else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
-                                }
-                                else
-                                {
-                                    if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
-                                    else                                   return std::get<univ>(parent_t::m_UniversalTuple);
-                                }
-                            }
-                            else
-                            {
-                                auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
-
-                                if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
-
-                                auto p = MyP;                   // Back up the pointer
-                                MyP++;                         // Get ready for the next entity
-
-                                if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
-                                else                                return reinterpret_cast<J>(*p);
-                            }
-                        }( xcore::types::make_null_tuple_v<T> )
-                        ...
-                    );
-                }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
-            }
-
-            //
-            // Did the user change any of the share components?
-            // If so... we need to move this entity into another family
-            //
-            [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+            bool  bBreak = false;
+            for (int iEntity = 0; iEntity < parent_t::m_pPool->Size(); ++iEntity)
             {
                 //
-                // Compute the new Sum Guid which will allow us to detect if something has change
+                // Call the user function
                 //
-                std::array<xecs::component::type::share::key, parent_t::nonconst_share_count_v >   UpdatedKeyArray;
-                std::uint64_t                                                                      NewKeySumGuid    {};
-                int                                                                                nNewEnties       {0};
-
-                (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                if constexpr (std::is_same_v<bool, ret_t>)
                 {
-                    if constexpr ( false == std::is_const_v<J> )
+                    bBreak = [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
                     {
-                        const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
-                        if constexpr (std::is_pointer_v<J>) if(-1 == parent_t::m_RemapIndices[Index]) return;
+                        return Function
+                        (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
+                            {
+                                using univ = parent_t::template universal_t<J>;
 
-                        UpdatedKeyArray[nNewEnties] = xecs::component::type::details::ComputeShareKey
-                        ( parent_t::m_pArchetype->getGuid()
-                        , xecs::component::type::info_v<J>
-                        , reinterpret_cast<const std::byte*>(&std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple))
+                                if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE)
+                                {
+                                    if constexpr (std::is_pointer_v<J>)
+                                    {
+                                        if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
+                                        else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
+                                    }
+                                    else
+                                    {
+                                        if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
+                                        else                                   return std::get<univ>(parent_t::m_UniversalTuple);
+                                    }
+                                }
+                                else
+                                {
+                                    auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
+
+                                    if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
+
+                                    auto p = MyP;                   // Back up the pointer
+                                    MyP++;                         // Get ready for the next entity
+
+                                    if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
+                                    else                                return reinterpret_cast<J>(*p);
+                                }
+                            }( xcore::types::make_null_tuple_v<T> )
+                            ...
                         );
-                        NewKeySumGuid += UpdatedKeyArray[nNewEnties++].m_Value;
-                    }
-                }( xcore::types::make_null_tuple_v<T> )), ... );
 
-                //
-                // Check if we need to change family
-                //
-                if( NewKeySumGuid != parent_t::m_KeyCheckSum)
+                    }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
+                }
+                else
                 {
-                    std::array<std::byte*, parent_t::nonconst_share_count_v >   PointersToShares;
-
-                    // Collect the rest of the data
-                    int nCompactify = 0;
-                    (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                    [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
                     {
-                        if constexpr (false == std::is_const_v<J>)
-                        {
-                            const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
-                            if constexpr (std::is_pointer_v<J>) if (-1 == parent_t::m_RemapIndices[Index]) return;
-                            PointersToShares[nCompactify] = reinterpret_cast<std::byte*>(&std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple));
-                            nCompactify++;
-                        }
-                    }(xcore::types::make_null_tuple_v<T>)), ...);
-                    assert( nCompactify == nNewEnties );
-                    assert( nCompactify == parent_t::m_UpdatedComponentsBits.CountComponents() );
+                        Function
+                        (   [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
+                            {
+                                using univ = parent_t::template universal_t<J>;
 
-                    //
-                    // Get the new family and move the entity there
-                    //
-                    parent_t::m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
-                    ( *parent_t::m_pFamily
-                    , parent_t::m_UpdatedComponentsBits
-                    , PointersToShares
-                    , UpdatedKeyArray
-                    )
-                    .MoveIn
-                    ( *parent_t::m_pGameMgr
-                    , *parent_t::m_pFamily
-                    , *parent_t::m_pPool
-                    , { parent_t::m_EntityIndex }
-                    );
+                                if constexpr (xecs::component::type::info_v<J>.m_TypeID == xecs::component::type::id::SHARE)
+                                {
+                                    if constexpr (std::is_pointer_v<J>)
+                                    {
+                                        if constexpr (std::is_pointer_v<univ>) return std::get<univ>(parent_t::m_UniversalTuple);
+                                        else                                   return &std::get<univ>(parent_t::m_UniversalTuple);
+                                    }
+                                    else
+                                    {
+                                        if constexpr (std::is_pointer_v<univ>) return *std::get<univ>(parent_t::m_UniversalTuple);
+                                        else                                   return std::get<univ>(parent_t::m_UniversalTuple);
+                                    }
+                                }
+                                else
+                                {
+                                    auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
 
-                    //
-                    // Copy the memory for only share components that can change
-                    //
-                    (([&]<typename J>(std::tuple<J>*) constexpr noexcept
-                    {
-                        if constexpr (!std::is_const_v<J>)
-                        {
-                            const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
-                            if constexpr (std::is_pointer_v<J>) if (-1 == parent_t::m_RemapIndices[Index]) return;
-                            std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple) = *std::get<xcore::types::decay_full_t<J>*>(parent_t::m_CacheSharePointers);
-                        }
-                    }(xcore::types::make_null_tuple_v<T>)), ...);
+                                    if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
+
+                                    auto p = MyP;                   // Back up the pointer
+                                    MyP++;                         // Get ready for the next entity
+
+                                    if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
+                                    else                                return reinterpret_cast<J>(*p);
+                                }
+                            }( xcore::types::make_null_tuple_v<T> )
+                            ...
+                        );
+                    }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
                 }
 
-            }(xcore::types::null_tuple_v<parent_t::share_tuple_unfilter>);
+                //
+                // Did the user change any of the share components?
+                // If so... we need to move this entity into another family
+                //
+                [&]<typename...T>(std::tuple<T...>*) constexpr noexcept
+                {
+                    //
+                    // Compute the new Sum Guid which will allow us to detect if something has change
+                    //
+                    std::array<xecs::component::type::share::key, parent_t::nonconst_share_count_v >   UpdatedKeyArray;
+                    std::uint64_t                                                                      NewKeySumGuid    {};
+                    int                                                                                nNewEnties       {0};
 
-            //
-            // Increase the entity index count
-            //
-            parent_t::m_EntityIndex++;
+                    (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                    {
+                        if constexpr ( false == std::is_const_v<J> )
+                        {
+                            const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
+                            if constexpr (std::is_pointer_v<J>) if(-1 == parent_t::m_RemapIndices[Index]) return;
 
-            //
-            // Return the right thing if we are a bool function
-            //
-            if constexpr (std::is_same_v<bool, ret_t>) return bBreak;
+                            UpdatedKeyArray[nNewEnties] = xecs::component::type::details::ComputeShareKey
+                            ( parent_t::m_pArchetype->getGuid()
+                            , xecs::component::type::info_v<J>
+                            , reinterpret_cast<const std::byte*>(&std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple))
+                            );
+                            NewKeySumGuid += UpdatedKeyArray[nNewEnties++].m_Value;
+                        }
+                    }( xcore::types::make_null_tuple_v<T> )), ... );
+
+                    //
+                    // Check if we need to change family
+                    //
+                    if( NewKeySumGuid != parent_t::m_KeyCheckSum)
+                    {
+                        std::array<std::byte*, parent_t::nonconst_share_count_v >   PointersToShares;
+
+                        // Collect the rest of the data
+                        int nCompactify = 0;
+                        (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                        {
+                            if constexpr (false == std::is_const_v<J>)
+                            {
+                                const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
+                                if constexpr (std::is_pointer_v<J>) if (-1 == parent_t::m_RemapIndices[Index]) return;
+                                PointersToShares[nCompactify] = reinterpret_cast<std::byte*>(&std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple));
+                                nCompactify++;
+                            }
+                        }(xcore::types::make_null_tuple_v<T>)), ...);
+                        assert( nCompactify == nNewEnties );
+                        assert( nCompactify == parent_t::m_UpdatedComponentsBits.CountComponents() );
+
+                        //
+                        // Get the new family and move the entity there
+                        //
+                        parent_t::m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
+                        ( *parent_t::m_pFamily
+                        , parent_t::m_UpdatedComponentsBits
+                        , PointersToShares
+                        , UpdatedKeyArray
+                        )
+                        .MoveIn
+                        ( *parent_t::m_pGameMgr
+                        , *parent_t::m_pFamily
+                        , *parent_t::m_pPool
+                        , { iEntity }
+                        );
+
+                        //
+                        // Copy the memory for only share components that can change
+                        //
+                        (([&]<typename J>(std::tuple<J>*) constexpr noexcept
+                        {
+                            if constexpr (!std::is_const_v<J>)
+                            {
+                                const auto Index = xcore::types::tuple_t2i_v<J, parent_t::share_tuple_unfilter>;
+                                if constexpr (std::is_pointer_v<J>) if (-1 == parent_t::m_RemapIndices[Index]) return;
+                                std::get<parent_t::universal_t<J>>(parent_t::m_UniversalTuple) = *std::get<xcore::types::decay_full_t<J>*>(parent_t::m_CacheSharePointers);
+                            }
+                        }(xcore::types::make_null_tuple_v<T>)), ...);
+                    }
+
+                }(xcore::types::null_tuple_v<parent_t::share_tuple_unfilter>);
+
+                //
+                // Return the right thing if we are a bool function
+                //
+                if constexpr (std::is_same_v<bool, ret_t>) return bBreak;
+            }
         }
         else
         {
-            //
-            // Call the user function
-            //
-            if constexpr (std::is_same_v<bool, ret_t>)
+            int i = parent_t::m_pPool->Size();
+            do
             {
-                return [&] <typename... T>(std::tuple<T...>*) constexpr noexcept
+                //
+                // Call the user function
+                //
+                if constexpr (std::is_same_v<bool, ret_t>)
                 {
-                    return Function
-                    ( [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
-                        {
-                            auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
+                    if( [&] <typename... T>(std::tuple<T...>*) constexpr noexcept
+                    {
+                        return Function
+                        ( [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
+                            {
+                                auto& MyP = std::get<parent_t::template universal_t<J>>(parent_t::m_DataTuple);
 
-                            if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
+                                if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
 
-                            auto p = MyP;                   // Back up the pointer
-                            MyP ++;                         // Get ready for the next entity
+                                auto p = MyP;                   // Back up the pointer
+                                MyP ++;                         // Get ready for the next entity
 
-                            if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
-                            else                                return reinterpret_cast<J>(*p);
-                        }(xcore::types::make_null_tuple_v<T>)
-                        ...
-                    );
-                }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
-            }
-            else
-            {
-                [&] <typename... T>(std::tuple<T...>*) constexpr noexcept
+                                if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
+                                else                                return reinterpret_cast<J>(*p);
+                            }(xcore::types::make_null_tuple_v<T>)
+                            ...
+                        );
+                    }(xcore::types::null_tuple_v<typename func_t::args_tuple>) ) return true;
+                }
+                else
                 {
-                    Function
-                    ( [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
-                        {
-                            auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
+                    [&] <typename... T>(std::tuple<T...>*) constexpr noexcept
+                    {
+                        Function
+                        ( [&]<typename J>(std::tuple<J>*) constexpr noexcept -> J
+                            {
+                                auto& MyP = std::get<parent_t::universal_t<J>>(parent_t::m_DataTuple);
 
-                            if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
+                                if constexpr (std::is_pointer_v<J>) if (MyP == nullptr) return reinterpret_cast<J>(nullptr);
 
-                            auto p = MyP;                   // Back up the pointer
-                            MyP ++;                         // Get ready for the next entity
+                                auto p = MyP;                   // Back up the pointer
+                                MyP ++;                         // Get ready for the next entity
 
-                            if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
-                            else                                return reinterpret_cast<J>(*p);
-                        }(xcore::types::make_null_tuple_v<T>)
-                        ...
-                    );
-                }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
-            }
+                                if constexpr (std::is_pointer_v<J>) return reinterpret_cast<J>(p);
+                                else                                return reinterpret_cast<J>(*p);
+                            }(xcore::types::make_null_tuple_v<T>)
+                            ...
+                        );
+                    }(xcore::types::null_tuple_v<typename func_t::args_tuple>);
+                }
+
+            } while( --i );
+
+            if constexpr (std::is_same_v<bool, ret_t>) return false;
         }
     }
 }

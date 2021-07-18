@@ -157,21 +157,18 @@ namespace xecs::game_mgr
                 Iterator.UpdateFamilyPool( *pFamily );
                 for( auto pPool = &pFamily->m_DefaultPool; pPool; pPool = pPool->m_Next.get() )
                 {
-                    int i = pPool->Size();
-                    if(i==0) continue;
+                    if( 0 == pPool->Size() ) continue;
                     Iterator.UpdatePool( *pPool );
-                    do
+
+                    if constexpr (std::is_same_v<xecs::query::iterator<T_FUNCTION>::ret_t, bool >)
                     {
-                        if constexpr (std::is_same_v<xecs::query::iterator<T_FUNCTION>::ret_t, bool >)
-                        {
-                            if( Iterator.ForeachEntity( std::forward<T_FUNCTION&&>(Function) ) )
-                                return;
-                        }
-                        else
-                        {
-                            Iterator.ForeachEntity( std::forward<T_FUNCTION&&>(Function));
-                        }
-                    } while(--i);
+                        if( Iterator.ForeachEntity( std::forward<T_FUNCTION&&>(Function) ) )
+                            return;
+                    }
+                    else
+                    {
+                        Iterator.ForeachEntity( std::forward<T_FUNCTION&&>(Function));
+                    }
                 }
             }
         }

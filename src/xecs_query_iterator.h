@@ -29,7 +29,8 @@ namespace xecs::query
             , decltype(xcore::types::null_tuple_v<typename func::args_tuple>)
             >;
 
-            archetype::instance*    m_pArchetype;
+            archetype::instance*    m_pArchetype    {};
+            pool::instance*         m_pPool         {};
             data_tuple              m_DataTuple;
         };
 
@@ -166,7 +167,6 @@ namespace xecs::query
             share_tuple                                                             m_UniversalTuple;
             data_tuple                                                              m_DataTuple;
             std::uint64_t                                                           m_KeyCheckSum;
-            int                                                                     m_EntityIndex;
         };
     }
 
