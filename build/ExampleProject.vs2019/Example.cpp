@@ -191,7 +191,7 @@ struct update_movement : xecs::system::instance
         .m_pName = "update_movement"
     };
 
-    __inline
+    __inline 
     void operator()( position& Position, velocity& Velocity, grid_cell& GridCell ) const noexcept
     {
         Position.m_Value += Velocity.m_Value;
@@ -240,7 +240,7 @@ struct grid_system_pool_family_create : xecs::system::instance
 
     std::shared_ptr<grid::instance> m_Grid = std::make_shared<grid::instance>();
 
-    __inline
+    __inline 
     void OnPoolFamily( xecs::archetype::instance& Archetype, xecs::pool::family& PoolFamily ) const noexcept
     {
         assert(PoolFamily.m_ShareInfos.size() == 1);
@@ -273,7 +273,7 @@ struct update_timer : xecs::system::instance
         .m_pName = "update_timer"
     };
 
-    __inline
+    __inline constexpr
     void operator()( entity& Entity, timer& Timer ) const noexcept
     {
         Timer.m_Value -= 0.01f;
@@ -305,7 +305,7 @@ struct bullet_logic : xecs::system::instance
         xecs::query::must<bullet>
     >;
 
-    __inline
+    __inline 
     void OnUpdate() noexcept
     {
         xecs::query::instance QueryBullets;
@@ -320,12 +320,12 @@ struct bullet_logic : xecs::system::instance
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( *m_pGrid, X, Y, QueryBullets, [&]( entity& Entity, position& Position, bullet& Bullet ) constexpr noexcept
+            grid::Foreach( *m_pGrid, X, Y, QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
             {
                 // If I am dead because some other bullet killed me then there is nothing for me to do...
                 if (Entity.isZombie()) return;
 
-                grid::Search( *m_pGrid, X, Y, QueryAny, [&]( entity& E, position& Pos )  constexpr noexcept
+                grid::Search( *m_pGrid, X, Y, QueryAny, [&]( entity& E, const position& Pos )  constexpr noexcept
                 {
                     if (E.isZombie()) return false;
 
@@ -365,7 +365,7 @@ struct destroy_bullet_on_remove_timer : xecs::system::instance
     >;
 
     __inline
-    void operator()(entity& Entity) const noexcept
+    void operator()( entity& Entity ) const noexcept
     {
         DeleteEntity(Entity);
     }
@@ -409,9 +409,9 @@ struct space_ship_logic : xecs::system::instance
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( *m_pGrid, X, Y, QueryThinkingShipsOnly, [&]( entity& Entity, position& Position ) constexpr noexcept
+            grid::Foreach( *m_pGrid, X, Y, QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
             {
-                grid::Search( *m_pGrid, X, Y, QueryAnyShips, [&]( entity& E, position& Pos ) constexpr noexcept
+                grid::Search( *m_pGrid, X, Y, QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
                 {
                     // Don't shoot myself
                     if ( Entity == E ) return false;
@@ -472,8 +472,8 @@ struct on_destroy_count_dead_ships : xecs::system::instance
     , xecs::query::must<position>
     >;
 
-    __inline
-    void operator()(timer* pTimer) const noexcept
+    __inline constexpr
+    void operator()( const timer* pTimer) const noexcept
     {
         if (pTimer) s_Game.m_nEntityWaitingDead++;
         else        s_Game.m_nEntityThinkingDead++;
@@ -496,7 +496,7 @@ struct renderer : xecs::system::instance
     >;
 
     __inline
-    void OnUpdate() noexcept
+    void OnUpdate( void ) noexcept
     {
         //
         // Begin of the rendering
@@ -519,7 +519,7 @@ struct renderer : xecs::system::instance
 //---------------------------------------------------------------------------------------
 
 template< typename... T_ARGS>
-void GlutPrint(int x, int y, const char* pFmt, T_ARGS&&... Args) noexcept
+void GlutPrint( const int x, const int y, const char* const pFmt, T_ARGS&&... Args) noexcept
 {
     std::array<char, 256> FinalString;
     const auto len = sprintf_s(FinalString.data(), FinalString.size(), pFmt, Args...);
@@ -558,18 +558,18 @@ struct render_bullets : xecs::system::instance
         xecs::query::must<bullet>
     >;
 
-    void OnPreUpdate()
+    void OnPreUpdate( void ) noexcept
     {
         glBegin(GL_TRIANGLES);
     }
 
-    void OnPostUpdate()
+    void OnPostUpdate( void ) noexcept
     {
         glEnd();
     }
 
     __inline
-    void operator()( position& Position, velocity& Velocity ) const noexcept
+    void operator()( const position& Position, const velocity& Velocity ) const noexcept
     {
         constexpr auto SizeX = 1;
         constexpr auto SizeY = SizeX*3;
@@ -595,18 +595,18 @@ struct render_ships : xecs::system::instance
     ,   xecs::query::one_of<entity>
     >;
 
-    void OnPreUpdate()
+    void OnPreUpdate( void ) noexcept
     {
         glBegin(GL_QUADS);
     }
 
-    void OnPostUpdate()
+    void OnPostUpdate( void ) noexcept
     {
         glEnd();
     }
 
     __inline
-    void operator()( position& Position, timer* pTimer ) const noexcept
+    void operator()( const position& Position, const timer* pTimer ) const noexcept
     {
         constexpr auto Size = 3;
         if(pTimer) glColor3f(1.0, 1.0, 1.0);
@@ -629,13 +629,13 @@ struct render_grid : xecs::system::instance
 
     grid::instance* m_pGrid;
 
-    void OnGameStart() noexcept
+    void OnGameStart( void ) noexcept
     {
         m_pGrid = getSystem<grid_system_pool_family_create>().m_Grid.get();
     }
 
-    __inline
-    void OnUpdate() noexcept
+    __inline constexpr
+    void OnUpdate( void ) noexcept
     {
         for( int y=0; y<grid::cell_y_count; y++ )
         for( int x=0; x<grid::cell_x_count; x++ )
