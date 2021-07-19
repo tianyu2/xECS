@@ -2,23 +2,31 @@ namespace xecs::query
 {
     namespace details
     {
+        enum class mode
+        {
+            DEFAULT
+        ,   DATA_ONLY
+        ,   DATA_AND_CONST_SHARES
+        ,   DATA_AND_SHARES
+        };
+
         //------------------------------------------------------------------------------------
 
         template
         < typename  T_FUNCTION
-        , bool      T_HAS_SHARES_V = xecs::tools::function_has_share_component_args_v<T_FUNCTION>
+        , mode      T_HAS_SHARES_V = xecs::tools::function_has_share_component_args_v<T_FUNCTION> ? mode::DATA_AND_SHARES : mode::DATA_ONLY
         >
         struct data_pack;
 
         //------------------------------------------------------------------------------------
 
         template< typename T_FUNCTION>
-        struct data_pack< T_FUNCTION, false >
+        struct data_pack< T_FUNCTION, mode::DATA_ONLY >
         {
             static_assert(xcore::function::is_callable_v<T_FUNCTION>);
 
             using                   func                = xcore::function::traits<T_FUNCTION>;
-            static constexpr bool   has_shares_v        = false;
+            static constexpr auto   mode_v              = mode::DATA_ONLY;
             using                   data_tuple_unfilter = typename func::args_tuple;
             template< typename T >
             using                   universal_t         = xcore::types::decay_full_t<T>*;
@@ -37,13 +45,13 @@ namespace xecs::query
         //------------------------------------------------------------------------------------
 
         template< typename T_FUNCTION>
-        struct data_pack< T_FUNCTION, true >
+        struct data_pack< T_FUNCTION, mode::DATA_AND_SHARES >
         {
             static_assert(xcore::function::is_callable_v<T_FUNCTION>);
 
             using func = xcore::function::traits<T_FUNCTION>;
 
-            static constexpr bool has_shares_v = true;
+            static constexpr auto mode_v = mode::DATA_AND_SHARES;
 
             using share_tuple_unfilter              = std::invoke_result_t
             < decltype
@@ -172,12 +180,14 @@ namespace xecs::query
 
     //------------------------------------------------------------------------------------
 
-    template< typename T_FUNCTION >
-    struct iterator : details::data_pack<T_FUNCTION>
+    template< typename T_FUNCTION, auto T_MODE_V = details::mode::DEFAULT >
+    struct iterator : std::conditional_t< T_MODE_V == details::mode::DEFAULT, details::data_pack<T_FUNCTION>, details::data_pack<T_FUNCTION, T_MODE_V> >
     {
-        using parent_t  = details::data_pack<T_FUNCTION>;
+        using parent_t  = std::conditional_t< T_MODE_V == details::mode::DEFAULT, details::data_pack<T_FUNCTION>, details::data_pack<T_FUNCTION, T_MODE_V> >;
         using func_t    = xcore::function::traits<T_FUNCTION>;
         using ret_t     = func_t::return_type;
+
+        constexpr static auto mode_v = parent_t::mode_v;
 
         __inline
                     iterator                        ( xecs::game_mgr::instance&     GameMgr

@@ -117,7 +117,7 @@ namespace xecs::component
         //
         std::sort
         ( s_BitsToInfo.begin()
-        , s_BitsToInfo.begin() + s_nTypes - 1
+        , s_BitsToInfo.begin() + s_nTypes
         , xecs::component::type::details::CompareTypeInfos
         );
 

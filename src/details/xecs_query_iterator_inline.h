@@ -3,7 +3,7 @@ namespace xecs::query
     namespace details
     {
         template< typename  T_FUNCTION >
-        data_pack<T_FUNCTION, true>::data_pack() noexcept
+        data_pack<T_FUNCTION, details::mode::DATA_AND_SHARES>::data_pack() noexcept
         : m_UpdatedComponentsBits { [&] <typename...T>(std::tuple<T...>*) constexpr noexcept
                                     {
                                         xecs::tools::bits Bits;
@@ -15,16 +15,16 @@ namespace xecs::query
                                             }
                                         }(xcore::types::make_null_tuple_v<T>)), ...);
                                         return Bits;
-                                    }(xcore::types::null_tuple_v<data_pack<T_FUNCTION, true>::share_tuple_unfilter>) }
+                                    }(xcore::types::null_tuple_v<data_pack<T_FUNCTION, details::mode::DATA_AND_SHARES>::share_tuple_unfilter>) }
         {   
         }
     }
 
     //---------------------------------------------------------------------
-    template< typename T_FUNCTION >
-    iterator<T_FUNCTION>::iterator( xecs::game_mgr::instance& GameMgr ) noexcept
+    template< typename T_FUNCTION, auto T_MODE_V >
+    iterator<T_FUNCTION, T_MODE_V>::iterator( xecs::game_mgr::instance& GameMgr ) noexcept
     {
-        if constexpr (parent_t::has_shares_v)
+        if constexpr (mode_v == xecs::query::details::mode::DATA_AND_SHARES )
         {
             parent_t::m_pGameMgr = &GameMgr;
 
@@ -44,12 +44,12 @@ namespace xecs::query
 
     //---------------------------------------------------------------------
 
-    template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::UpdateArchetype( xecs::archetype::instance& Archetype ) noexcept
+    template< typename T_FUNCTION, auto T_MODE_V >
+    void iterator<T_FUNCTION, T_MODE_V>::UpdateArchetype( xecs::archetype::instance& Archetype ) noexcept
     {
         parent_t::m_pArchetype = &Archetype;
 
-        if constexpr( parent_t::has_shares_v )
+        if constexpr(mode_v == xecs::query::details::mode::DATA_AND_SHARES )
         {
             // Setup the share bits only
             parent_t::m_ArchetypeShareBits.setupAnd( Archetype.getComponentBits(), xecs::component::mgr::s_ShareBits );
@@ -79,10 +79,10 @@ namespace xecs::query
 
     //---------------------------------------------------------------------
 
-    template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::UpdateFamilyPool(xecs::pool::family& Family) noexcept
+    template< typename T_FUNCTION, auto T_MODE_V >
+    void iterator<T_FUNCTION, T_MODE_V>::UpdateFamilyPool(xecs::pool::family& Family) noexcept
     {
-        if constexpr (parent_t::has_shares_v)
+        if constexpr (mode_v == xecs::query::details::mode::DATA_AND_SHARES )
         {
             parent_t::m_pFamily = &Family;
 
@@ -166,8 +166,8 @@ namespace xecs::query
 
     //---------------------------------------------------------------------
 
-    template< typename T_FUNCTION >
-    void iterator<T_FUNCTION>::UpdatePool( xecs::pool::instance& Pool ) noexcept
+    template< typename T_FUNCTION, auto T_MODE_V >
+    void iterator<T_FUNCTION, T_MODE_V>::UpdatePool( xecs::pool::instance& Pool ) noexcept
     {
         //
         // Set the pool
@@ -208,13 +208,13 @@ namespace xecs::query
 
     //---------------------------------------------------------------------
 
-    template< typename T_FUNCTION >
+    template< typename T_FUNCTION, auto T_MODE_V >
     xcore::function::traits<T_FUNCTION>::return_type
-    iterator<T_FUNCTION>::ForeachEntity( T_FUNCTION&& Function ) noexcept
+    iterator<T_FUNCTION, T_MODE_V>::ForeachEntity( T_FUNCTION&& Function ) noexcept
     {
         assert(parent_t::m_pPool->Size());
 
-        if constexpr ( parent_t::has_shares_v )
+        if constexpr(mode_v == xecs::query::details::mode::DATA_AND_SHARES )
         {
             bool  bBreak = false;
             for (int iEntity = 0; iEntity < parent_t::m_pPool->Size(); ++iEntity)
@@ -391,7 +391,7 @@ namespace xecs::query
                 if constexpr (std::is_same_v<bool, ret_t>) return bBreak;
             }
         }
-        else
+        else if constexpr(mode_v == xecs::query::details::mode::DATA_ONLY )
         {
             int i = parent_t::m_pPool->Size();
             do

@@ -541,88 +541,81 @@ struct render_grid : xecs::system::instance
         .m_pName = "render_grid"
     };
 
-    __inline constexpr
-    void OnUpdate( void ) noexcept
+    using query = std::tuple
+    <
+        xecs::query::must<xecs::component::share_as_data_exclusive_tag>
+    >;
+
+    __inline
+    void operator()( const grid_cell& GridCell, const xecs::component::share_filter& ShareFilter ) noexcept
     {
-        for( std::int16_t y=0; y<grid::cell_y_count; y++ )
-        for( std::int16_t x=0; x<grid::cell_x_count; x++ )
+        // Hide nodes where there are not entities
+        if constexpr (false)
         {
-            auto pGridCell = findShareFilter( grid_cell{ .m_X = x, .m_Y = y } );
-            if(nullptr == pGridCell) continue;
+            int nEntities = 0;
+            for (auto& ArchetypeCell : ShareFilter.m_lEntries)
+                for (auto& Family : ArchetypeCell.m_lFamilies)
+                    nEntities += static_cast<int>(Family->m_DefaultPool.Size());
+            if(nEntities == 0 ) return;
+        }
+        
+        const float X = ((GridCell.m_X -1) + 0.5f + (GridCell.m_Y & 1) * 0.5f) * grid::cell_width_v;
+        const float Y =  (GridCell.m_Y + 0.5f                     ) * grid::cell_height_v;
+        constexpr auto SizeX = grid::cell_width_v  / 2.0f - 1;
+        constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
+        
+        glBegin(GL_QUADS);
+        glColor3f(0.25f, 0.25f, 0.25f);
+        glVertex2i(X - SizeX, Y - SizeY);
+        glVertex2i(X - SizeX, Y + SizeY);
+        glVertex2i(X + SizeX, Y + SizeY);
+        glVertex2i(X + SizeX, Y - SizeY);
+        glEnd();
 
-            // If we don't have any archetypes then move on
-            int Count = static_cast<int>(pGridCell->m_lEntries.size());
-            if( 0 == Count) continue;
+        enum print
+        {
+            NONE
+        ,   FAMILIES
+        ,   ARCHETYPES
+        ,   ENTITIES
+        ,   GRIDCELL_XY
+        };
 
-            // Hide nodes where there are not entities
-            if constexpr (false)
+        // What are we printing?
+        switch( print::NONE)
+        {
+            case print::ARCHETYPES: 
+            {
+                glColor3f(1.0f, 1.0f, 1.0f);
+                GlutPrint(X, Y - 15, "%d", ShareFilter.m_lEntries.size() );
+                break;
+            }
+            case print::FAMILIES:
+            {
+                int nFamilies = 0;
+                for (auto& ArchetypeCell : ShareFilter.m_lEntries)
+                    nFamilies += static_cast<int>(ArchetypeCell.m_lFamilies.size());
+
+                glColor3f(1.0f, 1.0f, 1.0f);
+                GlutPrint(X, Y - 15, "%d", nFamilies);
+                break;
+            }
+            case print::ENTITIES:
             {
                 int nEntities = 0;
-                for (auto& ArchetypeCell : pGridCell->m_lEntries)
+                for (auto& ArchetypeCell : ShareFilter.m_lEntries)
                     for (auto& Family : ArchetypeCell.m_lFamilies)
                         nEntities += static_cast<int>(Family->m_DefaultPool.Size());
-                if(nEntities == 0 ) continue;
+
+                glColor3f(1.0f, 1.0f, 1.0f);
+                GlutPrint(X, Y - 15, "%d", nEntities);
+                break;
             }
-            
-            const float X = ((x-1) + 0.5f + (y & 1) * 0.5f) * grid::cell_width_v;
-            const float Y = (y + 0.5f                     ) * grid::cell_height_v;
-            constexpr auto SizeX = grid::cell_width_v  / 2.0f - 1;
-            constexpr auto SizeY = grid::cell_height_v / 2.0f - 1;
-            
-            glBegin(GL_QUADS);
-            glColor3f(0.25f, 0.25f, 0.25f);
-            glVertex2i(X - SizeX, Y - SizeY);
-            glVertex2i(X - SizeX, Y + SizeY);
-            glVertex2i(X + SizeX, Y + SizeY);
-            glVertex2i(X + SizeX, Y - SizeY);
-            glEnd();
-
-            enum print
+            case print::GRIDCELL_XY:
             {
-                NONE
-            ,   FAMILIES
-            ,   ARCHETYPES
-            ,   ENTITIES
-            ,   GRIDCELL_XY
-            };
-
-            // What are we printing?
-            switch( print::NONE)
-            {
-                case print::ARCHETYPES: 
-                {
-                    glColor3f(1.0f, 1.0f, 1.0f);
-                    GlutPrint(X, Y - 15, "%d", Count);
-                    break;
-                }
-                case print::FAMILIES:
-                {
-                    int nFamilies = 0;
-                    for (auto& ArchetypeCell : pGridCell->m_lEntries)
-                        nFamilies += static_cast<int>(ArchetypeCell.m_lFamilies.size());
-
-                    glColor3f(1.0f, 1.0f, 1.0f);
-                    GlutPrint(X, Y - 15, "%d", nFamilies);
-                    break;
-                }
-                case print::ENTITIES:
-                {
-                    int nEntities = 0;
-                    for (auto& ArchetypeCell : pGridCell->m_lEntries)
-                        for (auto& Family : ArchetypeCell.m_lFamilies)
-                            nEntities += static_cast<int>(Family->m_DefaultPool.Size());
-
-                    glColor3f(1.0f, 1.0f, 1.0f);
-                    GlutPrint(X, Y - 15, "%d", nEntities);
-                    break;
-                }
-                case print::GRIDCELL_XY:
-                {
-                    auto& C = pGridCell->m_lEntries[0].m_pArchetype->getShareComponent<grid_cell>(*pGridCell->m_lEntries[0].m_lFamilies[0]);
-                    glColor3f(1.0f, 1.0f, 1.0f);
-                    GlutPrint(X-23, Y - 15, "%d,%d", C.m_X, C.m_Y );
-                    break;
-                }
+                glColor3f(1.0f, 1.0f, 1.0f);
+                GlutPrint(X-23, Y - 15, "%d,%d", GridCell.m_X, GridCell.m_Y );
+                break;
             }
         }
 
@@ -716,9 +709,12 @@ void timer(int value)
 //---------------------------------------------------------------------------------------
 // MAIN
 //---------------------------------------------------------------------------------------
+
 int main(int argc, char** argv)
 {
     xcore::Init("ECS Example");
+
+//    static_assert( xecs::tools::is_share_as_data_v<q> );
 
     //
     // Initialize the game

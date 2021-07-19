@@ -40,12 +40,15 @@ namespace xecs::system
                     }
                     else
                     {
-                        auto ArchetypeList = T_USER_SYSTEM::m_GameMgr.Search( type::info_v<T_USER_SYSTEM>.m_Query );
-                        T_USER_SYSTEM::m_GameMgr.Foreach
-                        (
-                            ArchetypeList
-                        ,   *this
-                        );
+                        auto ArchetypeList = T_USER_SYSTEM::m_GameMgr.Search(type::info_v<T_USER_SYSTEM>.m_Query);
+                        if constexpr( xecs::tools::is_share_as_data_v<T_USER_SYSTEM::query> )
+                        {
+                            T_USER_SYSTEM::m_GameMgr.Foreach<decltype(*this),true>(ArchetypeList, *this);
+                        }
+                        else
+                        {
+                            T_USER_SYSTEM::m_GameMgr.Foreach(ArchetypeList, *this);
+                        }
                     }
 
                     if constexpr (&T_USER_SYSTEM::OnPostUpdate != &instance::OnPostUpdate)
@@ -262,6 +265,7 @@ instance::AddOrRemoveComponents
 
     template
     <   typename T_FUNCTION
+    ,   auto     T_SHARE_AS_DATA
     > requires
     ( xecs::tools::assert_is_callable_v<T_FUNCTION>
         && (   xecs::tools::function_return_v<T_FUNCTION, bool >
@@ -273,7 +277,7 @@ instance::Foreach
     , T_FUNCTION&&                                   Function 
     ) const noexcept
     {
-        return m_GameMgr.Foreach( List, std::forward<T_FUNCTION&&>(Function) );
+        return m_GameMgr.Foreach<T_FUNCTION,T_SHARE_AS_DATA>( List, std::forward<T_FUNCTION&&>(Function) );
     }
 
     //-------------------------------------------------------------------------------------------

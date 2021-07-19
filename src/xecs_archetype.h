@@ -217,6 +217,6 @@ protected:
     friend struct pool::family;
     friend struct system::mgr;
     friend struct game_mgr::instance;
-    template<typename T> friend struct query::iterator;
+    template<typename T, auto T_MODE_V > friend struct query::iterator;
     };
 }

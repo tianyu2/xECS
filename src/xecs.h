@@ -65,7 +65,7 @@ namespace xecs::pool
 
 namespace xecs::query
 {
-    template< typename T_FUNCTION >
+    template< typename T_FUNCTION, auto T_MODE_V >
     struct iterator;
 }
 
@@ -90,6 +90,7 @@ namespace xecs::query
 // INLINE FILES
 //--------------------------------------------------------------
 #include "details/xecs_component_inline.h"
+#include "details/xecs_tools_inline.h"
 #include "details/xecs_component_mgr_inline.h"
 #include "details/xecs_pool_inline.h"
 #include "details/xecs_archetype_inline.h"
@@ -99,7 +100,6 @@ namespace xecs::query
 #include "details/xecs_query_iterator_inline.h"
 #include "details/xecs_game_mgr_inline.h"
 #include "details/xecs_query_inline.h"
-#include "details/xecs_tools_inline.h"
 #include "details/xecs_event_inline.h"
 
 #endif

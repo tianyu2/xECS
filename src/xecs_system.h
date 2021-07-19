@@ -248,6 +248,7 @@ namespace xecs::system
                                                                     ) const noexcept;
         template
         <   typename T_FUNCTION
+        ,   auto     T_SHARE_AS_DATA = false
         > requires
         ( xecs::tools::assert_is_callable_v<T_FUNCTION>
             && (   xecs::tools::function_return_v<T_FUNCTION, bool >

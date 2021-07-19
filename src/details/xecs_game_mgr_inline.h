@@ -141,6 +141,7 @@ namespace xecs::game_mgr
     //---------------------------------------------------------------------------
     template
     < typename T_FUNCTION
+    , auto     T_SHARE_AS_DATA_V
     > requires
     ( xecs::tools::assert_is_callable_v<T_FUNCTION>
         && (xecs::tools::function_return_v<T_FUNCTION, bool >
@@ -148,7 +149,12 @@ namespace xecs::game_mgr
     )
     bool instance::Foreach(const std::span<xecs::archetype::instance* const> List, T_FUNCTION&& Function ) noexcept
     {
-        xecs::query::iterator<T_FUNCTION> Iterator(*this);
+        std::conditional_t
+        < T_SHARE_AS_DATA_V
+        , xecs::query::iterator<T_FUNCTION, xecs::query::details::mode::DATA_ONLY>
+        , xecs::query::iterator<T_FUNCTION>
+        > Iterator(*this);
+
         for( const auto& pE : List )
         {
             Iterator.UpdateArchetype( *pE );
