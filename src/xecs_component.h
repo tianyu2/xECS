@@ -210,6 +210,25 @@ namespace xecs::component
             .m_pName = "Share As Data"
         };
     };
+
+    //
+    // Query Share Filter component
+    //
+    struct share_filter
+    {
+        constexpr static auto typedef_v = xecs::component::type::data
+        {
+            .m_pName = "Share Filter"
+        };
+
+        struct entry
+        {
+            xecs::archetype::instance*          m_pArchetype;
+            std::vector<xecs::pool::family*>    m_lFamilies;
+        };
+
+        std::vector<entry>  m_lEntries;
+    };
 }
 
 template<>

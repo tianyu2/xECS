@@ -8,10 +8,11 @@ namespace xecs::component
 
     mgr::mgr(void) noexcept
     {
-        // Register the Entity
+        // Register Key system components
         RegisterComponent<xecs::component::entity>();
         RegisterComponent<xecs::component::share_as_data_exclusive_tag>();
         RegisterComponent<xecs::component::ref_count>();
+        RegisterComponent<xecs::component::share_filter>();
 
         // Create a link list of empty entries
         for (int i = 0, end = xecs::settings::max_entities_v - 2; i < end; ++i)

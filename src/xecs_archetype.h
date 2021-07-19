@@ -32,6 +32,9 @@ namespace xecs::archetype
         const T&                getShareComponent       ( const xecs::pool::family& Family 
                                                         ) const noexcept;
         constexpr __inline
+        const xecs::tools::bits& getExclusiveTagBits    ( void 
+                                                        ) const noexcept;
+        constexpr __inline
         const xecs::tools::bits& getComponentBits       ( void 
                                                         ) const noexcept;
         constexpr __inline

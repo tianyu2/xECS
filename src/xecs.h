@@ -55,6 +55,7 @@ namespace xecs::archetype
 namespace xecs::pool
 {
     struct instance;
+    struct family;
     struct index
     {
         int     m_Value;

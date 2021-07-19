@@ -1160,6 +1160,15 @@ instance::_MoveInEntity
     }
 
     //-------------------------------------------------------------------------------------
+
+    constexpr
+    const xecs::tools::bits& instance::getExclusiveTagBits( void ) const noexcept
+    {
+        return m_ExclusiveTagsBits;
+    }
+
+
+    //-------------------------------------------------------------------------------------
     constexpr
     guid instance::getGuid(void) const noexcept
     {

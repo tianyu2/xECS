@@ -89,29 +89,23 @@ namespace grid
     constexpr int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
     constexpr int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
 
-    struct archetype_entry
-    {
-        xecs::archetype::instance*          m_pArchetype;
-        std::vector<xecs::pool::family*>    m_ListOfFamilies;
-    };
-
-    using instance = std::array<std::array<std::vector<archetype_entry>,cell_x_count>,cell_y_count>;
+    using instance = std::array<std::array<xecs::component::share_filter,cell_x_count>,cell_y_count>;
 
     //---------------------------------------------------------------------------------------
 
     template<typename T_FUNCTION>
     constexpr __inline
-    bool Foreach( const instance& Grid, const int X, const int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    bool Foreach( const xecs::component::share_filter& ShareFilter, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
-        for( xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr); const auto& ArchetypeCell : Grid[Y][X] )
+        for( xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr); const auto& ShareFilterEntry : ShareFilter.m_lEntries )
         {
             // Make sure this archetype matches are query
-            if( Query.Compare(ArchetypeCell.m_pArchetype->getComponentBits()) == false )
+            if( Query.Compare(ShareFilterEntry.m_pArchetype->getComponentBits(), ShareFilterEntry.m_pArchetype->getExclusiveTagBits() ) == false )
                 continue;
 
-            Iterator.UpdateArchetype(*ArchetypeCell.m_pArchetype);
+            Iterator.UpdateArchetype(*ShareFilterEntry.m_pArchetype);
 
-            for( auto F : ArchetypeCell.m_ListOfFamilies )
+            for( auto F : ShareFilterEntry.m_lFamilies )
             {
                 Iterator.UpdateFamilyPool( *F );
                 for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
@@ -158,7 +152,7 @@ namespace grid
             i+=2;
             for (int x = XStart; x != XEnd; ++x)
             {
-                if( Foreach( Grid, x,y, Query, std::forward<T_FUNCTION&&>(Function) ) ) 
+                if( Foreach( Grid[y][x], Query, std::forward<T_FUNCTION&&>(Function) ) )
                     return true;
             }
         }
@@ -247,20 +241,20 @@ struct grid_system_pool_family_create : xecs::system::instance
 
         auto& Cell      = Archetype.getShareComponent<grid_cell>(PoolFamily);
         auto& GridCell  = (*m_Grid)[Cell.m_Y][Cell.m_X];
-        for( auto& E : GridCell )
+        for( auto& E : GridCell.m_lEntries )
         {
             if(E.m_pArchetype == &Archetype)
             {
-                E.m_ListOfFamilies.push_back(&PoolFamily);
+                E.m_lFamilies.push_back(&PoolFamily);
                 return;
             }
         }
         
         // We made it here so it means we did not find the archetype
         // So lets create a new entry for our new archetype
-        GridCell.emplace_back();
-        GridCell.back().m_pArchetype = &Archetype;
-        GridCell.back().m_ListOfFamilies.push_back(&PoolFamily);
+        GridCell.m_lEntries.emplace_back();
+        GridCell.m_lEntries.back().m_pArchetype = &Archetype;
+        GridCell.m_lEntries.back().m_lFamilies.push_back(&PoolFamily);
     }
 };
 
@@ -318,7 +312,7 @@ struct bullet_logic : xecs::system::instance
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( *m_pGrid, X, Y, m_QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
+            grid::Foreach( (*m_pGrid)[Y][X], m_QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
             {
                 // If I am dead because some other bullet killed me then there is nothing for me to do...
                 if (Entity.isZombie()) return;
@@ -383,6 +377,12 @@ struct space_ship_logic : xecs::system::instance
     xecs::query::instance       m_QueryThinkingShipsOnly    {};
     xecs::query::instance       m_QueryAnyShips             {};
 
+    using query = std::tuple
+    <
+        xecs::query::must<position>
+    ,   xecs::query::none_of<bullet, timer>
+    >;
+
     void OnGameStart( void ) noexcept
     {
         m_pBulletArchetype  = &getOrCreateArchetype<bullet_tuple>();
@@ -393,19 +393,13 @@ struct space_ship_logic : xecs::system::instance
         m_QueryAnyShips.m_NoneOf.AddFromComponents<bullet>();
     }
 
-    using query = std::tuple
-    <
-        xecs::query::must<position>
-    ,   xecs::query::none_of<bullet, timer>
-    >;
-
     __inline
     void OnUpdate( void ) noexcept
     {
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( *m_pGrid, X, Y, m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
+            grid::Foreach( (*m_pGrid)[Y][X], m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
             {
                 grid::Search( *m_pGrid, X, Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
                 {
@@ -639,14 +633,14 @@ struct render_grid : xecs::system::instance
             const auto& GridCell = (*m_pGrid)[y][x];
 
             // If we don't have any archetypes then move on
-            int Count = static_cast<int>(GridCell.size());
+            int Count = static_cast<int>(GridCell.m_lEntries.size());
             if( 0 == Count) continue;
 
             if(false)
             {
                 int nEntities = 0;
-                for (auto& ArchetypeCell : GridCell)
-                    for (auto& Family : ArchetypeCell.m_ListOfFamilies)
+                for (auto& ArchetypeCell : GridCell.m_lEntries)
+                    for (auto& Family : ArchetypeCell.m_lFamilies)
                         nEntities += static_cast<int>(Family->m_DefaultPool.Size());
                 if(nEntities == 0 ) continue;
             }
@@ -685,8 +679,8 @@ struct render_grid : xecs::system::instance
                 case print::FAMILIES:
                 {
                     int nFamilies = 0;
-                    for (auto& ArchetypeCell : GridCell)
-                        nFamilies += static_cast<int>(ArchetypeCell.m_ListOfFamilies.size());
+                    for (auto& ArchetypeCell : GridCell.m_lEntries)
+                        nFamilies += static_cast<int>(ArchetypeCell.m_lFamilies.size());
 
                     glColor3f(1.0f, 1.0f, 1.0f);
                     GlutPrint(X, Y - 15, "%d", nFamilies);
@@ -695,8 +689,8 @@ struct render_grid : xecs::system::instance
                 case print::ENTITIES:
                 {
                     int nEntities = 0;
-                    for (auto& ArchetypeCell : GridCell)
-                        for (auto& Family : ArchetypeCell.m_ListOfFamilies)
+                    for (auto& ArchetypeCell : GridCell.m_lEntries)
+                        for (auto& Family : ArchetypeCell.m_lFamilies)
                             nEntities += static_cast<int>(Family->m_DefaultPool.Size());
 
                     glColor3f(1.0f, 1.0f, 1.0f);
@@ -705,7 +699,7 @@ struct render_grid : xecs::system::instance
                 }
                 case print::GRIDCELL_XY:
                 {
-                    auto& C = GridCell[0].m_pArchetype->getShareComponent<grid_cell>(*GridCell[0].m_ListOfFamilies[0]);
+                    auto& C = GridCell.m_lEntries[0].m_pArchetype->getShareComponent<grid_cell>(*GridCell.m_lEntries[0].m_lFamilies[0]);
                     glColor3f(1.0f, 1.0f, 1.0f);
                     GlutPrint(X-23, Y - 15, "%d,%d", C.m_X, C.m_Y );
                     break;
