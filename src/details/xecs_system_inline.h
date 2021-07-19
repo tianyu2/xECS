@@ -305,8 +305,12 @@ instance::Foreach
     )
     bool instance::Foreach( const xecs::component::share_filter& ShareFilter, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
-        for( xecs::query::iterator<T_FUNCTION> Iterator(m_GameMgr); const auto& ShareFilterEntry : ShareFilter.m_lEntries )
+        xecs::query::iterator<T_FUNCTION> Iterator(m_GameMgr);
+
+        for( int i=0, end = static_cast<int>(ShareFilter.m_lEntries.size()); i != end; ++i)
         {
+            const auto& ShareFilterEntry = ShareFilter.m_lEntries[i];
+
             // Make sure this archetype matches are query
             if( Query.Compare(ShareFilterEntry.m_pArchetype->getComponentBits(), ShareFilterEntry.m_pArchetype->getExclusiveTagBits() ) == false )
                 continue;
@@ -338,5 +342,36 @@ instance::Foreach
         return false;
     }
 
+    //-------------------------------------------------------------------------------------------
 
+    template
+    < typename T_SHARE_COMPONENT
+    > __inline
+    const xecs::component::share_filter* instance::findShareFilter( T_SHARE_COMPONENT&& ShareComponent, xecs::archetype::guid ArchetypeGuid ) noexcept
+    {
+        static_assert(xecs::component::type::info_v<T_SHARE_COMPONENT>.m_bBuildShareFilter );
+        assert( xecs::component::type::info_v<T_SHARE_COMPONENT>.m_bGlobalScoped ? ArchetypeGuid.isNull() : ArchetypeGuid.isValid() );
+
+        return findShareFilter
+        (   xecs::component::type::details::ComputeShareKey
+            (
+                ArchetypeGuid
+            ,   xecs::component::type::info_v<T_SHARE_COMPONENT>
+            ,   reinterpret_cast<std::byte*>(&ShareComponent)
+            )
+        );
+    }
+
+    //-------------------------------------------------------------------------------------------
+
+    __inline
+    const xecs::component::share_filter* instance::findShareFilter( xecs::component::type::share::key Key ) noexcept
+    {
+        auto&   ShareMap    = m_GameMgr.m_ArchetypeMgr.m_ShareComponentEntityMap;
+        auto    It          = ShareMap.find(Key);
+        if( It == ShareMap.end() ) return nullptr;
+
+        auto& EntityDetails = m_GameMgr.m_ComponentMgr.getEntityDetails(It->second);
+        return &EntityDetails.m_pPool->getComponent<xecs::component::share_filter>(EntityDetails.m_PoolIndex);
+    }
 }

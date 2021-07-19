@@ -267,7 +267,6 @@ namespace xecs::system
                                                                     , const xecs::query::instance&          Query
                                                                     , T_FUNCTION&&                          Function 
                                                                     ) noexcept;
-
         template
         < typename T_SYSTEM
         > __inline constexpr
@@ -278,7 +277,17 @@ namespace xecs::system
         > __inline constexpr
         T_SYSTEM&                           getSystem               ( void
                                                                     ) const noexcept;
-
+        template
+        < typename T_SHARE_COMPONENT
+        > __inline
+        const xecs::component::share_filter*
+                                            findShareFilter         ( T_SHARE_COMPONENT&&       ShareComponent
+                                                                    , xecs::archetype::guid     ArchetypeGuid = xecs::archetype::guid{}
+                                                                    ) noexcept;
+        __inline
+        const xecs::component::share_filter*
+                                            findShareFilter         ( xecs::component::type::share::key Key
+                                                                    ) noexcept;
     private:
 
         xecs::game_mgr::instance&   m_GameMgr;

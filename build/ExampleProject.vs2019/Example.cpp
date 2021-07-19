@@ -17,9 +17,6 @@ static struct game
     int m_W = 1024;
     int m_H = 800;
 
-    int m_nEntityThinkingDead = 0;
-    int m_nEntityWaitingDead  = 0;
-
 } s_Game;
 
 //---------------------------------------------------------------------------------------
@@ -54,7 +51,10 @@ struct bullet
 
 struct grid_cell
 {
-    constexpr static auto typedef_v = xecs::component::type::share {};
+    constexpr static auto typedef_v = xecs::component::type::share
+    {
+        .m_bBuildFilter = true
+    };
 
     std::int16_t m_X;
     std::int16_t m_Y;
@@ -66,56 +66,80 @@ using bullet_tuple = std::tuple<position, velocity, timer, bullet, grid_cell>;
 // TOOLS
 //--------------------------------------------------\/-----------------------------------
 //                                                  //
-//      +----+----+----+----+----+----+----+----+   //
-//      |  -1,-1  |   0,-1  |   1,-1  |    :    |   //
-// +---------+---------+---------+---------+----+   //
-// |  -1,0   |   0,0   |   1,0   |   2,0   |        //
-// +----+----+----+----+----+----+----+----+----+   //
-//      |  -1,1   |   0,1   |   1,1   |    :    |   //
-// +----+----+----+----+----+----+----+----+----+   //
-// |  -1,2   |   0,2   |   1,2   |   2,2   |        //
-// +----+----+----+----+----+----+----+----+----+   //
-//      |  -1,3   |   0,3   |   1,3   |    :    |   //
-//      +----+----+----+----+----+----+----+----+   //
+//       +----+----+----+----+----+----+----+----+  //
+//       |  -1,-1  |   0,-1  |   1,-1  |    :    |  //
+//  +---------+---------+---------+---------+----+  //
+//  |  -1,0   |   0,0   |   1,0   |   2,0   |       //
+//  +----+----+----+----+----+----+----+----+----+  //
+//       |  -1,1   |   0,1   |   1,1   |    :    |  //
+//  +----+----+----+----+----+----+----+----+----+  //
+//  |  -1,2   |   0,2   |   1,2   |   2,2   |       //
+//  +----+----+----+----+----+----+----+----+----+  //
+//       |  -1,3   |   0,3   |   1,3   |    :    |  //
+//       +----+----+----+----+----+----+----+----+  //
 //                                                  //
 //--------------------------------------------------/\-----------------------------------
 
 namespace grid
 {
-    constexpr int cell_width_v               = 64; // Keep this divisible by 2
-    constexpr int cell_height_v              = 42; // Keep this divisible by 2
-    constexpr int max_resolution_width_v     = 1024;
-    constexpr int max_resolution_height_v    = 800;
-    constexpr int cell_x_count               = max_resolution_width_v /cell_width_v  + 1;
-    constexpr int cell_y_count               = max_resolution_height_v/cell_height_v + 1;
-
-    using instance = std::array<std::array<xecs::component::share_filter,cell_x_count>,cell_y_count>;
+    constexpr int   cell_width_v               = 64; // Keep this divisible by 2
+    constexpr int   cell_height_v              = 42; // Keep this divisible by 2
+    constexpr int   max_resolution_width_v     = 1024;
+    constexpr int   max_resolution_height_v    = 800;
+    constexpr auto  cell_x_count               = static_cast<std::int16_t>(max_resolution_width_v /cell_width_v  + 1);
+    constexpr auto  cell_y_count               = static_cast<std::int16_t>(max_resolution_height_v/cell_height_v + 1);
 
     //---------------------------------------------------------------------------------------
 
     template<typename T_FUNCTION>
     constexpr __inline
-    bool Search( xecs::system::instance& System, const instance& Grid, const int X, const int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    bool Search
+    ( xecs::system::instance&               System
+    , const xecs::component::share_filter&  ShareFilter
+    , const std::int16_t                    X
+    , const std::int16_t                    Y
+    , const xecs::query::instance&          Query
+    , T_FUNCTION&&                          Function 
+    ) noexcept
     {
-        static constexpr auto Table = std::array
-        { -1, 0 + 1
-        , -1, 1 + 1
-        , -1, 0 + 1
-        ,  0, 1 + 1
-        , -1, 1 + 1
-        ,  0, 1 + 1
+        static constexpr auto Table = std::array< std::int16_t, 2*6 >
+        { -1, 0
+        , -1, 1
+        , -1, 0
+        ,  0, 1
+        , -1, 1
+        ,  0, 1
         };
-        int i = (Y&1)*(3*2);
-        for( int y = std::max(0,Y-1), end_y = std::min(cell_y_count-1, Y+1); y != end_y; ++y )
+
+        //
+        // Search self first 
+        //
+        if( System.Foreach(ShareFilter, Query, std::forward<T_FUNCTION&&>(Function)) )
+            return true;
+
+        //
+        // Search neighbors 
+        //
+        int i = (Y&1)*(2*3);
+        for( std::int16_t y = std::max(0,Y-1), end_y = std::min(cell_y_count-1, Y+1); y != end_y; ++y )
         {
-            const auto XStart = std::max(0,                X + Table[i+0]);
-            const auto XEnd   = std::min(cell_x_count - 1, X + Table[i+1] );
+            if( auto pShareFilter = System.findShareFilter(grid_cell{ .m_X = X + Table[i + 0], .m_Y = y }); pShareFilter && System.Foreach
+                    ( *pShareFilter
+                    , Query
+                    , std::forward<T_FUNCTION&&>(Function)
+                    )
+                )
+                return true;
+
+            if( auto pShareFilter = System.findShareFilter(grid_cell{ .m_X = X + Table[i + 1], .m_Y = y }); pShareFilter && System.Foreach
+                    ( *pShareFilter
+                    , Query
+                    , std::forward<T_FUNCTION&&>(Function)
+                    )
+                )
+                return true;
+
             i+=2;
-            for (int x = XStart; x != XEnd; ++x)
-            {
-                if( System.Foreach( Grid[y][x], Query, std::forward<T_FUNCTION&&>(Function) ) )
-                    return true;
-            }
         }
         return false;
     }
@@ -181,46 +205,6 @@ struct update_movement : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-struct grid_system_pool_family_create : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::pool_family_create
-    {
-        .m_pName = "grid_system_pool_family_create"
-    };
-
-    using query = std::tuple
-    <
-        xecs::query::must<position, grid_cell>
-    >;
-
-    std::shared_ptr<grid::instance> m_Grid = std::make_shared<grid::instance>();
-
-    __inline 
-    void OnPoolFamily( xecs::archetype::instance& Archetype, xecs::pool::family& PoolFamily ) const noexcept
-    {
-        assert(PoolFamily.m_ShareInfos.size() == 1);
-
-        auto& Cell      = Archetype.getShareComponent<grid_cell>(PoolFamily);
-        auto& GridCell  = (*m_Grid)[Cell.m_Y][Cell.m_X];
-        for( auto& E : GridCell.m_lEntries )
-        {
-            if(E.m_pArchetype == &Archetype)
-            {
-                E.m_lFamilies.push_back(&PoolFamily);
-                return;
-            }
-        }
-        
-        // We made it here so it means we did not find the archetype
-        // So lets create a new entry for our new archetype
-        GridCell.m_lEntries.emplace_back();
-        GridCell.m_lEntries.back().m_pArchetype = &Archetype;
-        GridCell.m_lEntries.back().m_lFamilies.push_back(&PoolFamily);
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
 struct update_timer : xecs::system::instance
 {
     constexpr static auto typedef_v = xecs::system::type::update
@@ -248,7 +232,6 @@ struct bullet_logic : xecs::system::instance
         .m_pName = "bullet_logic"
     };
 
-    const grid::instance* m_pGrid;
     xecs::query::instance m_QueryBullets;
     xecs::query::instance m_QueryAny;
 
@@ -259,7 +242,6 @@ struct bullet_logic : xecs::system::instance
 
     void OnGameStart( void ) noexcept
     {
-        m_pGrid = getSystem<grid_system_pool_family_create>().m_Grid.get();
         m_QueryBullets.AddQueryFromTuple<query>();
         m_QueryAny.m_Must.AddFromComponents<position>();
     }
@@ -270,15 +252,18 @@ struct bullet_logic : xecs::system::instance
         //
         // Update all the bullets
         //
-        for( int Y=0; Y<grid::cell_y_count; ++Y )
-        for( int X=0; X<grid::cell_x_count; ++X )
+        for( std::int16_t Y=0; Y<grid::cell_y_count; ++Y )
+        for( std::int16_t X=0; X<grid::cell_x_count; ++X )
         {
-            Foreach( (*m_pGrid)[Y][X], m_QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
+            auto pShareFilter = findShareFilter(grid_cell{ .m_X = X, .m_Y = Y });
+            if( pShareFilter == nullptr ) continue;
+
+            Foreach( *pShareFilter, m_QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
             {
                 // If I am dead because some other bullet killed me then there is nothing for me to do...
                 if (Entity.isZombie()) return;
 
-                grid::Search( *this, *m_pGrid, X, Y, m_QueryAny, [&]( entity& E, const position& Pos )  constexpr noexcept
+                grid::Search( *this, *pShareFilter, X, Y, m_QueryAny, [&]( entity& E, const position& Pos )  constexpr noexcept
                 {
                     if (E.isZombie()) return false;
 
@@ -334,7 +319,6 @@ struct space_ship_logic : xecs::system::instance
     };
 
     xecs::archetype::instance*  m_pBulletArchetype          {};
-    const grid::instance*       m_pGrid                     {};
     xecs::query::instance       m_QueryThinkingShipsOnly    {};
     xecs::query::instance       m_QueryAnyShips             {};
 
@@ -347,7 +331,6 @@ struct space_ship_logic : xecs::system::instance
     void OnGameStart( void ) noexcept
     {
         m_pBulletArchetype  = &getOrCreateArchetype<bullet_tuple>();
-        m_pGrid             = getSystem<grid_system_pool_family_create>().m_Grid.get();
         m_QueryThinkingShipsOnly.AddQueryFromTuple<query>();
 
         m_QueryAnyShips.m_Must.AddFromComponents<position>();
@@ -357,12 +340,15 @@ struct space_ship_logic : xecs::system::instance
     __inline
     void OnUpdate( void ) noexcept
     {
-        for( int Y=0; Y<grid::cell_y_count; ++Y )
-        for( int X=0; X<grid::cell_x_count; ++X )
+        for( std::int16_t Y=0; Y<grid::cell_y_count; ++Y )
+        for( std::int16_t X=0; X<grid::cell_x_count; ++X )
         {
-            Foreach( (*m_pGrid)[Y][X], m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
+            auto pShareFilter = findShareFilter(grid_cell{ .m_X = X, .m_Y = Y });
+            if( nullptr == pShareFilter ) continue;
+
+            Foreach( *pShareFilter, m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
             {
-                grid::Search( *this, *m_pGrid, X, Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
+                grid::Search( *this, *pShareFilter, X, Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
                 {
                     // Don't shoot myself
                     if ( Entity == E ) return false;
@@ -405,29 +391,6 @@ struct space_ship_logic : xecs::system::instance
                 });
             });
         }
-    }
-};
-
-//---------------------------------------------------------------------------------------
-
-struct on_destroy_count_dead_ships : xecs::system::instance
-{
-    constexpr static auto typedef_v = xecs::system::type::notify_destroy
-    {
-        .m_pName = "on_destroy_count_dead_ships"
-    };
-
-    using query = std::tuple
-    < xecs::query::none_of<bullet>
-    , xecs::query::one_of<entity>
-    , xecs::query::must<position>
-    >;
-
-    __inline constexpr
-    void operator()( const timer* pTimer) const noexcept
-    {
-        if (pTimer) s_Game.m_nEntityWaitingDead++;
-        else        s_Game.m_nEntityThinkingDead++;
     }
 };
 
@@ -578,29 +541,24 @@ struct render_grid : xecs::system::instance
         .m_pName = "render_grid"
     };
 
-    const grid::instance* m_pGrid;
-
-    void OnGameStart( void ) noexcept
-    {
-        m_pGrid = getSystem<grid_system_pool_family_create>().m_Grid.get();
-    }
-
     __inline constexpr
     void OnUpdate( void ) noexcept
     {
-        for( int y=0; y<grid::cell_y_count; y++ )
-        for( int x=0; x<grid::cell_x_count; x++ )
+        for( std::int16_t y=0; y<grid::cell_y_count; y++ )
+        for( std::int16_t x=0; x<grid::cell_x_count; x++ )
         {
-            const auto& GridCell = (*m_pGrid)[y][x];
+            auto pGridCell = findShareFilter( grid_cell{ .m_X = x, .m_Y = y } );
+            if(nullptr == pGridCell) continue;
 
             // If we don't have any archetypes then move on
-            int Count = static_cast<int>(GridCell.m_lEntries.size());
+            int Count = static_cast<int>(pGridCell->m_lEntries.size());
             if( 0 == Count) continue;
 
-            if(false)
+            // Hide nodes where there are not entities
+            if constexpr (false)
             {
                 int nEntities = 0;
-                for (auto& ArchetypeCell : GridCell.m_lEntries)
+                for (auto& ArchetypeCell : pGridCell->m_lEntries)
                     for (auto& Family : ArchetypeCell.m_lFamilies)
                         nEntities += static_cast<int>(Family->m_DefaultPool.Size());
                 if(nEntities == 0 ) continue;
@@ -640,7 +598,7 @@ struct render_grid : xecs::system::instance
                 case print::FAMILIES:
                 {
                     int nFamilies = 0;
-                    for (auto& ArchetypeCell : GridCell.m_lEntries)
+                    for (auto& ArchetypeCell : pGridCell->m_lEntries)
                         nFamilies += static_cast<int>(ArchetypeCell.m_lFamilies.size());
 
                     glColor3f(1.0f, 1.0f, 1.0f);
@@ -650,7 +608,7 @@ struct render_grid : xecs::system::instance
                 case print::ENTITIES:
                 {
                     int nEntities = 0;
-                    for (auto& ArchetypeCell : GridCell.m_lEntries)
+                    for (auto& ArchetypeCell : pGridCell->m_lEntries)
                         for (auto& Family : ArchetypeCell.m_lFamilies)
                             nEntities += static_cast<int>(Family->m_DefaultPool.Size());
 
@@ -660,7 +618,7 @@ struct render_grid : xecs::system::instance
                 }
                 case print::GRIDCELL_XY:
                 {
-                    auto& C = GridCell.m_lEntries[0].m_pArchetype->getShareComponent<grid_cell>(*GridCell.m_lEntries[0].m_lFamilies[0]);
+                    auto& C = pGridCell->m_lEntries[0].m_pArchetype->getShareComponent<grid_cell>(*pGridCell->m_lEntries[0].m_lFamilies[0]);
                     glColor3f(1.0f, 1.0f, 1.0f);
                     GlutPrint(X-23, Y - 15, "%d,%d", C.m_X, C.m_Y );
                     break;
@@ -721,16 +679,14 @@ void InitializeGame( void ) noexcept
     // same message they will get them in the order that are here.
     // This is why I create a separate section for these even thought they still are systems.
     s_Game.m_GameMgr->RegisterSystems
-    <   on_destroy_count_dead_ships     // Structural: No
-    ,   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets entities when timer is removed)
-    ,   grid_system_pool_family_create  // Structutal: No
+    <   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets entities when timer is removed)
     >();
 
     //
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 20, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)

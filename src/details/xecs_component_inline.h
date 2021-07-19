@@ -18,7 +18,7 @@ namespace xecs::component
             ,   .m_Size             = xcore::types::static_cast_safe<std::uint16_t>(sizeof(T_COMPONENT))
             ,   .m_TypeID           = T_COMPONENT::typedef_v.id_v
             ,   .m_bGlobalScoped    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bGlobalScoped; else return false; }()
-            ,   .m_bKeyCanFilter    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bKeyCanFilter; else return false; }()
+            ,   .m_bBuildShareFilter    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bBuildFilter; else return false; }()
             ,   .m_bExclusiveTag    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG)   return T_COMPONENT::typedef_v.exclusive_v;     else return false; }()
             ,   .m_pConstructFn     = std::is_trivially_constructible_v<T_COMPONENT>
                                         ? nullptr
