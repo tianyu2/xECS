@@ -74,14 +74,6 @@ namespace xecs::game_mgr
         > [[nodiscard]] std::vector<archetype::instance*>
                                             Search                  ( const xecs::query::instance& Query
                                                                     ) const noexcept;
-        /*
-        template
-        < typename... T_COMPONENTS
-        > [[nodiscard]] std::vector<archetype::instance*>
-                                            Search                  ( const xecs::query::instance&          Query
-                                                                    , std::span<xecs::query::share_filter>  ShareFilters
-                                                                    ) const noexcept;
-*/
         inline
         [[nodiscard]] archetype::instance*  findArchetype           ( xecs::archetype::guid Guid 
                                                                     ) const noexcept;
@@ -121,7 +113,7 @@ namespace xecs::game_mgr
             && (   xecs::tools::function_return_v<T_FUNCTION, bool >
                 || xecs::tools::function_return_v<T_FUNCTION, void > )
         ) __inline
-        void                                Foreach                 (std::span<xecs::archetype::instance* const>    List
+        bool                                Foreach                 ( std::span<xecs::archetype::instance* const>   List
                                                                     , T_FUNCTION&&                                  Function 
                                                                     ) noexcept;
         inline

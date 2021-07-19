@@ -253,9 +253,21 @@ namespace xecs::system
             && (   xecs::tools::function_return_v<T_FUNCTION, bool >
                 || xecs::tools::function_return_v<T_FUNCTION, void > )
         ) __inline constexpr
-        void                                Foreach                 ( std::span<xecs::archetype::instance* const>    List
+            bool                            Foreach                 ( std::span<xecs::archetype::instance* const>   List
                                                                     , T_FUNCTION&&                                  Function 
                                                                     ) const noexcept;
+        template
+        <   typename T_FUNCTION
+        > requires
+        ( xecs::tools::assert_is_callable_v<T_FUNCTION>
+            && (   xecs::tools::function_return_v<T_FUNCTION, bool >
+                || xecs::tools::function_return_v<T_FUNCTION, void > )
+        ) __inline
+        bool                                Foreach                 ( const xecs::component::share_filter&  ShareFilter
+                                                                    , const xecs::query::instance&          Query
+                                                                    , T_FUNCTION&&                          Function 
+                                                                    ) noexcept;
+
         template
         < typename T_SYSTEM
         > __inline constexpr

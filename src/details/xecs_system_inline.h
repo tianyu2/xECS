@@ -267,7 +267,7 @@ instance::AddOrRemoveComponents
         && (   xecs::tools::function_return_v<T_FUNCTION, bool >
             || xecs::tools::function_return_v<T_FUNCTION, void > )
     ) constexpr
-    void
+    bool
 instance::Foreach
     ( std::span<xecs::archetype::instance* const>    List
     , T_FUNCTION&&                                   Function 
@@ -293,5 +293,50 @@ instance::Foreach
     {
         return m_GameMgr.getSystem<T_SYSTEM>();
     }
+
+    //-------------------------------------------------------------------------------------------
+
+    template
+    < typename T_FUNCTION
+    >requires
+    ( xecs::tools::assert_is_callable_v<T_FUNCTION>
+        && (xecs::tools::function_return_v<T_FUNCTION, bool >
+           || xecs::tools::function_return_v<T_FUNCTION, void >)
+    )
+    bool instance::Foreach( const xecs::component::share_filter& ShareFilter, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    {
+        for( xecs::query::iterator<T_FUNCTION> Iterator(m_GameMgr); const auto& ShareFilterEntry : ShareFilter.m_lEntries )
+        {
+            // Make sure this archetype matches are query
+            if( Query.Compare(ShareFilterEntry.m_pArchetype->getComponentBits(), ShareFilterEntry.m_pArchetype->getExclusiveTagBits() ) == false )
+                continue;
+
+            Iterator.UpdateArchetype(*ShareFilterEntry.m_pArchetype);
+
+            for( auto F : ShareFilterEntry.m_lFamilies )
+            {
+                Iterator.UpdateFamilyPool( *F );
+                for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
+                {
+                    if( 0 == p->Size() ) continue;
+
+                    // Update the pool
+                    Iterator.UpdatePool(*p);
+
+                    // Do all entities
+                    if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
+                    {
+                        if (Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function))) return true;
+                    }
+                    else
+                    {
+                        Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function));
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
 
 }

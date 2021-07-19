@@ -146,7 +146,7 @@ namespace xecs::game_mgr
         && (xecs::tools::function_return_v<T_FUNCTION, bool >
             || xecs::tools::function_return_v<T_FUNCTION, void >)
     )
-    void instance::Foreach(const std::span<xecs::archetype::instance* const> List, T_FUNCTION&& Function ) noexcept
+    bool instance::Foreach(const std::span<xecs::archetype::instance* const> List, T_FUNCTION&& Function ) noexcept
     {
         xecs::query::iterator<T_FUNCTION> Iterator(*this);
         for( const auto& pE : List )
@@ -163,7 +163,7 @@ namespace xecs::game_mgr
                     if constexpr (std::is_same_v<xecs::query::iterator<T_FUNCTION>::ret_t, bool >)
                     {
                         if( Iterator.ForeachEntity( std::forward<T_FUNCTION&&>(Function) ) )
-                            return;
+                            return true;
                     }
                     else
                     {
@@ -172,6 +172,7 @@ namespace xecs::game_mgr
                 }
             }
         }
+        return false;
     }
 
     //---------------------------------------------------------------------------

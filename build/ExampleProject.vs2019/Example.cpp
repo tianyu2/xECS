@@ -95,46 +95,7 @@ namespace grid
 
     template<typename T_FUNCTION>
     constexpr __inline
-    bool Foreach( const xecs::component::share_filter& ShareFilter, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
-    {
-        for( xecs::query::iterator<T_FUNCTION> Iterator(*s_Game.m_GameMgr); const auto& ShareFilterEntry : ShareFilter.m_lEntries )
-        {
-            // Make sure this archetype matches are query
-            if( Query.Compare(ShareFilterEntry.m_pArchetype->getComponentBits(), ShareFilterEntry.m_pArchetype->getExclusiveTagBits() ) == false )
-                continue;
-
-            Iterator.UpdateArchetype(*ShareFilterEntry.m_pArchetype);
-
-            for( auto F : ShareFilterEntry.m_lFamilies )
-            {
-                Iterator.UpdateFamilyPool( *F );
-                for( auto p = &F->m_DefaultPool; p ; p = p->m_Next.get() )
-                {
-                    if( 0 == p->Size() ) continue;
-
-                    // Update the pool
-                    Iterator.UpdatePool(*p);
-
-                    // Do all entities
-                    if constexpr (xecs::tools::function_return_v<T_FUNCTION, bool>)
-                    {
-                        if (Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function))) return true;
-                    }
-                    else
-                    {
-                        Iterator.ForeachEntity(std::forward<T_FUNCTION&&>(Function));
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    //---------------------------------------------------------------------------------------
-
-    template<typename T_FUNCTION>
-    constexpr __inline
-    bool Search( const instance& Grid, const int X, const int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
+    bool Search( xecs::system::instance& System, const instance& Grid, const int X, const int Y, const xecs::query::instance& Query, T_FUNCTION&& Function ) noexcept
     {
         static constexpr auto Table = std::array
         { -1, 0 + 1
@@ -152,7 +113,7 @@ namespace grid
             i+=2;
             for (int x = XStart; x != XEnd; ++x)
             {
-                if( Foreach( Grid[y][x], Query, std::forward<T_FUNCTION&&>(Function) ) )
+                if( System.Foreach( Grid[y][x], Query, std::forward<T_FUNCTION&&>(Function) ) )
                     return true;
             }
         }
@@ -312,12 +273,12 @@ struct bullet_logic : xecs::system::instance
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( (*m_pGrid)[Y][X], m_QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
+            Foreach( (*m_pGrid)[Y][X], m_QueryBullets, [&]( entity& Entity, const position& Position, const bullet& Bullet ) constexpr noexcept
             {
                 // If I am dead because some other bullet killed me then there is nothing for me to do...
                 if (Entity.isZombie()) return;
 
-                grid::Search( *m_pGrid, X, Y, m_QueryAny, [&]( entity& E, const position& Pos )  constexpr noexcept
+                grid::Search( *this, *m_pGrid, X, Y, m_QueryAny, [&]( entity& E, const position& Pos )  constexpr noexcept
                 {
                     if (E.isZombie()) return false;
 
@@ -399,9 +360,9 @@ struct space_ship_logic : xecs::system::instance
         for( int Y=0; Y<grid::cell_y_count; ++Y )
         for( int X=0; X<grid::cell_x_count; ++X )
         {
-            grid::Foreach( (*m_pGrid)[Y][X], m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
+            Foreach( (*m_pGrid)[Y][X], m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
             {
-                grid::Search( *m_pGrid, X, Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
+                grid::Search( *this, *m_pGrid, X, Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
                 {
                     // Don't shoot myself
                     if ( Entity == E ) return false;
