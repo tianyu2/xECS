@@ -322,75 +322,68 @@ struct space_ship_logic : xecs::system::instance
     xecs::query::instance       m_QueryThinkingShipsOnly    {};
     xecs::query::instance       m_QueryAnyShips             {};
 
-    using query = std::tuple
-    <
-        xecs::query::must<position>
-    ,   xecs::query::none_of<bullet, timer>
-    >;
-
     void OnGameStart( void ) noexcept
     {
         m_pBulletArchetype  = &getOrCreateArchetype<bullet_tuple>();
-        m_QueryThinkingShipsOnly.AddQueryFromTuple<query>();
+        m_QueryThinkingShipsOnly.m_Must.AddFromComponents<position>();
+        m_QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<bullet, timer>();
 
         m_QueryAnyShips.m_Must.AddFromComponents<position>();
         m_QueryAnyShips.m_NoneOf.AddFromComponents<bullet>();
     }
 
+    using query = std::tuple
+    <
+        xecs::query::must<xecs::component::share_as_data_exclusive_tag>
+    >;
+
     __inline
-    void OnUpdate( void ) noexcept
+    void operator()( const grid_cell& GridCell, const xecs::component::share_filter& ShareFilter ) noexcept
     {
-        for( std::int16_t Y=0; Y<grid::cell_y_count; ++Y )
-        for( std::int16_t X=0; X<grid::cell_x_count; ++X )
+        Foreach(ShareFilter, m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
         {
-            auto pShareFilter = findShareFilter(grid_cell{ .m_X = X, .m_Y = Y });
-            if( nullptr == pShareFilter ) continue;
-
-            Foreach( *pShareFilter, m_QueryThinkingShipsOnly, [&]( entity& Entity, const position& Position ) constexpr noexcept
+            grid::Search( *this, ShareFilter, GridCell.m_X, GridCell.m_Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
             {
-                grid::Search( *this, *pShareFilter, X, Y, m_QueryAnyShips, [&]( const entity& E, const position& Pos ) constexpr noexcept
+                // Don't shoot myself
+                if ( Entity == E ) return false;
+
+                auto        Direction        = Pos.m_Value - Position.m_Value;
+                const auto  DistanceSquare   = Direction.getLengthSquared();
+
+                // Shoot a bullet if close enough
+                if(constexpr auto min_distance_v = 60; DistanceSquare < min_distance_v*min_distance_v )
                 {
-                    // Don't shoot myself
-                    if ( Entity == E ) return false;
-
-                    auto        Direction        = Pos.m_Value - Position.m_Value;
-                    const auto  DistanceSquare   = Direction.getLengthSquared();
-
-                    // Shoot a bullet if close enough
-                    if(constexpr auto min_distance_v = 60; DistanceSquare < min_distance_v*min_distance_v )
+                    auto NewEntity = AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
                     {
-                        auto NewEntity = AddOrRemoveComponents<std::tuple<timer>>( Entity, [&]( timer& Timer )
-                        {
-                            Timer.m_Value = 8;
-                        });
+                        Timer.m_Value = 8;
+                    });
 
-                        // After moving the entity all access to its components via the function existing parameters is consider a bug
-                        // Since the entity has moved to a different archetype
-                        assert( Entity.isZombie() );
+                    // After moving the entity all access to its components via the function existing parameters is consider a bug
+                    // Since the entity has moved to a different archetype
+                    assert( Entity.isZombie() );
 
-                        // Hopefully there is not system that intersects me and kills me
-                        assert( !NewEntity.isZombie() );
+                    // Hopefully there is not system that intersects me and kills me
+                    assert( !NewEntity.isZombie() );
 
-                        m_pBulletArchetype->CreateEntity( [&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer, grid_cell& Cell) noexcept
-                        {
-                            Direction  /= std::sqrt(DistanceSquare);
-                            Vel.m_Value = Direction * 2.0f;
-                            Pos.m_Value = Position.m_Value + Vel.m_Value;
+                    m_pBulletArchetype->CreateEntity( [&]( position& Pos, velocity& Vel, bullet& Bullet, timer& Timer, grid_cell& Cell) noexcept
+                    {
+                        Direction  /= std::sqrt(DistanceSquare);
+                        Vel.m_Value = Direction * 2.0f;
+                        Pos.m_Value = Position.m_Value + Vel.m_Value;
 
-                            Bullet.m_ShipOwner = NewEntity;
+                        Bullet.m_ShipOwner = NewEntity;
 
-                            Cell = grid::ComputeGridCellFromWorldPosition(Pos.m_Value);
+                        Cell = grid::ComputeGridCellFromWorldPosition(Pos.m_Value);
 
-                            Timer.m_Value      = 10;
-                        });
+                        Timer.m_Value      = 10;
+                    });
 
-                        return true;
-                    }
+                    return true;
+                }
 
-                    return false;
-                });
+                return false;
             });
-        }
+        });
     }
 };
 
