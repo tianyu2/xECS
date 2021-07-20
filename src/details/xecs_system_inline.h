@@ -311,10 +311,8 @@ instance::Foreach
     {
         xecs::query::iterator<T_FUNCTION> Iterator(m_GameMgr);
 
-        for( int i=0, end = static_cast<int>(ShareFilter.m_lEntries.size()); i != end; ++i)
+        for(const auto& ShareFilterEntry : ShareFilter.m_lEntries )
         {
-            const auto& ShareFilterEntry = ShareFilter.m_lEntries[i];
-
             // Make sure this archetype matches are query
             if( Query.Compare(ShareFilterEntry.m_pArchetype->getComponentBits(), ShareFilterEntry.m_pArchetype->getExclusiveTagBits() ) == false )
                 continue;

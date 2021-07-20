@@ -6,7 +6,7 @@ namespace xecs::query
         {
             DEFAULT
         ,   DATA_ONLY
-        ,   DATA_AND_CONST_SHARES
+        ,   DATA_AND_ONLY_CONST_SHARES
         ,   DATA_AND_SHARES
         };
 

@@ -402,42 +402,12 @@ namespace xecs::archetype
         //
         // Create new Pool Family
         //
-        auto& PoolFamily = CreateNewPoolFamily
+        return CreateNewPoolFamily
         ( FamilyGuid
         , std::span{ ShareComponentEntityRefs.data(),       static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ AllKeys.data(),                        static_cast<std::size_t>(m_nShareComponents) }
         );
 
-        //
-        // Add references to share filters
-        //
-        for (int i = 0, end = static_cast<int>(PoolFamily.m_ShareInfos.size()); i != end ; i++)
-        {
-            auto pInfo = PoolFamily.m_ShareInfos[i];
-
-            if (pInfo->m_bBuildShareFilter)
-            {
-                m_Mgr.m_GameMgr.getEntity( PoolFamily.m_ShareDetails[i].m_Entity, [&](xecs::component::share_filter& ShareFilter )
-                {
-                    for (auto& E : ShareFilter.m_lEntries)
-                    {
-                        if (E.m_pArchetype == this )
-                        {
-                            E.m_lFamilies.push_back(&PoolFamily);
-                            return;
-                        }
-                    }
-
-                    // We made it here so it means we did not find the archetype
-                    // So lets create a new entry for our new archetype
-                    ShareFilter.m_lEntries.emplace_back();
-                    ShareFilter.m_lEntries.back().m_pArchetype = this;
-                    ShareFilter.m_lEntries.back().m_lFamilies.push_back(&PoolFamily);
-                });
-            }
-        }
-
-        return PoolFamily;
     }
 
     //--------------------------------------------------------------------------------------------
@@ -535,40 +505,11 @@ instance::getOrCreatePoolFamilyFromSameArchetype
         //
         // Create new Pool Family
         //
-        auto& PoolFamily = CreateNewPoolFamily
+        return CreateNewPoolFamily
         ( NewFamilyGuid
         , std::span{ FinalEntities.data(),  static_cast<std::size_t>(m_nShareComponents) }
         , std::span{ FinalShareKeys.data(), static_cast<std::size_t>(m_nShareComponents) }
         );
-
-        //
-        // Add references to share filters
-        //
-        for (int i = 0, end = static_cast<int>(FromFamily.m_ShareInfos.size()); i != end; i++)
-        {
-            if (PoolFamily.m_ShareInfos[i]->m_bBuildShareFilter)
-            {
-                m_Mgr.m_GameMgr.getEntity(PoolFamily.m_ShareDetails[i].m_Entity, [&](xecs::component::share_filter& ShareFilter)
-                {
-                    for (auto& E : ShareFilter.m_lEntries)
-                    {
-                        if (E.m_pArchetype == this )
-                        {
-                            E.m_lFamilies.push_back(&PoolFamily);
-                            return;
-                        }
-                    }
-
-                    // We made it here so it means we did not find the archetype
-                    // So lets create a new entry for our new archetype
-                    ShareFilter.m_lEntries.emplace_back();
-                    ShareFilter.m_lEntries.back().m_pArchetype = this;
-                    ShareFilter.m_lEntries.back().m_lFamilies.push_back(&PoolFamily);
-                });
-            }
-        }
-
-        return PoolFamily;
     }
 
     //--------------------------------------------------------------------------------------------
@@ -1173,12 +1114,45 @@ instance::_MoveInEntity
 
     void instance::_UpdateStructuralChanges( void ) noexcept
     {
+        auto AddShareFilter = [&]( xecs::pool::family& PoolFamily) noexcept
+        {
+            //
+            // Add references to share filters
+            //
+            for (int i = 0, end = static_cast<int>(PoolFamily.m_ShareInfos.size()); i != end; i++)
+            {
+                auto pInfo = PoolFamily.m_ShareInfos[i];
+
+                if (pInfo->m_bBuildShareFilter)
+                {
+                    m_Mgr.m_GameMgr.getEntity(PoolFamily.m_ShareDetails[i].m_Entity, [&](xecs::component::share_filter& ShareFilter)
+                    {
+                        for (auto& E : ShareFilter.m_lEntries)
+                        {
+                            if (E.m_pArchetype == this)
+                            {
+                                E.m_lFamilies.push_back(&PoolFamily);
+                                return;
+                            }
+                        }
+
+                        // We made it here so it means we did not find the archetype
+                        // So lets create a new entry for our new archetype
+                        ShareFilter.m_lEntries.emplace_back();
+                        ShareFilter.m_lEntries.back().m_pArchetype = this;
+                        ShareFilter.m_lEntries.back().m_lFamilies.push_back(&PoolFamily);
+                    });
+                }
+            }
+        };
+
         //
         // Handle the special case of the default pool
         //
         if (m_DefaultPoolFamily.m_pPrev)
         {
             m_DefaultPoolFamily.m_pPrev = nullptr;
+            AddShareFilter(m_DefaultPoolFamily);
             m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, m_DefaultPoolFamily );
         }
 
@@ -1193,6 +1167,11 @@ instance::_MoveInEntity
             // Doing the actual updating of the pools
             //
             {
+                //
+                // Add the share filter
+                //
+                AddShareFilter(*p);
+
                 //
                 // officially announce it
                 //
