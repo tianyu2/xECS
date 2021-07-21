@@ -1,13 +1,16 @@
 namespace xecs::event
 {
+    //
+    // TYPE
+    //
     namespace type
     {
         using guid = xcore::guid::unit<64, struct event_tag>;
 
         struct info
         {
-            type::guid  m_Guid;
-            const char* m_pName;
+            const type::guid  m_Guid;
+            const char* const m_pName;
         };
 
         namespace details
@@ -29,11 +32,17 @@ namespace xecs::event
         };
     }
 
+    //
+    // OVERRIDES
+    //
     struct overrides
     {
         constexpr static auto   typedef_v = type::global{};
     };
 
+    //
+    // INSTANCE
+    //
     template< typename...T_ARGS >
     struct instance : overrides
     {
@@ -65,34 +74,5 @@ namespace xecs::event
         void                RemoveDelegate          ( T_CLASS& Class
                                                     ) noexcept;
         std::vector<info>   m_Delegates{};
-    };
-
-    struct mgr
-    {
-        template< typename T_EVENT, typename T_CLASS >
-        void RegisterClass( T_CLASS&& Class ) noexcept
-        {
-            auto It = m_GlobalEventsMap.find( type::info_v<T_EVENT>.m_Guid );
-            assert( It != m_GlobalEventsMap.end() );
-            reinterpret_cast<T_EVENT*>(It->second)->Register<&T_CLASS::OnEvent>(Class);
-        }
-
-        template< typename T_EVENT >
-        T_EVENT& getEvent( void ) const noexcept
-        {
-            auto It = m_GlobalEventsMap.find(type::info_v<T_EVENT>.m_Guid);
-            assert(It != m_GlobalEventsMap.end());
-            return *reinterpret_cast<T_EVENT*>(It->second);
-        }
-
-        template< typename T_EVENT >
-        void Register( void ) noexcept
-        {
-            m_GlobalEvents.push_back( std::make_unique<T_EVENT>() );
-            m_GlobalEventsMap.emplace( type::info_v<T_EVENT>.m_Guid, m_GlobalEvents.back().get() );
-        }
-
-        std::unordered_map<type::guid, overrides*>  m_GlobalEventsMap;
-        std::vector<std::unique_ptr<overrides>>     m_GlobalEvents;
     };
 }

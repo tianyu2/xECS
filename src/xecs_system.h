@@ -129,11 +129,11 @@ namespace xecs::system
         {
             using notifier_registration = void( xecs::archetype::instance&, xecs::system::instance&);
 
-            type::guid                              m_Guid;
+            const type::guid                        m_Guid;
             mutable xecs::query::instance           m_Query;
-            notifier_registration*                  m_NotifierRegistration;
-            const char*                             m_pName;
-            id                                      m_ID;
+            notifier_registration* const            m_NotifierRegistration;
+            const char* const                       m_pName;
+            const id                                m_ID;
         };
 
         namespace details

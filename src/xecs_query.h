@@ -53,20 +53,4 @@ namespace xecs::query
         std::uint64_t           GenerateUniqueID        ( void
                                                         ) const noexcept;
     };
-
-    struct share_filter
-    {
-        template
-        < typename T_SHARE_COMPONENT
-        > requires
-        ( xecs::tools::assert_all_components_are_share_types_v<T_SHARE_COMPONENT>
-        ) constexpr
-        share_filter(T_SHARE_COMPONENT&& ShareComponent ) noexcept
-        : m_ComponentInfo{ xecs::component::type::info_v<T_SHARE_COMPONENT>}
-        , m_ShareFilterPartialKeys{ xecs::component::type::info_v<T_SHARE_COMPONENT>.m_pComputeKeyFn(reinterpret_cast<std::byte*>(&ShareComponent)) }
-        {}
-
-        const xecs::component::type::info&  m_ComponentInfo;
-        xecs::component::type::share::key   m_ShareFilterPartialKeys;
-    };
 }

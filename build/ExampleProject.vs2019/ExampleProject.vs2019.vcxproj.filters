@@ -267,6 +267,18 @@
     <ClInclude Include="..\..\src\details\xecs_system_mgr_inline.h">
       <Filter>xECS\Details</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\details\xecs_event_mgr_inline.h">
+      <Filter>xECS\Details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\xecs_event_mgr.h">
+      <Filter>xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\xecs_tools_bits.h">
+      <Filter>xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\details\xecs_tools_bits_inline.h">
+      <Filter>xECS\Details</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

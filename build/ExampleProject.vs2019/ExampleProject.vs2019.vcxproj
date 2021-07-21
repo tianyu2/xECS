@@ -72,12 +72,14 @@
     <ClInclude Include="..\..\src\details\xecs_component_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_component_mgr_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_event_inline.h" />
+    <ClInclude Include="..\..\src\details\xecs_event_mgr_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_game_mgr_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_pool_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_query_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_query_iterator_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_system_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_system_mgr_inline.h" />
+    <ClInclude Include="..\..\src\details\xecs_tools_bits_inline.h" />
     <ClInclude Include="..\..\src\details\xecs_tools_inline.h" />
     <ClInclude Include="..\..\src\xecs.h" />
     <ClInclude Include="..\..\src\xecs_archetype.h" />
@@ -85,6 +87,7 @@
     <ClInclude Include="..\..\src\xecs_component.h" />
     <ClInclude Include="..\..\src\xecs_component_mgr.h" />
     <ClInclude Include="..\..\src\xecs_event.h" />
+    <ClInclude Include="..\..\src\xecs_event_mgr.h" />
     <ClInclude Include="..\..\src\xecs_game_mgr.h" />
     <ClInclude Include="..\..\src\xecs_pool.h" />
     <ClInclude Include="..\..\src\xecs_query.h" />
@@ -95,6 +98,7 @@
     <ClInclude Include="..\..\src\xecs_tools.h" />
     <ClInclude Include="..\..\src\Settings\PropertyConfig.h" />
     <ClInclude Include="..\..\src\Settings\xcore_user_settings.h" />
+    <ClInclude Include="..\..\src\xecs_tools_bits.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />
