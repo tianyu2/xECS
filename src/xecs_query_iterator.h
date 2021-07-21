@@ -176,33 +176,41 @@ namespace xecs::query
             data_tuple                                                              m_DataTuple;
             std::uint64_t                                                           m_KeyCheckSum;
         };
+
+        //------------------------------------------------------------------------------------
+
+        template<typename T_FUNCTION, auto T_MODE_V >
+        using choose_pack_t = std::conditional_t
+        < T_MODE_V == mode::DEFAULT
+        , data_pack<T_FUNCTION>
+        , data_pack<T_FUNCTION, T_MODE_V>
+        >;
     }
 
     //------------------------------------------------------------------------------------
 
     template< typename T_FUNCTION, auto T_MODE_V = details::mode::DEFAULT >
-    struct iterator : std::conditional_t< T_MODE_V == details::mode::DEFAULT, details::data_pack<T_FUNCTION>, details::data_pack<T_FUNCTION, T_MODE_V> >
+    struct iterator : details::choose_pack_t< T_FUNCTION, T_MODE_V >
     {
-        using parent_t  = std::conditional_t< T_MODE_V == details::mode::DEFAULT, details::data_pack<T_FUNCTION>, details::data_pack<T_FUNCTION, T_MODE_V> >;
-        using func_t    = xcore::function::traits<T_FUNCTION>;
-        using ret_t     = func_t::return_type;
+        using                   parent_t    = details::choose_pack_t< T_FUNCTION, T_MODE_V >;
+        using                   func_t      = xcore::function::traits<T_FUNCTION>;
+        using                   ret_t       = func_t::return_type;
+        constexpr static auto   mode_v      = parent_t::mode_v;
 
-        constexpr static auto mode_v = parent_t::mode_v;
-
         __inline
-                    iterator                        ( xecs::game_mgr::instance&     GameMgr
-                                                    ) noexcept;
+                    iterator                ( xecs::game_mgr::instance&     GameMgr
+                                            ) noexcept;
         __inline
-        void        UpdateArchetype                 ( xecs::archetype::instance&    Archetype 
-                                                    ) noexcept;
+        void        UpdateArchetype         ( xecs::archetype::instance&    Archetype 
+                                            ) noexcept;
         __inline
-        void        UpdateFamilyPool                ( xecs::pool::family&           Family 
-                                                    ) noexcept;
+        void        UpdateFamilyPool        ( xecs::pool::family&           Family 
+                                            ) noexcept;
         __inline
-        void        UpdatePool                      ( xecs::pool::instance&         Pool 
-                                                    ) noexcept;
+        void        UpdatePool              ( xecs::pool::instance&         Pool 
+                                            ) noexcept;
         __inline
-        ret_t       ForeachEntity                   ( T_FUNCTION&&                  Function 
-                                                    ) noexcept;
+        ret_t       ForeachEntity           ( T_FUNCTION&&                  Function 
+                                            ) noexcept;
     };
 }

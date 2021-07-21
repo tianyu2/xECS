@@ -256,27 +256,23 @@ namespace xecs::pool
     {
         assert(Index.m_Value>=0);
 
+        if (Index.m_Value >= m_Size) return false;
+        assert(m_Size);
+
         // Subtract one to the total count if we can.
         // If the last entry then happens to be a zombie then keep subtracting since these entries will get deleted later
         // This should make things faster and allow for the moved entries to be deleted properly
-        if( Index.m_Value < m_Size )
+        do 
         {
-            while(m_Size)
+            m_Size--;
+            if(reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false )
             {
-                m_Size--;
-                if(reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false )
-                {
-                    m_Size++;
-                    break;
-                }
+                m_Size++;
+                break;
             }
-        }
 
-        // Check if we have any entry to move
-        if( Index.m_Value >= m_Size )
-        {
             // We are not moving anything just just call destructors if we have to
-            if( bCallDestructors )
+            if (bCallDestructors)
             {
                 for (int i = 0; i < m_ComponentInfos.size(); ++i)
                 {
@@ -285,9 +281,10 @@ namespace xecs::pool
                     if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index.m_Value * MyInfo.m_Size]);
                 }
             }
-            return false;
-        }
-        else
+        } while (m_Size);
+
+        // Check if we have any entry to move
+        if(Index.m_Value < m_Size)
         {
             m_Size--;
             for (int i = 0; i < m_ComponentInfos.size(); ++i)
@@ -307,6 +304,8 @@ namespace xecs::pool
             }
             return true;
         }
+
+        return false;
     }
 
     //-------------------------------------------------------------------------------------
