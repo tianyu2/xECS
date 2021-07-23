@@ -12,6 +12,7 @@ Each of the lessons will be place at different branches. Please read the README.
 2. [Lesson02 pulish the basics](https://github.com/LIONant-depot/xECS/tree/Lesson02_Pulish_the_basics)
 3. [Lesson03 events and maps](https://github.com/LIONant-depot/xECS/tree/Lesson03_Events_n_Maps)
 4. [Lesson04 more component types](https://github.com/LIONant-depot/xECS/tree/Lesson04_More_Components_Types)
+5. [Lesson05 const and improvements](https://github.com/LIONant-depot/xECS/tree/Lesson05_Const_and_improvements)
 
 ## To use in your projects
 Any of the versions could be a good starting point.
