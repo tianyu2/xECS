@@ -422,6 +422,13 @@ struct renderer : xecs::system::instance
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_DEPTH_TEST);
 
+        glViewport(0, 0, s_Game.m_W, s_Game.m_H);
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glOrtho(0, s_Game.m_W, 0, s_Game.m_H, -1, 1);
+        glScalef(1, -1, 1);
+        glTranslatef(0, -s_Game.m_H, 0);
+
         //
         // Let all the system that depends on me
         //
@@ -732,20 +739,14 @@ int main(int argc, char** argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE);
     glutCreateWindow(xcore::get().m_pAppName);
-    glutDisplayFunc([]
+    glutDisplayFunc([]( void ) noexcept
     {
         s_Game.m_GameMgr->Run();
     });
-    glutReshapeFunc([](int w, int h)
+    glutReshapeFunc([](int w, int h) noexcept
     {
         s_Game.m_W = w;
         s_Game.m_H = h;
-        glViewport(0, 0, w, h);
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(0, w, 0, h, -1, 1);
-        glScalef(1, -1, 1);
-        glTranslatef(0, -h, 0);
     });
     glutTimerFunc( 0, timer, 0 );
     glutKeyboardFunc([](unsigned char Key, int MouseX, int MouseY) noexcept
