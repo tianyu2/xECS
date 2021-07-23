@@ -13,9 +13,17 @@
 
 static struct game
 {
-    std::unique_ptr<xecs::game_mgr::instance> m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
-    int m_W = 1024;
-    int m_H = 800;
+    using game_mgr_uptr = std::unique_ptr<xecs::game_mgr::instance>;
+    using keys_array    = std::array<bool, 0xff+1>;
+
+    game_mgr_uptr   m_GameMgr       = std::make_unique<xecs::game_mgr::instance>();
+    int             m_W             = 1024;
+    int             m_H             = 800;
+    int             m_MouseX        {};
+    int             m_MouseY        {};
+    bool            m_MouseLeft     {};
+    bool            m_MouseRight    {};
+    keys_array      m_Keys          {};
 
 } s_Game;
 
@@ -412,6 +420,7 @@ struct renderer : xecs::system::instance
         // Begin of the rendering
         //
         glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_DEPTH_TEST);
 
         //
         // Let all the system that depends on me
@@ -691,14 +700,16 @@ void InitializeGame( void ) noexcept
 }
 
 //---------------------------------------------------------------------------------------
+// GLUT TIMER
+//---------------------------------------------------------------------------------------
 
-void timer(int value)
+void timer( int value ) noexcept
 {
     // Post re-paint request to activate display()
     glutPostRedisplay();
 
     // next timer call milliseconds later
-    glutTimerFunc(15, timer, 0); 
+    glutTimerFunc(15, timer, 0);
 }
 
 //---------------------------------------------------------------------------------------
@@ -736,8 +747,26 @@ int main(int argc, char** argv)
         glScalef(1, -1, 1);
         glTranslatef(0, -h, 0);
     });
-    glutTimerFunc(0, timer, 0);
-    glDisable(GL_DEPTH_TEST);
+    glutTimerFunc( 0, timer, 0 );
+    glutKeyboardFunc([](unsigned char Key, int MouseX, int MouseY) noexcept
+    {
+        s_Game.m_Keys[Key] = true;
+        s_Game.m_MouseX = MouseX;
+        s_Game.m_MouseY = MouseY;
+    });
+    glutKeyboardUpFunc([](unsigned char Key, int MouseX, int MouseY) noexcept
+    {
+        s_Game.m_Keys[Key] = false;
+        s_Game.m_MouseX = MouseX;
+        s_Game.m_MouseY = MouseY;
+    });
+    glutMouseFunc([](int Button, int State, int MouseX, int MouseY) noexcept
+    {
+        s_Game.m_MouseX = MouseX;
+        s_Game.m_MouseY = MouseY;
+             if (Button == GLUT_LEFT_BUTTON ) s_Game.m_MouseLeft  = (State == GLUT_DOWN);
+        else if (Button == GLUT_RIGHT_BUTTON) s_Game.m_MouseRight = (State == GLUT_DOWN);
+    });
     glutMainLoop();
 
     xcore::Kill();
