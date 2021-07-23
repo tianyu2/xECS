@@ -1,38 +1,22 @@
-# xECS -Lesson 04, More component types
+# xECS -Lesson 05, Const and Improvements
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
-* New types of components
-  * Tags
-  * Exclusive Tags
-  * Share components
-* New concepts in pools
-  * Families
-  * New way to handle Archetectural changes
-  * You can have unlimited entities
-* Archetypes
-  * Shift to deal with types bits rather than in type::info*
-  * Handle families for both shared and non-share
-  * New way to compute the guid
+* Share component filters
+  * Can specify if you want your share component to have a filter or not
+  * findShareFilter 
+* Const 
+  * Adding const to arguments of function create speed ups
+  * Faster Share component reading, etc.
 * System
-  * New child_update system
-  * More types of events
-    * OnPreUpdate
-    * OnPostUpdate
-    * OnPostStructuralChanges
-    * OnGamePause
+  * Exclusive functions for systems
+  * System understand what share filters are
   * Clean up
-* Queries
-  * Added the iterator
-* Tools::bits
-  * Added more helpers
-* Settings
-  * More details settings
 * Generally 
-  * Major rework in organization Game_Mgr becomes little by little a container for other Managers
-  * Major rework in the archetypes as PoolFamily are handle due to share components
-  * Major clean up on giving more responsability to Managers
-* Example updated to show new changes
+  * Factor out more mgrs 
+* Example
+  * updated to show new changes
+  * Added a more efficient type of grid
 
 ## To build
 1. Go to the build directory 

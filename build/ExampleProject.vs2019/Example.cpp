@@ -123,7 +123,8 @@ namespace grid
         int i = (Y&1)*(2*3);
         for( std::int16_t y = std::max(0,Y-1), end_y = std::min(cell_y_count-1, Y+1); y != end_y; ++y )
         {
-            if( auto pShareFilter = System.findShareFilter(grid_cell{ .m_X = X + Table[i + 0], .m_Y = y }); pShareFilter && System.Foreach
+            if( auto pShareFilter = System.findShareFilter(grid_cell{ .m_X = X + Table[i + 0], .m_Y = y }); 
+                     pShareFilter && System.Foreach
                     ( *pShareFilter
                     , Query
                     , std::forward<T_FUNCTION&&>(Function)
@@ -131,7 +132,8 @@ namespace grid
                 )
                 return true;
 
-            if( auto pShareFilter = System.findShareFilter(grid_cell{ .m_X = X + Table[i + 1], .m_Y = y }); pShareFilter && System.Foreach
+            if( auto pShareFilter = System.findShareFilter(grid_cell{ .m_X = X + Table[i + 1], .m_Y = y }); 
+                    pShareFilter && System.Foreach
                     ( *pShareFilter
                     , Query
                     , std::forward<T_FUNCTION&&>(Function)
@@ -325,6 +327,7 @@ struct space_ship_logic : xecs::system::instance
     void OnGameStart( void ) noexcept
     {
         m_pBulletArchetype  = &getOrCreateArchetype<bullet_tuple>();
+
         m_QueryThinkingShipsOnly.m_Must.AddFromComponents<position>();
         m_QueryThinkingShipsOnly.m_NoneOf.AddFromComponents<bullet, timer>();
 
@@ -575,7 +578,7 @@ struct render_grid : xecs::system::instance
         };
 
         // What are we printing?
-        switch( print::NONE)
+        switch( print::NONE )
         {
             case print::ARCHETYPES: 
             {
