@@ -662,7 +662,6 @@ void InitializeGame( void ) noexcept
     ,       render_bullets      // Structural: No
     >();
 
-
     // Register Reactive Systems. Note that the order for this system are not related with the update systems
     // Since these are event base they can happen at any time. But if many of them are going to get the
     // same message they will get them in the order that are here.
@@ -709,8 +708,6 @@ void timer(int value)
 int main(int argc, char** argv)
 {
     xcore::Init("ECS Example");
-
-//    static_assert( xecs::tools::is_share_as_data_v<q> );
 
     //
     // Initialize the game
