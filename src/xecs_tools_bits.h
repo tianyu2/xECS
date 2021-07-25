@@ -8,7 +8,7 @@ namespace xecs::tools
         void                    setBit                  ( int Bit 
                                                         ) noexcept;
         inline
-        void                    setupAnd                ( const bits& A
+        bits&                   setupAnd                ( const bits& A
                                                         , const bits& B 
                                                         ) noexcept;
         constexpr __inline

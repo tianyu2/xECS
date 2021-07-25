@@ -87,12 +87,13 @@ namespace xecs::tools
 
     //------------------------------------------------------------------------------------
     inline
-    void bits::setupAnd( const bits& A, const bits& B ) noexcept
+    bits& bits::setupAnd( const bits& A, const bits& B ) noexcept
     {
         for( auto i = 0, size = static_cast<const int>(m_Bits.size()); i < size; ++i)
         {
             m_Bits[i] = A.m_Bits[i] & B.m_Bits[i];
         }
+        return *this;
     }
 
     //------------------------------------------------------------------------------------

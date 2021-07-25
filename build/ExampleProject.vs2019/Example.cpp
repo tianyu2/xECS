@@ -33,35 +33,83 @@ static struct game
 
 struct position 
 {
-    constexpr static auto typedef_v = xecs::component::type::data {};
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept
+    {
+        auto& Position = *reinterpret_cast<position*>(pData);
+        return TextFile.Field("Value", Position.m_Value.m_X, Position.m_Value.m_Y);
+    }
+
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName        = "Position"
+    ,   .m_pSerilizeFn  = Serialize
+    };
+
     xcore::vector2 m_Value;
 };
 
 struct velocity
 {
-    constexpr static auto typedef_v = xecs::component::type::data {};
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept
+    {
+        auto& Velocity = *reinterpret_cast<velocity*>(pData);
+        return TextFile.Field("Value", Velocity.m_Value.m_X, Velocity.m_Value.m_Y);
+    }
+
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName        = "Velocity"
+    ,   .m_pSerilizeFn  = Serialize
+    };
+
     xcore::vector2 m_Value;
 };
 
 struct timer
 {
-    constexpr static auto typedef_v = xecs::component::type::data {};
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept
+    {
+        auto& Timer = *reinterpret_cast<timer*>(pData);
+        return TextFile.Field("Value", Timer.m_Value);
+    }
+
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName        = "Timer"
+    ,   .m_pSerilizeFn  = Serialize
+    };
 
     float m_Value;
 };
 
 struct bullet
 {
-    constexpr static auto typedef_v = xecs::component::type::data {};
+    constexpr static auto typedef_v = xecs::component::type::data
+    {
+        .m_pName        = "Bullet"
+    ,   .m_pSerilizeFn  = xecs::component::entity::Serialize
+    };
 
     xecs::component::entity m_ShipOwner;
 };
 
 struct grid_cell
 {
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData) noexcept
+    {
+        xcore::err  Error;
+        auto&       GridCell = *reinterpret_cast<grid_cell*>(pData);
+
+            (Error = TextFile.Field( "X", GridCell.m_X ))
+        ||  (Error = TextFile.Field( "Y", GridCell.m_Y ));
+        return Error;
+    }
+
     constexpr static auto typedef_v = xecs::component::type::share
     {
-        .m_bBuildFilter = true
+        .m_pName        = "GridCell"
+    ,   .m_bBuildFilter = true
+    ,   .m_pSerilizeFn  = Serialize
     };
 
     std::int16_t m_X;
@@ -704,6 +752,10 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value        = std::rand() / static_cast<float>(RAND_MAX) * 8;
         });
+
+    s_Game.m_GameMgr->SerializeGameState( "Test.txt", false, false );
+
+    int a=22;
 }
 
 //---------------------------------------------------------------------------------------

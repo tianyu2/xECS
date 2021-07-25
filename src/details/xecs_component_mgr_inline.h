@@ -19,6 +19,9 @@ namespace xecs::component
         {
             m_lEntities[i].m_PoolIndex = xecs::pool::index{ i + 1 };
         }
+
+        // Make sure the last entry is set to null
+        m_lEntities[xecs::settings::max_entities_v - 1].m_PoolIndex.m_Value = -1;
     }
 
     //------------------------------------------------------------------------------
@@ -132,6 +135,9 @@ namespace xecs::component
             // Ok we just officially assing their ID now in shorted order
             s_BitsToInfo[i]->m_BitID = i;
 
+            // Add to the info map
+            m_ComponentInfoMap.emplace( std::pair{ s_BitsToInfo[i]->m_Guid, s_BitsToInfo[i] } );
+
             // Now we are ready to assign the IDs...
             switch( s_BitsToInfo[i]->m_TypeID )
             {
@@ -146,5 +152,14 @@ namespace xecs::component
                 default: assert(false);
             }
         }
+    }
+
+    //---------------------------------------------------------------------------
+
+    const xecs::component::type::info* mgr::findComponentTypeInfo( xecs::component::type::guid Guid ) const noexcept
+    {
+        auto It = m_ComponentInfoMap.find(Guid);
+        if( It == m_ComponentInfoMap.end() ) return nullptr;
+        return It->second;
     }
 }

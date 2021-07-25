@@ -37,11 +37,16 @@ namespace xecs::component
         inline
         void                                LockComponentTypes      ( void 
                                                                     ) noexcept;
+        inline 
+        const xecs::component::type::info*  findComponentTypeInfo   ( xecs::component::type::guid Guid
+                                                                    ) const noexcept;
 
         using bits_to_info_array = std::array<const xecs::component::type::info*, xecs::settings::max_component_types_v>;
+        using component_info_map = std::unordered_map<xecs::component::type::guid, const xecs::component::type::info*>;
 
         std::unique_ptr<entity::global_info[]>              m_lEntities         = std::make_unique<entity::global_info[]>(xecs::settings::max_entities_v);
         int                                                 m_EmptyHead         = 0;
+        component_info_map                                  m_ComponentInfoMap  {};
 
         inline static xecs::tools::bits                     s_ShareBits         {};
         inline static xecs::tools::bits                     s_DataBits          {};

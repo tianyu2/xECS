@@ -134,6 +134,11 @@ namespace xecs::game_mgr
         T_SYSTEM&                           getSystem               ( void
                                                                     ) noexcept;
 
+        xcore::err                          SerializeGameState      ( const char* pFileName
+                                                                    , bool        isRead
+                                                                    , bool        isBinary = false
+                                                                    ) noexcept;
+
         xecs::system::mgr                                   m_SystemMgr         {};
         xecs::event::mgr                                    m_EventMgr          {};
         xecs::component::mgr                                m_ComponentMgr      {};

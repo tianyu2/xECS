@@ -5,7 +5,9 @@ namespace xecs::component
     //
     namespace type
     {
-        using guid = xcore::guid::unit<64, struct component_type_tag>;
+        using guid                  = xcore::guid::unit<64, struct component_type_tag>;
+        using full_serialize_fn     = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept;
+        using serialize_fn          = xcore::err(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept;
 
         // The order of this enum is very important as the system relies in this order
         // This is the general shorting order of components Data, then Share components, then Tags
@@ -23,6 +25,8 @@ namespace xecs::component
 
             guid                    m_Guid              {};
             const char*             m_pName             {"Unnamed data component"};
+            serialize_fn*           m_pSerilizeFn       { nullptr };
+            full_serialize_fn*      m_pFullSerializeFn  { nullptr };
         };
 
         struct tag
@@ -62,6 +66,8 @@ namespace xecs::component
             bool                    m_bGlobalScoped     { true };
             bool                    m_bBuildFilter      { false };
             compute_key_fn*         m_ComputeKeyFn      { nullptr };
+            serialize_fn*           m_pSerilizeFn       { nullptr };
+            full_serialize_fn*      m_pFullSerializeFn  { nullptr };
         };
 
         namespace details
@@ -111,6 +117,7 @@ namespace xecs::component
             move_fn* const              m_pMoveFn;              // Move function pointer if required
             copy_fn* const              m_pCopyFn;              // Copy function for the component
             compute_key_fn* const       m_pComputeKeyFn;        // Computes the key from a share component
+            full_serialize_fn* const    m_pSerilizeFn;          // This is the serialize function
             mutable type::share::key    m_DefaultShareKey;      // Default value for this share component
             const char* const           m_pName;                // Friendly Human readable string name for the component type
         };
@@ -133,10 +140,17 @@ namespace xecs::component
     //
     union entity final
     {
+        static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData) noexcept
+        {
+            auto&           Entity = *reinterpret_cast<entity*>(pData);
+            return TextFile.Field("Entity", Entity.m_Value );
+        }
+
         constexpr static auto invalid_entity_v  = 0xffffffffffffffffu;
         constexpr static auto typedef_v         = xecs::component::type::data
         {
-            .m_pName = "Entity"
+            .m_pName        = "Entity"
+        ,   .m_pSerilizeFn  = Serialize
         };
 
         // Array of infos for an entity
@@ -168,7 +182,7 @@ namespace xecs::component
 
             xecs::archetype::instance*      m_pArchetype    {};
             xecs::pool::instance*           m_pPool         {};
-            xecs::pool::index               m_PoolIndex     {-1};
+            xecs::pool::index               m_PoolIndex     {};
             validation                      m_Validation    {};
         };
 
@@ -192,9 +206,16 @@ namespace xecs::component
     //
     struct ref_count
     {
+        static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData) noexcept
+        {
+            auto& RefCount = *reinterpret_cast<ref_count*>(pData);
+            return TextFile.Field("GlobalIndex", RefCount.m_Value );
+        }
+
         constexpr static auto typedef_v = xecs::component::type::data
         {
-            .m_pName = "Reference Count"
+            .m_pName        = "ReferenceCount"
+        ,   .m_pSerilizeFn  = Serialize
         };
 
         int m_Value{1};
@@ -207,7 +228,7 @@ namespace xecs::component
     {
         constexpr static auto typedef_v = xecs::component::type::exclusive_tag
         {
-            .m_pName = "Share As Data"
+            .m_pName = "ShareAsData"
         };
     };
 
@@ -218,7 +239,7 @@ namespace xecs::component
     {
         constexpr static auto typedef_v = xecs::component::type::data
         {
-            .m_pName = "Share Filter"
+            .m_pName        = "ShareFilter"
         };
 
         struct entry

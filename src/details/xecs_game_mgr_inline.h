@@ -328,4 +328,322 @@ instance::AddOrRemoveComponents
         return *p;
     }
 
+    //---------------------------------------------------------------------------
+
+    xcore::err instance::SerializeGameState
+    ( const char* pFileName
+    , bool        isRead
+    , bool        isBinary
+    ) noexcept
+    {
+        xcore::textfile::stream     TextFile;
+        xcore::err                  Error;
+
+        //
+        // Make sure that we are all up to date
+        //
+        if(isRead == false) m_ArchetypeMgr.UpdateStructuralChanges();
+
+        //
+        // Open file for writing
+        //
+        if(Error = TextFile.Open
+        ( isRead
+        , std::string_view{ pFileName }
+        , isBinary ? xcore::textfile::file_type::BINARY : xcore::textfile::file_type::TEXT
+        , {xcore::textfile::flags::WRITE_FLOATS}
+        ); Error ) return Error;
+
+        //
+        // Write Global Guids
+        //
+        if( TextFile.Record( Error, "GlobalEntities"
+        ,   [&]( std::size_t& C, xcore::err& ) noexcept
+            {
+                if( false == isRead )
+                {
+                    //
+                    // Determine the max index we want to write
+                    //
+                    auto Span = std::span{ m_ComponentMgr.m_lEntities.get(), xecs::settings::max_entities_v };
+                    for (auto It = Span.rbegin(); It != Span.rend(); ++It)
+                    {
+                        auto& E = *It;
+                        if (E.m_pPool)
+                        {
+                            C = static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_lEntities.get()));
+                            break;
+                        }
+                    }
+                }
+            }
+        ,   [&]( std::size_t i, xcore::err& Error )
+            {
+                Error = TextFile.Field("Validation", m_ComponentMgr.m_lEntities[i].m_Validation.m_Value );
+            }
+        )) return Error;
+
+        //
+        // Serialize some basic info
+        //
+        int ArchetypeCount = isRead ? 0 : static_cast<int>(m_ArchetypeMgr.m_lArchetype.size());
+        if( TextFile.Record( Error, "GameMgr"
+            ,   [&]( std::size_t i, xcore::err& Error ) noexcept
+                {
+                    Error = TextFile.Field("nArchetypes", ArchetypeCount);
+                }
+            )) return Error;
+
+        //
+        // Serialize all the archetypes
+        //
+        for( int iArchetype=0; iArchetype < ArchetypeCount; ++iArchetype)
+        {
+            //
+            // Archetype main header
+            //
+            xecs::component::entity::info_array Infos           {};
+            int                                 InfoCount       {};
+            int                                 nDataTypes      {};
+            int                                 nShareTypes     {};
+            int                                 nTagTypes       {};
+            int                                 nFamilies       {};
+            xecs::archetype::guid               ArchetypeGuid   {};
+
+            if( false == isRead )
+            {
+                auto&               Archetype   = m_ArchetypeMgr.m_lArchetype[iArchetype];
+                xecs::tools::bits   TagBits     = xecs::tools::bits{}.setupAnd(Archetype->m_ComponentBits, xecs::component::mgr::s_TagsBits);
+
+                nDataTypes      = Archetype->m_nDataComponents;
+                nShareTypes     = Archetype->m_nShareComponents;
+                nTagTypes       = TagBits.CountComponents();
+                InfoCount       = Archetype->m_ComponentBits.ToInfoArray(Infos);
+                nFamilies       = 0;
+                ArchetypeGuid   = Archetype->m_Guid;
+
+                for (auto pF = Archetype->getFamilyHead(); pF; pF = pF->m_Next.get()) nFamilies++;
+
+                //
+                // Write comments to help the user read the file
+                //
+                if ((Error = TextFile.WriteComment(" TypeInfo Details: "))) return Error;
+                for(int i=0; i< InfoCount; i++ )
+                {
+                    if( (Error = TextFile.WriteComment( xcore::string::Fmt( "   Guid:%.16llX   Type:%s   Name:%s"
+                        , Infos[i]->m_Guid.m_Value
+                        , Infos[i]->m_TypeID == xecs::component::type::id::DATA 
+                            ? "Data"
+                            : Infos[i]->m_TypeID == xecs::component::type::id::SHARE
+                            ? "Share"
+                            : "Tag"
+                        , Infos[i]->m_pName ).getView()))) return Error;
+                }
+            }
+
+            //
+            // Save the basic archetype info
+            //
+            if( TextFile.Record( Error, "Archetype"
+                ,   [&]( std::size_t, xcore::err& Error ) noexcept
+                    {
+                            (Error = TextFile.Field("Guid",         ArchetypeGuid.m_Value))
+                        ||  (Error = TextFile.Field("nFamilies",    nFamilies))
+                        ||  (Error = TextFile.Field("nDataTypes",   nDataTypes))
+                        ||  (Error = TextFile.Field("nShareTypes",  nShareTypes))
+                        ||  (Error = TextFile.Field("nTagTypes",    nTagTypes));
+                    }
+                )) return Error;
+
+            //
+            // Read the archetype types
+            //
+            if( TextFile.Record( Error, "ArchetypeTypes"
+                ,   [&]( std::size_t& C, xcore::err& ) noexcept
+                    {
+                        if( isRead ) InfoCount  = static_cast<int>(C); 
+                        else         C          = InfoCount;
+                    }
+                ,   [&]( std::size_t i, xcore::err& Error ) noexcept
+                    {
+                        xecs::component::type::guid Guid
+                            = isRead
+                            ? xecs::component::type::guid{}
+                            : Infos[i]->m_Guid;
+                        
+                        if( (Error = TextFile.Field( "TypeGuid", Guid.m_Value )) ) return;
+
+                        if( isRead )
+                        {
+                            auto pInfo = m_ComponentMgr.findComponentTypeInfo(Guid);
+                            if( pInfo == nullptr )
+                            {
+                                // TODO: Change this to a warning?
+                                Error = xerr_failure_s("Fail to find one of the components");
+                                return;
+                            }
+
+                            // Set the info into the structure this includes tags
+                            Infos[i] = pInfo;
+                        }
+                    }
+                )) return Error;
+
+            //
+            // Get or create the actual archetype
+            //
+            xecs::archetype::instance* pArchetype
+                = isRead
+                ? &getOrCreateArchetype({ Infos.data(), static_cast<std::size_t>(InfoCount) })
+                : m_ArchetypeMgr.m_lArchetype[iArchetype].get();
+
+            //
+            // Serialize all families
+            //
+            xecs::pool::family* pF = isRead ? nullptr : pArchetype->getFamilyHead();
+            for( int iFamily = 0; iFamily < nFamilies; ++iFamily, pF = pF->m_Next.get() )
+            {
+                int                         nPools      = 0;
+                int                         nEntities   = 0;
+                xecs::pool::family::guid    FamilyGuid  = isRead ? xecs::pool::family::guid{} : pF->m_Guid;
+                std::array<xecs::component::entity,           xecs::settings::max_share_components_per_entity_v> ShareEntities;
+                std::array<xecs::component::type::share::key, xecs::settings::max_share_components_per_entity_v> ShareKeys;
+
+                // Count how many pools we have
+                if( false == isRead )
+                {
+                    for( auto pP = &pF->m_DefaultPool; pP; pP = pP->m_Next.get() )
+                    {
+                        nPools++;
+                        nEntities += pP->Size();
+                    }
+                }
+
+                if( TextFile.Record( Error, "Family"
+                ,   [&]( std::size_t, xcore::err& Error ) noexcept
+                    {
+                          (Error = TextFile.Field("Guid",       FamilyGuid.m_Value ))
+                        ||(Error = TextFile.Field("nPools",     nPools))
+                        ||(Error = TextFile.Field("nEntities",  nEntities));
+                    }
+                )) return Error;
+
+                if( TextFile.Record( Error, "FamilyDetails"
+                ,   [&]( std::size_t& C, xcore::err& ) noexcept
+                    {
+                        if( false == isRead ) C = pF->m_ShareInfos.size();
+                        else                  assert( C == nShareTypes );
+                    }
+                ,   [&]( std::size_t i, xcore::err& Error ) noexcept
+                    {
+                        if( isRead )
+                        {
+                              (Error = TextFile.Field("Entity",     ShareEntities[i].m_Value ))
+                            ||(Error = TextFile.Field("ShareKey",   ShareKeys[i].m_Value));
+                        }
+                        else
+                        {
+                              (Error = TextFile.Field("Entity",     pF->m_ShareDetails[i].m_Entity.m_Value ))
+                            ||(Error = TextFile.Field("ShareKey",   pF->m_ShareDetails[i].m_Key.m_Value));
+                        }
+                    }
+                )) return Error;
+
+                // Create a family in case of reading
+                pF = isRead ? &pArchetype->CreateNewPoolFamily
+                            ( FamilyGuid
+                            , std::span{ ShareEntities.data(),  static_cast<std::size_t>(nShareTypes) }
+                            , std::span{ ShareKeys.data(),      static_cast<std::size_t>(nShareTypes) }
+                            )
+                            : pF;
+
+                //
+                // Serialize Pools
+                //
+                auto pP = &pF->m_DefaultPool;
+                for( int iPool =0; iPool < nPools; ++iPool, pP = pP->m_Next.get() )
+                {
+                    int     nEntitiesInPool = isRead ? 0 : pP->Size();
+
+                    if( TextFile.Record( Error, "PoolInfo"
+                    ,   [&]( std::size_t i, xcore::err& Error ) noexcept
+                        {
+                            Error = TextFile.Field("nEntities", nEntitiesInPool);
+                        }
+                    )) return Error;
+
+                    //
+                    // Serialize Entities
+                    //
+                    if( isRead )
+                    {
+                        pP->Append( nEntitiesInPool );
+
+                        for( auto iType = 0, end = (int)pP->m_ComponentInfos.size(); iType != end; iType++ )
+                        {
+                            if (pP->m_ComponentInfos[iType]->m_pSerilizeFn == nullptr) continue;
+
+                            int Count = 0;
+                            Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn(TextFile, isRead, pP->m_pComponent[iType], Count);
+                            if (Error) return Error;
+                            assert(Count == nEntitiesInPool);
+
+                            // Are we dealing with the entities?
+                            if( iType == 0 )
+                            {
+                                //
+                                // Hook up with the global entries
+                                //
+                                for( int i=0; i<nEntitiesInPool; i++ )
+                                {
+                                    auto& Entity = reinterpret_cast<xecs::component::entity*>(pP->m_pComponent[0])[i];
+                                    auto& Global = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+
+                                    Global.m_Validation = Entity.m_Validation;
+                                    Global.m_PoolIndex  = xecs::pool::index{i};
+                                    Global.m_pArchetype = pArchetype;
+                                    Global.m_pPool      = pP;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for( auto iType=0, end = (int)pP->m_ComponentInfos.size(); iType != end; iType++ )
+                        {
+                            if( pP->m_ComponentInfos[iType]->m_pSerilizeFn == nullptr ) continue;
+                            int Count = pP->Size();
+                            Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn( TextFile, isRead, pP->m_pComponent[iType], Count );
+                            if(Error) return Error;
+                        }
+                    }
+                }
+            }
+        }
+
+        //
+        // Fill unused global entities to the empty list
+        //
+        if( isRead )
+        {
+            m_ComponentMgr.m_EmptyHead = -1;
+            auto Span = std::span{ m_ComponentMgr.m_lEntities.get(), xecs::settings::max_entities_v };
+            for( auto It = Span.rbegin(); It != Span.rend(); ++It )
+            {
+                auto& E = *It;
+                if( E.m_pPool == nullptr )
+                {
+                    E.m_PoolIndex.m_Value = m_ComponentMgr.m_EmptyHead;
+                    m_ComponentMgr.m_EmptyHead = static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_lEntities.get()));
+                }
+            }
+
+            //
+            // Lets Update the structural changes
+            //
+            m_ArchetypeMgr.UpdateStructuralChanges();
+        }
+
+        return Error;
+    }
 }
