@@ -90,7 +90,7 @@ static struct game
 
 struct position 
 {
-    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData ) noexcept
     {
         auto& Position = *reinterpret_cast<position*>(pData);
         return TextFile.Field("Value", Position.m_Value.m_X, Position.m_Value.m_Y);
@@ -107,7 +107,7 @@ struct position
 
 struct velocity
 {
-    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData ) noexcept
     {
         auto& Velocity = *reinterpret_cast<velocity*>(pData);
         return TextFile.Field("Value", Velocity.m_Value.m_X, Velocity.m_Value.m_Y);
@@ -124,7 +124,7 @@ struct velocity
 
 struct timer
 {
-    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData ) noexcept
     {
         auto& Timer = *reinterpret_cast<timer*>(pData);
         return TextFile.Field("Value", Timer.m_Value);
@@ -152,7 +152,7 @@ struct bullet
 
 struct grid_cell
 {
-    static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData) noexcept
+    static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
     {
         xcore::err  Error;
         auto&       GridCell = *reinterpret_cast<grid_cell*>(pData);

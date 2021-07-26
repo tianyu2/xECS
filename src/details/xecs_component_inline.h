@@ -107,7 +107,7 @@ namespace xecs::component
                             }
                             , [&](std::size_t c, xcore::err& Error) noexcept
                             {
-                                Error = T_COMPONENT::typedef_v.m_pSerilizeFn(TextFile, reinterpret_cast<std::byte*>(pData + sizeof(T_COMPONENT) * c));
+                                Error = T_COMPONENT::typedef_v.m_pSerilizeFn(TextFile, isRead, reinterpret_cast<std::byte*>(pData + sizeof(T_COMPONENT) * c));
                             }
                         );
                         return Error;

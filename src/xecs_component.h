@@ -7,7 +7,7 @@ namespace xecs::component
     {
         using guid                  = xcore::guid::unit<64, struct component_type_tag>;
         using full_serialize_fn     = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept;
-        using serialize_fn          = xcore::err(xcore::textfile::stream& TextFile, std::byte* pData ) noexcept;
+        using serialize_fn          = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData ) noexcept;
 
         // The order of this enum is very important as the system relies in this order
         // This is the general shorting order of components Data, then Share components, then Tags
@@ -140,7 +140,7 @@ namespace xecs::component
     //
     union entity final
     {
-        static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData) noexcept
+        static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
         {
             auto&           Entity = *reinterpret_cast<entity*>(pData);
             return TextFile.Field("Entity", Entity.m_Value );
@@ -206,7 +206,7 @@ namespace xecs::component
     //
     struct ref_count
     {
-        static xcore::err Serialize(xcore::textfile::stream& TextFile, std::byte* pData) noexcept
+        static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
         {
             auto& RefCount = *reinterpret_cast<ref_count*>(pData);
             return TextFile.Field("GlobalIndex", RefCount.m_Value );
