@@ -857,7 +857,7 @@ int main(int argc, char** argv)
         ++iFrame;
         if( s_Game.m_Keys.getKeyUp('s') || s_Game.m_Keys.getKeyUp('x') )
         {
-            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin.txt", false, false);
+            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin", false, true);
             assert(!Error);
         }
         if (s_Game.m_Keys.getKeyUp('l') || s_Game.m_Keys.getKeyUp('x') )
@@ -866,7 +866,7 @@ int main(int argc, char** argv)
             xecs::component::mgr::resetRegistrations();
             s_Game.m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
             RegisterElements();
-            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin.txt", true, false);
+            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin", true, true);
             assert(!Error);
         }
         if (s_Game.m_Keys.getKeyUp('g')) s_Game.m_DisplayGridInfo++;
