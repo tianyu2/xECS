@@ -11,10 +11,66 @@
 // GAME
 //---------------------------------------------------------------------------------------
 
+struct keys
+{
+    enum class type : std::uint8_t
+    {
+        IS    =   (1<<0)
+    ,   UP    =   (1<<1)
+    ,   DOWN  =   (1<<2)
+    };
+
+    using keys_array = std::array<std::uint8_t, 0xff + 1>;
+    keys_array      m_Keys{};
+
+    void setKeyState( char x, bool OnOff ) noexcept
+    {
+        auto& Key = m_Keys[static_cast<std::uint8_t>(x)];
+
+        if( OnOff )
+        {
+            if (!(Key & static_cast<std::uint8_t>(type::IS)))
+            {
+                Key |= ( static_cast<std::uint8_t>(type::IS) | static_cast<std::uint8_t>(type::DOWN) );
+            }
+        }
+        else
+        {
+            if (Key & static_cast<std::uint8_t>(type::IS))
+            {
+                Key &= ~(static_cast<std::uint8_t>(type::IS) | static_cast<std::uint8_t>(type::DOWN));
+                Key |= static_cast<std::uint8_t>(type::UP);
+            }
+        }
+    }
+
+    bool getKeyUp( char x ) noexcept
+    {
+        return !!(m_Keys[static_cast<std::uint8_t>(x)] & static_cast<std::uint8_t>(type::UP));
+    }
+
+    bool getKeyDown ( char x ) noexcept
+    {
+        return !!(m_Keys[static_cast<std::uint8_t>(x)] & static_cast<std::uint8_t>(type::DOWN));
+    }
+
+    bool getKey( char x ) noexcept
+    {
+        return !!(m_Keys[static_cast<std::uint8_t>(x)] & static_cast<std::uint8_t>(type::IS));
+    }
+
+    void FrameUpdate( void ) noexcept
+    {
+        for( auto& K : m_Keys )
+        {
+            K = K & (~( static_cast<std::uint8_t>(type::UP) | static_cast<std::uint8_t>(type::DOWN)));
+        }
+    }
+};
+
 static struct game
 {
     using game_mgr_uptr = std::unique_ptr<xecs::game_mgr::instance>;
-    using keys_array    = std::array<bool, 0xff+1>;
 
     game_mgr_uptr   m_GameMgr       = std::make_unique<xecs::game_mgr::instance>();
     int             m_W             = 1024;
@@ -23,7 +79,7 @@ static struct game
     int             m_MouseY        {};
     bool            m_MouseLeft     {};
     bool            m_MouseRight    {};
-    keys_array      m_Keys          {};
+    keys            m_Keys          {};
 
 } s_Game;
 
@@ -692,13 +748,8 @@ struct render_grid : xecs::system::instance
 
 //---------------------------------------------------------------------------------------
 
-void InitializeGame( void ) noexcept
+void RegisterElements( void ) noexcept
 {
-    //
-    // Initialize global elements
-    //
-    std::srand(101);
-
     //
     // Register Components (They should always be first)
     //
@@ -733,12 +784,22 @@ void InitializeGame( void ) noexcept
     s_Game.m_GameMgr->RegisterSystems
     <   destroy_bullet_on_remove_timer  // Structural: Yes (Deletes bullets entities when timer is removed)
     >();
+}
+
+//---------------------------------------------------------------------------------------
+
+void InitializeGame( void ) noexcept
+{
+    //
+    // Initialize global elements
+    //
+    std::srand(101);
 
     //
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 100, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
@@ -752,10 +813,6 @@ void InitializeGame( void ) noexcept
 
             Timer.m_Value        = std::rand() / static_cast<float>(RAND_MAX) * 8;
         });
-
-    s_Game.m_GameMgr->SerializeGameState( "Test.txt", false, false );
-
-    int a=22;
 }
 
 //---------------------------------------------------------------------------------------
@@ -774,7 +831,7 @@ void timer( int value ) noexcept
 //---------------------------------------------------------------------------------------
 // MAIN
 //---------------------------------------------------------------------------------------
-
+static int iFrame =0;
 int main(int argc, char** argv)
 {
     xcore::Init("ECS Example");
@@ -782,6 +839,7 @@ int main(int argc, char** argv)
     //
     // Initialize the game
     //
+    RegisterElements();
     InitializeGame();
 
     //
@@ -794,6 +852,22 @@ int main(int argc, char** argv)
     glutDisplayFunc([]( void ) noexcept
     {
         s_Game.m_GameMgr->Run();
+        ++iFrame;
+        if( s_Game.m_Keys.getKeyUp('s') || s_Game.m_Keys.getKeyUp('x') )
+        {
+            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin", false, true);
+            assert(!Error);
+        }
+        if (s_Game.m_Keys.getKeyUp('l') || s_Game.m_Keys.getKeyUp('x') )
+        {
+            s_Game.m_GameMgr.release();
+            xecs::component::mgr::resetRegistrations();
+            s_Game.m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
+            RegisterElements();
+            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin", true, true);
+            assert(!Error);
+        }
+        s_Game.m_Keys.FrameUpdate();
     });
     glutReshapeFunc([](int w, int h) noexcept
     {
@@ -803,13 +877,13 @@ int main(int argc, char** argv)
     glutTimerFunc( 0, timer, 0 );
     glutKeyboardFunc([](unsigned char Key, int MouseX, int MouseY) noexcept
     {
-        s_Game.m_Keys[Key] = true;
+        s_Game.m_Keys.setKeyState(Key, true);
         s_Game.m_MouseX = MouseX;
         s_Game.m_MouseY = MouseY;
     });
     glutKeyboardUpFunc([](unsigned char Key, int MouseX, int MouseY) noexcept
     {
-        s_Game.m_Keys[Key] = false;
+        s_Game.m_Keys.setKeyState(Key, false);
         s_Game.m_MouseX = MouseX;
         s_Game.m_MouseY = MouseY;
     });

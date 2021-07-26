@@ -105,7 +105,7 @@ namespace xecs::game_mgr
         // Make sure we always include the entity
         Bits.setBit( xecs::component::type::info_v<xecs::component::entity>.m_BitID );
 
-        return *m_ArchetypeMgr.getOrCreateArchetype(Bits).get();
+        return m_ArchetypeMgr.getOrCreateArchetype(Bits);
     }
 
     //---------------------------------------------------------------------------
@@ -133,7 +133,7 @@ namespace xecs::game_mgr
         {
             xecs::tools::bits Bits;
             Bits.AddFromComponents< T... >();
-            return *m_ArchetypeMgr.getOrCreateArchetype(Bits);
+            return m_ArchetypeMgr.getOrCreateArchetype(Bits);
 
         }( xcore::types::null_tuple_v<xecs::component::type::details::combined_t<xecs::component::entity, T_TUPLES_OF_COMPONENTS_OR_COMPONENTS... >>);
     }
@@ -355,6 +355,17 @@ instance::AddOrRemoveComponents
         ); Error ) return Error;
 
         //
+        // Serialize some basic info
+        //
+        int ArchetypeCount = isRead ? 0 : static_cast<int>(m_ArchetypeMgr.m_lArchetype.size());
+        if (TextFile.Record(Error, "GameMgr"
+            , [&](std::size_t i, xcore::err& Error) noexcept
+            {
+                Error = TextFile.Field("nArchetypes", ArchetypeCount);
+            }
+        )) return Error;
+
+        //
         // Write Global Guids
         //
         if( TextFile.Record( Error, "GlobalEntities"
@@ -384,17 +395,6 @@ instance::AddOrRemoveComponents
         )) return Error;
 
         //
-        // Serialize some basic info
-        //
-        int ArchetypeCount = isRead ? 0 : static_cast<int>(m_ArchetypeMgr.m_lArchetype.size());
-        if( TextFile.Record( Error, "GameMgr"
-            ,   [&]( std::size_t i, xcore::err& Error ) noexcept
-                {
-                    Error = TextFile.Field("nArchetypes", ArchetypeCount);
-                }
-            )) return Error;
-
-        //
         // Serialize all the archetypes
         //
         for( int iArchetype=0; iArchetype < ArchetypeCount; ++iArchetype)
@@ -422,7 +422,18 @@ instance::AddOrRemoveComponents
                 nFamilies       = 0;
                 ArchetypeGuid   = Archetype->m_Guid;
 
-                for (auto pF = Archetype->getFamilyHead(); pF; pF = pF->m_Next.get()) nFamilies++;
+                // Save only families which have entites
+                for (auto pF = Archetype->getFamilyHead(); pF; pF = pF->m_Next.get())
+                {
+                    for( auto pP = &pF->m_DefaultPool; pP; pP = pP->m_Next.get() )
+                    {
+                        if( pP->Size() )
+                        {
+                            nFamilies++;
+                            break;
+                        }
+                    }
+                }
 
                 //
                 // Write comments to help the user read the file
@@ -501,23 +512,44 @@ instance::AddOrRemoveComponents
             // Serialize all families
             //
             xecs::pool::family* pF = isRead ? nullptr : pArchetype->getFamilyHead();
-            for( int iFamily = 0; iFamily < nFamilies; ++iFamily, pF = pF->m_Next.get() )
+            for( int iFamily = 0, iActualSaved = 0; true; ++iFamily, pF = pF->m_Next.get() )
             {
                 int                         nPools      = 0;
                 int                         nEntities   = 0;
-                xecs::pool::family::guid    FamilyGuid  = isRead ? xecs::pool::family::guid{} : pF->m_Guid;
-                std::array<xecs::component::entity,           xecs::settings::max_share_components_per_entity_v> ShareEntities;
-                std::array<xecs::component::type::share::key, xecs::settings::max_share_components_per_entity_v> ShareKeys;
 
+                //
                 // Count how many pools we have
+                //
                 if( false == isRead )
                 {
+                    if( pF == nullptr ) 
+                    {
+                        assert(iActualSaved == nFamilies );
+                        break;
+                    }
+
                     for( auto pP = &pF->m_DefaultPool; pP; pP = pP->m_Next.get() )
                     {
-                        nPools++;
                         nEntities += pP->Size();
+                        nPools++;
                     }
+
+                    // Do we need to save this Family?
+                    if( nEntities == 0 ) continue;
+
+                    iActualSaved++;
                 }
+                else
+                {
+                    if( iFamily == nFamilies ) break;
+                }
+
+                //
+                // Deal with the families
+                //
+                xecs::pool::family::guid    FamilyGuid = isRead ? xecs::pool::family::guid{} : pF->m_Guid;
+                std::array<xecs::component::entity, xecs::settings::max_share_components_per_entity_v> ShareEntities;
+                std::array<xecs::component::type::share::key, xecs::settings::max_share_components_per_entity_v> ShareKeys;
 
                 if( TextFile.Record( Error, "Family"
                 ,   [&]( std::size_t, xcore::err& Error ) noexcept
@@ -528,7 +560,7 @@ instance::AddOrRemoveComponents
                     }
                 )) return Error;
 
-                if( TextFile.Record( Error, "FamilyDetails"
+                if( nShareTypes && TextFile.Record( Error, "FamilyDetails"
                 ,   [&]( std::size_t& C, xcore::err& ) noexcept
                     {
                         if( false == isRead ) C = pF->m_ShareInfos.size();
@@ -572,6 +604,25 @@ instance::AddOrRemoveComponents
                         }
                     )) return Error;
 
+                    // Do we have any entities that we need to deal with?
+                    if( nEntitiesInPool == 0 )
+                    {
+                        //
+                        // If we need to add another pool lets do so
+                        //
+                        if( isRead )
+                        {
+                            if ((iPool + 1) != nPools)
+                            {
+                                pP->m_Next = std::make_unique<pool::instance>();
+                                pP->m_Next->Initialize(pF->m_DefaultPool.m_ComponentInfos, *pF);
+                            }
+                        }
+
+                        // Go next pool
+                        continue;
+                    }
+
                     //
                     // Serialize Entities
                     //
@@ -599,12 +650,23 @@ instance::AddOrRemoveComponents
                                     auto& Entity = reinterpret_cast<xecs::component::entity*>(pP->m_pComponent[0])[i];
                                     auto& Global = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
 
-                                    Global.m_Validation = Entity.m_Validation;
+                                    assert( Global.m_Validation == Entity.m_Validation );
                                     Global.m_PoolIndex  = xecs::pool::index{i};
                                     Global.m_pArchetype = pArchetype;
                                     Global.m_pPool      = pP;
                                 }
                             }
+                        }
+
+                        m_ArchetypeMgr.AddToStructuralPendingList(*pP);
+
+                        //
+                        // If we need to add another pool lets do so
+                        //
+                        if((iPool+1) != nPools)
+                        {
+                            pP->m_Next = std::make_unique<pool::instance>();
+                            pP->m_Next->Initialize(pF->m_DefaultPool.m_ComponentInfos, *pF);
                         }
                     }
                     else

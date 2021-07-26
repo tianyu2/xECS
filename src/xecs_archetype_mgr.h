@@ -13,7 +13,7 @@ namespace xecs::archetype
         inline                                  mgr                         ( xecs::game_mgr::instance& GameMgr 
                                                                             ) noexcept;
         inline
-        std::shared_ptr<archetype::instance>    getOrCreateArchetype        ( const xecs::tools::bits& ComponentBits
+        archetype::instance&                    getOrCreateArchetype        ( const xecs::tools::bits& ComponentBits
                                                                             ) noexcept;
         inline
         void                                    UpdateStructuralChanges     ( void 
@@ -38,7 +38,7 @@ namespace xecs::archetype
                                                                             , T_FUNCTION&&                  Function = xecs::tools::empty_lambda{}
                                                                             ) noexcept;
         inline
-        std::shared_ptr<archetype::instance>    CreateArchetype             ( archetype::guid      Guid
+        archetype::instance&                    CreateArchetype             ( archetype::guid      Guid
                                                                             , const tools::bits&   Bits
                                                                             ) noexcept;
 
@@ -53,7 +53,7 @@ namespace xecs::archetype
         events                                              m_Events                    {};
         share_component_entity_map                          m_ShareComponentEntityMap   {};
         archetype_map                                       m_ArchetypeMap              {};
-        std::vector<std::shared_ptr<archetype::instance>>   m_lArchetype                {};
+        std::vector<std::unique_ptr<archetype::instance>>   m_lArchetype                {};
         std::vector<std::pair<tools::bits, tools::bits>>    m_lArchetypeBits            {};
         pool_family_map                                     m_PoolFamily                {};
         instance*                                           m_pArchetypeStrututalPending{ reinterpret_cast<instance*>(end_structural_changes_v) };

@@ -162,4 +162,25 @@ namespace xecs::component
         if( It == m_ComponentInfoMap.end() ) return nullptr;
         return It->second;
     }
+
+    //---------------------------------------------------------------------------
+    inline 
+    void mgr::resetRegistrations( void ) noexcept
+    {
+        // Reset all known components
+        for( int i=0; i< s_nTypes; ++i)
+        {
+            s_BitsToInfo[i]->m_BitID = xecs::component::type::info::invalid_bit_id_v;
+        }
+
+        s_ShareBits         = xecs::tools::bits{};
+        s_DataBits          = xecs::tools::bits{};
+        s_TagsBits          = xecs::tools::bits{};
+        s_ExclusiveTagsBits = xecs::tools::bits{};
+
+        s_UniqueID          = 0;
+        s_BitsToInfo        = bits_to_info_array{};
+        s_nTypes            = 0;
+        s_isLocked          = false;
+    }
 }

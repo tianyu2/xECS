@@ -40,7 +40,9 @@ namespace xecs::component
         inline 
         const xecs::component::type::info*  findComponentTypeInfo   ( xecs::component::type::guid Guid
                                                                     ) const noexcept;
-
+        inline static
+        void                                resetRegistrations      ( void 
+                                                                    ) noexcept;
         using bits_to_info_array = std::array<const xecs::component::type::info*, xecs::settings::max_component_types_v>;
         using component_info_map = std::unordered_map<xecs::component::type::guid, const xecs::component::type::info*>;
 

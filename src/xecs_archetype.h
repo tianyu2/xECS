@@ -197,7 +197,7 @@ protected:
                                                         , T_CALLBACK&&          Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
 
-        using share_archetypes_array = std::array<std::shared_ptr<xecs::archetype::instance>,   xecs::settings::max_components_per_entity_v >;
+        using share_archetypes_array = std::array<xecs::archetype::instance*,   xecs::settings::max_components_per_entity_v >;
 
         xecs::archetype::mgr&               m_Mgr;
         guid                                m_Guid                      {};

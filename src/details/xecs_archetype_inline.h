@@ -248,7 +248,7 @@ namespace xecs::archetype
                 if(m_InfoData[m_nDataComponents + i]->m_bBuildShareFilter) ShareEntityBits.setBit(xecs::component::type::info_v<xecs::component::share_filter>.m_BitID);
                 ShareEntityBits.setBit(m_InfoData[m_nDataComponents + i]->m_BitID);
 
-                m_ShareArchetypesArray[i] = m_Mgr.getOrCreateArchetype(ShareEntityBits);
+                m_ShareArchetypesArray[i] = &m_Mgr.getOrCreateArchetype(ShareEntityBits);
             }
         }
     }

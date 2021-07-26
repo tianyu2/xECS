@@ -13,7 +13,7 @@ namespace xecs::archetype
 
     //-------------------------------------------------------------------------------------
 
-    std::shared_ptr<archetype::instance>
+    archetype::instance&
 mgr::getOrCreateArchetype
     ( const xecs::tools::bits& ComponentBits
     ) noexcept
@@ -25,7 +25,7 @@ mgr::getOrCreateArchetype
 
         // Return the archetype
         if( auto I = m_ArchetypeMap.find(ArchetypeGuid); I != m_ArchetypeMap.end() )
-            return std::shared_ptr<archetype::instance>{ I->second };
+            return *I->second;
 
         //
         // Create Archetype...
@@ -154,7 +154,7 @@ mgr::AddOrRemoveComponents
         if( pArchetype == nullptr )
         {
             // Fail to find the archetype which means that we must build one
-            pArchetype = CreateArchetype(NewArchetypeGuid, Bits).get();
+            pArchetype = &CreateArchetype(NewArchetypeGuid, Bits);
         }
 
         //
@@ -170,24 +170,24 @@ mgr::AddOrRemoveComponents
 
     //-------------------------------------------------------------------------------------
 
-    std::shared_ptr<archetype::instance> mgr::CreateArchetype( archetype::guid NewArchetypeGuid, const tools::bits& Bits ) noexcept
+    archetype::instance& mgr::CreateArchetype( archetype::guid NewArchetypeGuid, const tools::bits& Bits ) noexcept
     {
         //
         // Create Archetype...
         //
-        auto  SharedArchetype = std::make_shared<archetype::instance>(*this);
-        auto& Archetype       = *SharedArchetype;
+        auto  UniqueArchetype = std::make_unique<archetype::instance>(*this);
+        auto& Archetype       = *UniqueArchetype;
 
         m_ArchetypeMap.emplace(NewArchetypeGuid, &Archetype);
 
         Archetype.Initialize( NewArchetypeGuid, Bits );
 
-        m_lArchetype.push_back(SharedArchetype);
+        m_lArchetype.push_back(std::move(UniqueArchetype));
         m_lArchetypeBits.push_back({ Bits, Archetype.m_ExclusiveTagsBits });
 
         // Notify anyone interested
         m_Events.m_OnNewArchetype.NotifyAll(Archetype);
 
-        return SharedArchetype;
+        return Archetype;
     }
 }
