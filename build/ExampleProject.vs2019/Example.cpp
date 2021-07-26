@@ -80,6 +80,7 @@ static struct game
     bool            m_MouseLeft     {};
     bool            m_MouseRight    {};
     keys            m_Keys          {};
+    int             m_DisplayGridInfo{0};
 
 } s_Game;
 
@@ -692,13 +693,14 @@ struct render_grid : xecs::system::instance
         {
             NONE
         ,   FAMILIES
-        ,   ARCHETYPES
         ,   ENTITIES
+        ,   ARCHETYPES
         ,   GRIDCELL_XY
+        ,   MAX_DISPLAY
         };
 
         // What are we printing?
-        switch( print::NONE )
+        switch( static_cast<print>(s_Game.m_DisplayGridInfo % print::MAX_DISPLAY) )
         {
             case print::ARCHETYPES: 
             {
@@ -799,7 +801,7 @@ void InitializeGame( void ) noexcept
     // Generate a few random ships
     //
     s_Game.m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-        .CreateEntities( 100, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+        .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
         {
             Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % s_Game.m_W)
                                                  , static_cast<float>(std::rand() % s_Game.m_H)
@@ -855,7 +857,7 @@ int main(int argc, char** argv)
         ++iFrame;
         if( s_Game.m_Keys.getKeyUp('s') || s_Game.m_Keys.getKeyUp('x') )
         {
-            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin", false, true);
+            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin.txt", false, false);
             assert(!Error);
         }
         if (s_Game.m_Keys.getKeyUp('l') || s_Game.m_Keys.getKeyUp('x') )
@@ -864,9 +866,19 @@ int main(int argc, char** argv)
             xecs::component::mgr::resetRegistrations();
             s_Game.m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
             RegisterElements();
-            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin", true, true);
+            auto Error = s_Game.m_GameMgr->SerializeGameState("x64/Test.bin.txt", true, false);
             assert(!Error);
         }
+        if (s_Game.m_Keys.getKeyUp('g')) s_Game.m_DisplayGridInfo++;
+        if (s_Game.m_Keys.getKeyUp('r'))
+        {
+            s_Game.m_GameMgr.release();
+            xecs::component::mgr::resetRegistrations();
+            s_Game.m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
+            RegisterElements();
+            InitializeGame();
+        }
+
         s_Game.m_Keys.FrameUpdate();
     });
     glutReshapeFunc([](int w, int h) noexcept

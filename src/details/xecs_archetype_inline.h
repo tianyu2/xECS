@@ -1144,6 +1144,11 @@ instance::_MoveInEntity
                     });
                 }
             }
+
+            //
+            // Notify anyone that cares
+            //
+            m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, PoolFamily );
         };
 
         //
@@ -1153,7 +1158,6 @@ instance::_MoveInEntity
         {
             m_DefaultPoolFamily.m_pPrev = nullptr;
             AddShareFilter(m_DefaultPoolFamily);
-            m_Events.m_OnPoolFamilyCreated.NotifyAll( *this, m_DefaultPoolFamily );
         }
 
         //
@@ -1173,25 +1177,12 @@ instance::_MoveInEntity
                 AddShareFilter(*p);
 
                 //
-                // officially announce it
-                //
-                m_Events.m_OnPoolFamilyCreated.NotifyAll(*this, *p);
-
-                //
                 // Link it to the rest of the chain
                 //
-                if( p.get() == &m_DefaultPoolFamily )
-                {
-                    assert(m_DefaultPoolFamily.m_Guid.isValid());
-                    p.release();
-                }
-                else
-                {
-                    assert(m_DefaultPoolFamily.m_Guid.isValid());
-                    if( m_DefaultPoolFamily.m_Next.get() ) m_DefaultPoolFamily.m_Next->m_pPrev = p.get();
-                    p->m_Next = std::move(m_DefaultPoolFamily.m_Next);
-                    m_DefaultPoolFamily.m_Next = std::move(p);
-                }
+                assert( p.get() != &m_DefaultPoolFamily );
+                if( m_DefaultPoolFamily.m_Next.get() ) m_DefaultPoolFamily.m_Next->m_pPrev = p.get();
+                p->m_Next = std::move(m_DefaultPoolFamily.m_Next);
+                m_DefaultPoolFamily.m_Next = std::move(p);
             }
 
             p = std::move(Next);

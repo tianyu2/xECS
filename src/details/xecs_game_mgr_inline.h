@@ -336,6 +336,9 @@ instance::AddOrRemoveComponents
     , bool        isBinary
     ) noexcept
     {
+        std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareEntities;
+        std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> ShareKeys;
+
         xcore::textfile::stream     TextFile;
         xcore::err                  Error;
 
@@ -423,16 +426,9 @@ instance::AddOrRemoveComponents
                 ArchetypeGuid   = Archetype->m_Guid;
 
                 // Save only families which have entites
-                for (auto pF = Archetype->getFamilyHead(); pF; pF = pF->m_Next.get())
+                for( auto pF = Archetype->getFamilyHead(); pF; pF = pF->m_Next.get() )
                 {
-                    for( auto pP = &pF->m_DefaultPool; pP; pP = pP->m_Next.get() )
-                    {
-                        if( pP->Size() )
-                        {
-                            nFamilies++;
-                            break;
-                        }
-                    }
+                    nFamilies++;
                 }
 
                 //
@@ -512,7 +508,7 @@ instance::AddOrRemoveComponents
             // Serialize all families
             //
             xecs::pool::family* pF = isRead ? nullptr : pArchetype->getFamilyHead();
-            for( int iFamily = 0, iActualSaved = 0; true; ++iFamily, pF = pF->m_Next.get() )
+            for( int iFamily = 0; iFamily != nFamilies; ++iFamily, pF = pF->m_Next.get() )
             {
                 int                         nPools      = 0;
                 int                         nEntities   = 0;
@@ -522,34 +518,17 @@ instance::AddOrRemoveComponents
                 //
                 if( false == isRead )
                 {
-                    if( pF == nullptr ) 
-                    {
-                        assert(iActualSaved == nFamilies );
-                        break;
-                    }
-
                     for( auto pP = &pF->m_DefaultPool; pP; pP = pP->m_Next.get() )
                     {
                         nEntities += pP->Size();
                         nPools++;
                     }
-
-                    // Do we need to save this Family?
-                    if( nEntities == 0 ) continue;
-
-                    iActualSaved++;
-                }
-                else
-                {
-                    if( iFamily == nFamilies ) break;
                 }
 
                 //
                 // Deal with the families
                 //
                 xecs::pool::family::guid    FamilyGuid = isRead ? xecs::pool::family::guid{} : pF->m_Guid;
-                std::array<xecs::component::entity, xecs::settings::max_share_components_per_entity_v> ShareEntities;
-                std::array<xecs::component::type::share::key, xecs::settings::max_share_components_per_entity_v> ShareKeys;
 
                 if( TextFile.Record( Error, "Family"
                 ,   [&]( std::size_t, xcore::err& Error ) noexcept
@@ -582,12 +561,28 @@ instance::AddOrRemoveComponents
                 )) return Error;
 
                 // Create a family in case of reading
-                pF = isRead ? &pArchetype->CreateNewPoolFamily
-                            ( FamilyGuid
-                            , std::span{ ShareEntities.data(),  static_cast<std::size_t>(nShareTypes) }
-                            , std::span{ ShareKeys.data(),      static_cast<std::size_t>(nShareTypes) }
-                            )
-                            : pF;
+                if(isRead)
+                {
+                    // TODO: Make sure the order of families match the saved order in memory
+                    //      To do that we need to fix the link list of pending families
+                    pF = &pArchetype->CreateNewPoolFamily
+                    ( FamilyGuid
+                    , std::span{ ShareEntities.data(),  static_cast<std::size_t>(nShareTypes) }
+                    , std::span{ ShareKeys.data(),      static_cast<std::size_t>(nShareTypes) }
+                    );
+
+                    //
+                    // If the Family has shares then we must insert the shares into the hash map
+                    //
+                    if(nShareTypes)
+                    {
+                        for (int i = 0; i < nShareTypes; i++)
+                        {
+                            auto& Details = pF->m_ShareDetails[i];
+                            m_ArchetypeMgr.m_ShareComponentEntityMap.emplace( std::pair{ Details.m_Key, Details.m_Entity });
+                        }
+                    }
+                }
 
                 //
                 // Serialize Pools
@@ -658,6 +653,9 @@ instance::AddOrRemoveComponents
                             }
                         }
 
+                        //
+                        // Add to the pending list
+                        //
                         m_ArchetypeMgr.AddToStructuralPendingList(*pP);
 
                         //

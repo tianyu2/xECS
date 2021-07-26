@@ -228,7 +228,7 @@ namespace xecs::component
     {
         constexpr static auto typedef_v = xecs::component::type::exclusive_tag
         {
-            .m_pName = "ShareAsData"
+            .m_pName = "ExclusiveShareAsData"
         };
     };
 
