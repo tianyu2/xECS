@@ -36,12 +36,6 @@
     <ClInclude Include="..\..\dependencies\xcore\src\xcore.h">
       <Filter>Dependencies\xCore</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\Settings\PropertyConfig.h">
-      <Filter>Settings</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Settings\xcore_user_settings.h">
-      <Filter>Settings</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_arglist.h">
       <Filter>Dependencies\xCore</Filter>
     </ClInclude>
@@ -278,6 +272,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\details\xecs_tools_bits_inline.h">
       <Filter>xECS\Details</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings\PropertyConfig.h">
+      <Filter>Settings</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings\xcore_user_settings.h">
+      <Filter>Settings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

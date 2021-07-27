@@ -96,9 +96,9 @@
     <ClInclude Include="..\..\src\xecs_system.h" />
     <ClInclude Include="..\..\src\xecs_system_mgr.h" />
     <ClInclude Include="..\..\src\xecs_tools.h" />
-    <ClInclude Include="..\..\src\Settings\PropertyConfig.h" />
-    <ClInclude Include="..\..\src\Settings\xcore_user_settings.h" />
     <ClInclude Include="..\..\src\xecs_tools_bits.h" />
+    <ClInclude Include="Settings\PropertyConfig.h" />
+    <ClInclude Include="Settings\xcore_user_settings.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />

@@ -14,26 +14,28 @@ namespace xecs::system
             xecs::event::instance<>     m_OnFrameEnd;
         };
 
-        mgr(const mgr&
-        ) noexcept = delete;
-        mgr(void
-        ) noexcept = default;
+                                mgr                     ( const mgr&
+                                                        ) noexcept = delete;
+                                mgr                     ( void
+                                                        ) noexcept = default;
+                               ~mgr                     ( void
+                                                        ) noexcept;
         template
-            < typename T_SYSTEM
-            > requires
-            (std::derived_from< T_SYSTEM, xecs::system::instance>
-                )
-            T_SYSTEM& RegisterSystem(xecs::game_mgr::instance& GameMgr
-            ) noexcept;
+        < typename T_SYSTEM
+        > requires
+        ( std::derived_from< T_SYSTEM, xecs::system::instance>
+        )
+        T_SYSTEM&               RegisterSystem          ( xecs::game_mgr::instance& GameMgr
+                                                        ) noexcept;
         inline
-            void                    Run(void
-            ) noexcept;
+        void                    Run                     ( void
+                                                        ) noexcept;
         template< typename T_SYSTEM >
-        T_SYSTEM* find(void
-        ) noexcept;
+        T_SYSTEM*               find                    ( void
+                                                        ) noexcept;
         inline
-            void                    OnNewArchetype(xecs::archetype::instance& Archetype
-            ) noexcept;
+        void                    OnNewArchetype          ( xecs::archetype::instance& Archetype
+                                                        ) noexcept;
 
         using system_list = std::vector< std::pair<const xecs::system::type::info*, std::unique_ptr<xecs::system::instance>> >;
 

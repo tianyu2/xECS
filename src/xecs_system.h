@@ -127,11 +127,13 @@ namespace xecs::system
 
         struct info
         {
-            using notifier_registration = void( xecs::archetype::instance&, xecs::system::instance&);
+            using notifier_registration = void( xecs::archetype::instance&, xecs::system::instance&) noexcept;
+            using destroy_fn            = void( xecs::system::instance& ) noexcept;
 
             const type::guid                        m_Guid;
             mutable xecs::query::instance           m_Query;
             notifier_registration* const            m_NotifierRegistration;
+            destroy_fn* const                       m_DestroyFunction;
             const char* const                       m_pName;
             const id                                m_ID;
         };
@@ -186,7 +188,6 @@ namespace xecs::system
 
         constexpr                           instance                ( xecs::game_mgr::instance& GameMgr
                                                                     ) noexcept;
-
         template
         < typename   T_EVENT
         , typename   T_CLASS

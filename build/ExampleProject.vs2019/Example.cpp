@@ -72,7 +72,7 @@ static struct game
 {
     using game_mgr_uptr = std::unique_ptr<xecs::game_mgr::instance>;
 
-    game_mgr_uptr   m_GameMgr       = std::make_unique<xecs::game_mgr::instance>();
+    game_mgr_uptr   m_GameMgr       = nullptr;
     int             m_W             = 1024;
     int             m_H             = 800;
     int             m_MouseX        {};
@@ -836,11 +836,15 @@ void timer( int value ) noexcept
 static int iFrame =0;
 int main(int argc, char** argv)
 {
+    //_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    //    _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_DEBUG);
+    //    _CrtSetBreakAlloc(1882);
     xcore::Init("ECS Example");
 
     //
     // Initialize the game
     //
+    s_Game.m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
     RegisterElements();
     InitializeGame();
 
@@ -862,7 +866,7 @@ int main(int argc, char** argv)
         }
         if (s_Game.m_Keys.getKeyUp('l') || s_Game.m_Keys.getKeyUp('x') )
         {
-            s_Game.m_GameMgr.release();
+            s_Game.m_GameMgr.reset();
             xecs::component::mgr::resetRegistrations();
             s_Game.m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
             RegisterElements();
@@ -872,11 +876,15 @@ int main(int argc, char** argv)
         if (s_Game.m_Keys.getKeyUp('g')) s_Game.m_DisplayGridInfo++;
         if (s_Game.m_Keys.getKeyUp('r'))
         {
-            s_Game.m_GameMgr.release();
+            s_Game.m_GameMgr.reset();
             xecs::component::mgr::resetRegistrations();
             s_Game.m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
             RegisterElements();
             InitializeGame();
+        }
+        if (s_Game.m_Keys.getKeyUp('q'))
+        {
+            exit(0);
         }
 
         s_Game.m_Keys.FrameUpdate();
@@ -908,6 +916,7 @@ int main(int argc, char** argv)
     });
     glutMainLoop();
 
+    s_Game.m_GameMgr.reset();
     xcore::Kill();
     return 0;
 }

@@ -156,6 +156,10 @@ namespace xecs::system
                                                     static_assert( xcore::types::always_false_v<T_SYSTEM>, "Case is not supported for right now");
                                                 }
                                             }
+            ,   .m_DestroyFunction      = []( xecs::system::instance& This ) noexcept
+                                            {
+                                                std::destroy_at(&static_cast< xecs::system::details::compleated<T_SYSTEM>& >(This));
+                                            }
             ,   .m_pName                = T_SYSTEM::typedef_v.m_pName
             ,   .m_ID                   = T_SYSTEM::typedef_v.id_v
             };

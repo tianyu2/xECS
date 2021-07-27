@@ -336,8 +336,8 @@ instance::AddOrRemoveComponents
     , bool        isBinary
     ) noexcept
     {
-        std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareEntities;
-        std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> ShareKeys;
+        std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareEntities{};
+        std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> ShareKeys    {};
 
         xcore::textfile::stream     TextFile;
         xcore::err                  Error;
@@ -383,9 +383,9 @@ instance::AddOrRemoveComponents
                     for (auto It = Span.rbegin(); It != Span.rend(); ++It)
                     {
                         auto& E = *It;
-                        if (E.m_pPool)
+                        if (E.m_Validation.m_Value)
                         {
-                            C = static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_lEntities.get()));
+                            C = 1 + static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_lEntities.get()));
                             break;
                         }
                     }
@@ -486,7 +486,7 @@ instance::AddOrRemoveComponents
                             if( pInfo == nullptr )
                             {
                                 // TODO: Change this to a warning?
-                                Error = xerr_failure_s("Fail to find one of the components");
+                                Error = xerr_failure_s("Serialization Error, Fail to find one of the components types");
                                 return;
                             }
 

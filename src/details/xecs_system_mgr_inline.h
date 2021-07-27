@@ -1,6 +1,27 @@
 namespace xecs::system
 {
     //-------------------------------------------------------------------------------------------
+    mgr::~mgr( void ) noexcept
+    {
+        while( m_UpdaterSystems.size() )
+        {
+            auto p = m_UpdaterSystems.back().second.release();
+            m_UpdaterSystems.back().first->m_DestroyFunction(*p);
+            delete reinterpret_cast<void*>(p);
+            m_UpdaterSystems.pop_back();
+        }
+
+        while (m_NotifierSystems.size())
+        {
+            auto p = m_NotifierSystems.back().second.release();
+            m_NotifierSystems.back().first->m_DestroyFunction(*p);
+            delete reinterpret_cast<void*>(p);
+            m_NotifierSystems.pop_back();
+        }
+
+    }
+
+    //-------------------------------------------------------------------------------------------
 
     template
     < typename T_SYSTEM

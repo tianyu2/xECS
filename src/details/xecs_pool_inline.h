@@ -160,7 +160,7 @@ namespace xecs::pool
             Clear();
             for (int i = 0, end = static_cast<int>(m_ComponentInfos.size()); i < end; ++i)
             {
-                VirtualFree(m_pComponent[i], 0, MEM_RELEASE);
+                if(m_pComponent[i]) VirtualFree(m_pComponent[i], 0, MEM_RELEASE);
             }
         }
     }
@@ -265,8 +265,24 @@ namespace xecs::pool
         do 
         {
             m_Size--;
-            if(reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false )
+            if( reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity) * m_Size]).isZombie() == false )
             {
+                if( m_Size == Index.m_Value )
+                {
+                    // We are not moving anything just just call destructors if we have to
+                    if (bCallDestructors)
+                    {
+                        for (int i = 0; i < m_ComponentInfos.size(); ++i)
+                        {
+                            const auto& MyInfo = *m_ComponentInfos[i];
+                            auto        pData = m_pComponent[i];
+                            if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index.m_Value * MyInfo.m_Size]);
+                        }
+                    }
+
+                    return false;
+                }
+
                 m_Size++;
                 break;
             }
@@ -281,6 +297,7 @@ namespace xecs::pool
                     if (MyInfo.m_pDestructFn) MyInfo.m_pDestructFn(&pData[Index.m_Value * MyInfo.m_Size]);
                 }
             }
+
         } while (m_Size);
 
         // Check if we have any entry to move
