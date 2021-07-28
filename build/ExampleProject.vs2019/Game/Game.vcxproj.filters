@@ -7,9 +7,6 @@
     <Filter Include="Dependencies\xCore">
       <UniqueIdentifier>{d45123d5-2d54-4683-9848-0aabcc86cdef}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Core Filtes">
-      <UniqueIdentifier>{8080b4b5-60eb-4963-b2ac-7cb2e11b8871}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Components">
       <UniqueIdentifier>{57e914c4-59d6-49a1-a0a7-df0b7344b8ff}</UniqueIdentifier>
     </Filter>
@@ -25,7 +22,7 @@
     <Filter Include="Tools">
       <UniqueIdentifier>{1bebe4a8-8644-4835-b593-71f23e0d8104}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Settings">
+    <Filter Include="Dependencies\Settings">
       <UniqueIdentifier>{a3885b00-7017-4618-acd2-c24de067ed8d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -180,9 +177,6 @@
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_vector.h">
       <Filter>Dependencies\xCore</Filter>
     </ClInclude>
-    <ClInclude Include="pch.h">
-      <Filter>Core Filtes</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\src\xecs.h">
       <Filter>Dependencies\xECS</Filter>
     </ClInclude>
@@ -331,11 +325,13 @@
       <Filter>Tools</Filter>
     </ClInclude>
     <ClInclude Include="Settings\PropertyConfig.h">
-      <Filter>Settings</Filter>
+      <Filter>Dependencies\Settings</Filter>
     </ClInclude>
     <ClInclude Include="Settings\xcore_user_settings.h">
-      <Filter>Settings</Filter>
+      <Filter>Dependencies\Settings</Filter>
     </ClInclude>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="..\LiveCoding.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\dependencies\xcore\src\xcore.cpp">
@@ -347,9 +343,7 @@
     <ClCompile Include="..\..\..\dependencies\xcore\src\xcore_profiler_2.cpp">
       <Filter>Dependencies\xCore</Filter>
     </ClCompile>
-    <ClCompile Include="pch.cpp">
-      <Filter>Core Filtes</Filter>
-    </ClCompile>
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="pch.cpp" />
   </ItemGroup>
 </Project>

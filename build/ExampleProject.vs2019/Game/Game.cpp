@@ -162,8 +162,7 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
         {
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
             auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_Game.get());
-
-            auto Error = MyGame.SaveGameState("x64/Test.bin");
+            auto  Error    = MyGame.SaveGameState("x64/Test.bin");
                
             LiveInfo.m_Game.reset();
 
@@ -186,7 +185,6 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
             auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_Game.get());
 
             MyGame.m_GameMgr->Run();
-
             break;
         }
     }

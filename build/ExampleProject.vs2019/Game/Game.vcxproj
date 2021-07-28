@@ -172,6 +172,7 @@
     <ClInclude Include="..\..\..\src\xecs_system_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_tools.h" />
     <ClInclude Include="..\..\..\src\xecs_tools_bits.h" />
+    <ClInclude Include="..\LiveCoding.h" />
     <ClInclude Include="Components\bullet_data.h" />
     <ClInclude Include="Components\_components.h" />
     <ClInclude Include="Components\grid_cell_share.h" />
