@@ -1,10 +1,10 @@
-# xECS -Lesson 05, Const and Improvements
+# xECS -Lesson 06, Serializing
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
 * Leaks free xECS
   * Made sure that system can destroy themselves propertly without virtual functions
-* Serializing
+* Serializing the game state
   * Entities
   * Components
   * Pools
