@@ -22,14 +22,7 @@ struct my_game final : live::game
 
     //-----------------------------------------------------------------------------
 
-    virtual ~my_game() noexcept
-    {
-        m_GameMgr.reset();
-    }
-
-    //-----------------------------------------------------------------------------
-
-    virtual void CreateDefaultScene( void ) noexcept override
+    void CreateDefaultScene( void ) noexcept
     {
         //
         // Initialize global elements
@@ -143,9 +136,14 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
             xcore::Init("ECS Example");
 
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
-            assert( nullptr == LiveInfo.m_pGame );
+            auto& MyGame   = [&]() -> auto&
+            {
+                auto Game  = std::make_unique<my_game>();
+                auto pGame = Game.get();
+                LiveInfo.m_Game = std::move(Game);
+                return *pGame;
+            }();
 
-            auto& MyGame = *new my_game();
             MyGame.Initialize( *LiveInfo.m_pRenderer );
 
             if( ctx->version > 1 ) 
@@ -158,19 +156,16 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
                 MyGame.CreateDefaultScene();
             }
 
-            LiveInfo.m_pGame = &MyGame;
-
             break;
         }
         case CR_UNLOAD:
         {
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
-            auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_pGame);
+            auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_Game.get());
 
             auto Error = MyGame.SaveGameState("x64/Test.bin");
                
-            delete LiveInfo.m_pGame;
-            LiveInfo.m_pGame = nullptr;
+            LiveInfo.m_Game.reset();
 
             xcore::Kill();
 
@@ -180,8 +175,7 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
         case CR_CLOSE:
         {
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
-            delete LiveInfo.m_pGame;
-            LiveInfo.m_pGame = nullptr;
+            LiveInfo.m_Game.reset();
 
             xcore::Kill();
             break;
@@ -189,7 +183,7 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
         case CR_STEP:
         {
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
-            auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_pGame);
+            auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_Game.get());
 
             MyGame.m_GameMgr->Run();
 

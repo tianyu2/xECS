@@ -155,60 +155,18 @@ void timer( int value ) noexcept
 }
 
 //---------------------------------------------------------------------------------------
-// GAME PLUGIN
-//---------------------------------------------------------------------------------------
-
-struct game_plugin
-{
-    cr_plugin       m_CRInstance;
-    live::info      m_LiveInfo;
-    std::string     m_FullPath;
-
-    void Load( const char* pString )
-    {
-        m_FullPath = std::filesystem::canonical(pString).string();
-
-        if( false == cr_plugin_open( m_CRInstance, m_FullPath.c_str() ) )
-        {
-            assert(false);
-        }
-
-        m_LiveInfo.m_pRenderer = &s_Render;
-        m_CRInstance.userdata  = &m_LiveInfo;
-    }
-
-    void LoadGameState()
-    {
-        m_LiveInfo.m_pGame->LoadGameState("x64/Test.bin");
-    }
-
-    void SaveGameState()
-    {
-        m_LiveInfo.m_pGame->SaveGameState("x64/Test.bin");
-    }
-
-    bool Run()
-    {
-        return cr_plugin_update( m_CRInstance );
-    }
-
-    // at the end do not forget to cleanup the plugin context
-    ~game_plugin()
-    {
-        cr_plugin_close(m_CRInstance);
-    }
-};
-
-//---------------------------------------------------------------------------------------
 // MAIN
 //---------------------------------------------------------------------------------------
-game_plugin* pGamePlugin;
+live::plugin* pGamePlugin;
 int main(int argc, char** argv)
 {
-    game_plugin GamePlugin;
+    live::plugin GamePlugin;
 
     // Give access to clut functions
     pGamePlugin = &GamePlugin;
+
+    // Initialize with the render
+    GamePlugin.Initialize( s_Render );
 
     // Load the plugin
     GamePlugin.Load("Game/x64/Debug/Game.dll");
@@ -227,11 +185,12 @@ int main(int argc, char** argv)
 
         if(s_Input.m_Keys.getKeyUp('s') || s_Input.m_Keys.getKeyUp('x') )
         {
-            pGamePlugin->SaveGameState();
+            pGamePlugin->SaveGameState( "x64/Test.bin" );
         }
+
         if (s_Input.m_Keys.getKeyUp('l') || s_Input.m_Keys.getKeyUp('x') )
         {
-            pGamePlugin->LoadGameState();
+            pGamePlugin->LoadGameState( "x64/Test.bin" );
         }
 
         if (s_Input.m_Keys.getKeyUp('q'))
