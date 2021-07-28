@@ -133,7 +133,7 @@ namespace xecs::game_mgr
         > __inline
         T_SYSTEM&                           getSystem               ( void
                                                                     ) noexcept;
-
+        inline
         xcore::err                          SerializeGameState      ( const char* pFileName
                                                                     , bool        isRead
                                                                     , bool        isBinary = false

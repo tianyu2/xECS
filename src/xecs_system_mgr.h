@@ -18,7 +18,7 @@ namespace xecs::system
                                                         ) noexcept = delete;
                                 mgr                     ( void
                                                         ) noexcept = default;
-                               ~mgr                     ( void
+        inline                 ~mgr                     ( void
                                                         ) noexcept;
         template
         < typename T_SYSTEM

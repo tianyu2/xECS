@@ -106,7 +106,7 @@ namespace xecs::pool
                                 , std::span<const xecs::component::type::info* const>   Types
                                 , std::span<const std::byte* const>                     Data
                                 ) noexcept;
-
+        inline
         void Initialize
         ( guid                                              Guid
         , archetype::instance&                              ArchetypeInstance
@@ -121,6 +121,7 @@ namespace xecs::pool
         >
         void AppendEntities( int Count, xecs::archetype::mgr& ArchetypeMgr, T_FUNCTION&& Function ) noexcept;
 
+        inline
         void MoveIn( 
               xecs::game_mgr::instance& GameMgr
             , xecs::pool::family&       FromFamily
