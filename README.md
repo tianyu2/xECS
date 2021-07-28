@@ -2,21 +2,18 @@
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
-* Share component filters
-  * Can specify if you want your share component to have a filter or not
-  * findShareFilter 
-* Const 
-  * Adding const to arguments of function create speed ups
-  * Faster Share component reading, etc.
-* System
-  * Exclusive functions for systems
-  * System understand what share filters are
-  * Clean up
-* Generally 
-  * Factor out more mgrs 
+* Leaks free xECS
+  * Made sure that system can destroy themselves propertly without virtual functions
+* Serializing
+  * Entities
+  * Components
+  * Pools
+  * Families
+  * Archetypes
 * Example
   * updated to show new changes
-  * Added a more efficient type of grid
+  * updated to have better structure
+  * Change the input system to be more standard
 
 ## To build
 1. Go to the build directory 
