@@ -1,20 +1,26 @@
-# xECS -Lesson 06, Serializing
+# xECS -Lesson 07, Live Coding
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
-* Leaks free xECS
-  * Made sure that system can destroy themselves propertly without virtual functions
+* Simple project organization
+  * Game into its own project
+     * xCore
+     * xECS
+     * Components and System per file
+  * Main framework app
+     * Could be an editor or game, etc.
 * Serializing the game state
-  * Entities
-  * Components
-  * Pools
-  * Families
-  * Archetypes
-* Example
-  * updated to show new changes
-  * updated to have better structure
-  * Change the input system to be more standard
-
+  * Remove field errors 
+* Live Coding
+  * add new project dependency [CR.h](https://github.com/fungos/cr)
+  * Create Plugin API
+  * Hooking and the plugin with the game and framework
+  * Try handle exceptions correctly
+* CLUT WARNING
+  * Seems like CLUT is corrupting memory
+  * Used winDBG to find out, also can be seem allocating too much memory. 
+        Note that could be a combo of OpenGL and CLUT...
+  
 ## To build
 1. Go to the build directory 
 2. Click the GetDependencies.bat batch file
