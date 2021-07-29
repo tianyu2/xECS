@@ -6,3 +6,8 @@
 /.vs
 /build/ExampleProject.vs2019/x64
 /build/ExampleProject.vs2019/.vs/ExampleProject.vs2019/v16
+/build/ExampleProject.vs2019/Game/.vs/Game/v16
+/build/ExampleProject.vs2019/Game/Debug
+/build/ExampleProject.vs2019/Game/x64/Debug
+/build/ExampleProject.vs2019/Game/x64/Release/Game.tlog
+/build/ExampleProject.vs2019/Game/x64/Release
