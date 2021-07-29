@@ -39,18 +39,51 @@ namespace live
 
     struct plugin
     {
-        cr_plugin       m_CRInstance;
-        live::info      m_LiveInfo;
-        std::string     m_FullPath;
+        cr_plugin       m_CRInstance    {};
+        live::info      m_LiveInfo      {};
+        std::string     m_FullPath      {};
+        PVOID           m_hVeh          {};
 
         ~plugin(void) noexcept
         {
             cr_plugin_close(m_CRInstance);
+            if (m_hVeh) RemoveVectoredExceptionHandler(m_hVeh);
         }
 
         void Initialize ( renderer& Render ) noexcept
         {
             m_LiveInfo.m_pRenderer = &Render;
+
+            constexpr auto CallFirst = 1;
+            constexpr auto CallLast  = 0;
+            /*
+            m_hVeh = AddVectoredExceptionHandler
+            ( CallFirst
+            , []( struct _EXCEPTION_POINTERS* ExceptionInfo ) -> LONG
+            {
+                if (ExceptionInfo->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
+                {
+                    // If a debugger is attached, this will never be executed.
+
+                    printf("BreakPoint at 0x%x skipped.\n", ExceptionInfo->ExceptionRecord->ExceptionAddress);
+
+                    PCONTEXT Context = ExceptionInfo->ContextRecord;
+
+                    // The breakpoint instruction is 0xCC (int 3), just one byte in size.
+                    // Advance to the next instruction. Otherwise, this handler will just be called ad infinitum.
+                    #ifdef _AMD64_
+                            Context->Rip++;
+                    #else
+                            Context->Eip++;
+                    #endif    
+                    // Continue execution from the instruction at Context->Rip/Eip.
+                    return EXCEPTION_CONTINUE_EXECUTION;
+                }
+
+                // IT's not a break intruction. Continue searching for an exception handler.
+                return EXCEPTION_CONTINUE_SEARCH;
+            });
+            */
         }
 
         bool Load( const char* pString ) noexcept
@@ -63,7 +96,6 @@ namespace live
             {
                 if( cr_plugin_rollback(m_CRInstance) )
                 {
-                    assert(false);
                     return false;
                 }
             }
@@ -76,7 +108,6 @@ namespace live
         {
             if( const char* pError = m_LiveInfo.m_Game->LoadGameState("x64/Test.bin"); pError )
             {
-                assert(false);
                 return false;
             }
             return true;
@@ -86,7 +117,6 @@ namespace live
         {
             if( const char* pError = m_LiveInfo.m_Game->SaveGameState("x64/Test.bin"); pError )
             {
-                assert(false);
                 return false;
             }
             return true;
@@ -98,7 +128,6 @@ namespace live
             {
                 if (cr_plugin_rollback(m_CRInstance))
                 {
-                    assert(false);
                     return false;
                 }
             }

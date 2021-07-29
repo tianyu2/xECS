@@ -126,6 +126,24 @@ void GlutPrint(const int x, const int y, const char* const pFmt, T_ARGS&&... Arg
 
 //-----------------------------------------------------------------------------
 
+DWORD handler(cr_plugin& ctx, DWORD code)
+{
+    printf("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ EXCEPTION HAPPEN @@@@@@@@@@@@@@@@@@@@@@\n");
+
+    // If we loaded the default dll and failed then we are dead...
+    if (ctx.version == 1) 
+    {
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+
+    // If we can rewind lets try it
+    ctx.version = ctx.last_working_version;
+
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+//-----------------------------------------------------------------------------
+
 CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
 {
     assert(ctx);
@@ -133,6 +151,8 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
     {
         case CR_LOAD:
         {
+            printf("\nLoading Game DLL Version (( %d ))\n", ctx->version );
+
             xcore::Init("ECS Example");
 
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
@@ -160,6 +180,8 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
         }
         case CR_UNLOAD:
         {
+            printf("\nUnloading Game DLL Version { %d }\n", ctx->version);
+
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
             auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_Game.get());
             auto  Error    = MyGame.SaveGameState("x64/Test.bin");
@@ -173,6 +195,7 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
         }
         case CR_CLOSE:
         {
+            printf("\nClosing Game DLL\n");
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
             LiveInfo.m_Game.reset();
 
@@ -184,7 +207,14 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
             auto& LiveInfo = *static_cast<live::info*>(ctx->userdata);
             auto& MyGame   = *static_cast<my_game*>(LiveInfo.m_Game.get());
 
-            MyGame.m_GameMgr->Run();
+            __try
+            {
+                MyGame.m_GameMgr->Run();
+            }
+            __except (handler(*ctx, GetExceptionCode()))
+            {
+                return -1;
+            }
             break;
         }
     }

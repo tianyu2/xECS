@@ -193,11 +193,6 @@ int main(int argc, char** argv)
             pGamePlugin->LoadGameState( "x64/Test.bin" );
         }
 
-        if (s_Input.m_Keys.getKeyUp('q'))
-        {
-            exit(0);
-        }
-
         s_Input.m_Keys.FrameUpdate();
     });
 
@@ -226,6 +221,7 @@ int main(int argc, char** argv)
              if (Button == GLUT_LEFT_BUTTON ) s_Input.m_MouseLeft  = (State == GLUT_DOWN);
         else if (Button == GLUT_RIGHT_BUTTON) s_Input.m_MouseRight = (State == GLUT_DOWN);
     });
+
     glutMainLoop();
 
     return 0;

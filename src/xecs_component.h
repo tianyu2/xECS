@@ -142,7 +142,7 @@ namespace xecs::component
     {
         static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
         {
-            auto&           Entity = *reinterpret_cast<entity*>(pData);
+            auto& Entity = *reinterpret_cast<entity*>(pData);
             return TextFile.Field("Entity", Entity.m_Value );
         }
 

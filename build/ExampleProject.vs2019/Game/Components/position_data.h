@@ -3,7 +3,8 @@ struct position
     static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
     {
         auto& Position = *reinterpret_cast<position*>(pData);
-        return TextFile.Field("Value", Position.m_Value.m_X, Position.m_Value.m_Y);
+        TextFile.Field("Value", Position.m_Value.m_X, Position.m_Value.m_Y).clear();
+        return{};
     }
 
     constexpr static auto typedef_v = xecs::component::type::data
