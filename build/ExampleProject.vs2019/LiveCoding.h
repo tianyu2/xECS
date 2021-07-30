@@ -53,10 +53,11 @@ namespace live
         void Initialize ( renderer& Render ) noexcept
         {
             m_LiveInfo.m_pRenderer = &Render;
+            m_CRInstance.userdata  = &m_LiveInfo;
 
+            /*
             constexpr auto CallFirst = 1;
             constexpr auto CallLast  = 0;
-            /*
             m_hVeh = AddVectoredExceptionHandler
             ( CallFirst
             , []( struct _EXCEPTION_POINTERS* ExceptionInfo ) -> LONG
@@ -100,7 +101,6 @@ namespace live
                 }
             }
 
-            m_CRInstance.userdata  = &m_LiveInfo;
             return true;
         }
 
