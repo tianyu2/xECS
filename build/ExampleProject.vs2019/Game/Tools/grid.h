@@ -102,7 +102,7 @@ namespace grid
     //
     // To remove the condition we can use the following trick
     //
-    // X_Real = (X_img - (1 & ((X_img ^ Y_img))) / 2
+    // X_Real = (X_img - (1 & ((X_img ^ Y_img) & Y_img)) / 2
     //
     // In the code below we add a 1 to the final result to avoid the coordinates to be negative
     // However in the normal case we would remove that "1 + " from our equation.
