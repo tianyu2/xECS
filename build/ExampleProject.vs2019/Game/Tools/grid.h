@@ -82,7 +82,31 @@ namespace grid
     }
 
     //---------------------------------------------------------------------------------------
-
+    // This function will map between word space to the grid space. However it uses an imaginary grid
+    // to help map between both. The imaginary grid is just a regular grid nothing special but not real.
+    // Not real in the sense it does not get use for anything just for mapping reasons. The imaginary
+    // Grid is twice the resolution in the X direction. Given that then we just need to find a formula to
+    // Map between this imaginary yet regular grid to the Actual Tiled grid.
+    //
+    // Imaginary Grid--> |0 |1 |2 |3 |4 |5 |6 |7 |8 |9 |10|11|12|13|14|15|16|17|18|19|20|21|
+    // RealGrid          +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    //                   +  0  +  1  +  2  +  3  +  4  +  5  +  6  +  7  +  8  +  9  +  10 +
+    //                +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    //                + -1  +  0  +  1  +  2  +  3  +  4  +  5  +  6  +  7  +  8  +  9  +
+    //                +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    //
+    // To map between the Imaginary grid we use the following formulas:
+    //
+    //  For Odd  Values of Y:  X_Real = (X_img-(1-(X_img&1)))/2
+    //  For Even Values of Y:  X_Real = (X_img/2)
+    //
+    // To remove the condition we can use the following trick
+    //
+    // X_Real = (X_img - (1 & ((X_img ^ Y_img))) / 2
+    //
+    // In the code below we add a 1 to the final result to avoid the coordinates to be negative
+    // However in the normal case we would remove that "1 + " from our equation.
+    //---------------------------------------------------------------------------------------
     __inline constexpr
     grid_cell ComputeGridCellFromWorldPosition( const xcore::vector2 Position ) noexcept
     {
