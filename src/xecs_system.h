@@ -188,6 +188,9 @@ namespace xecs::system
 
         constexpr                           instance                ( xecs::game_mgr::instance& GameMgr
                                                                     ) noexcept;
+        __forceinline
+        bool                                isEntityDead            ( xecs::component::entity Entity
+                                                                    ) const noexcept;
         template
         < typename   T_EVENT
         , typename   T_CLASS
