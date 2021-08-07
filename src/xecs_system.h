@@ -280,6 +280,14 @@ namespace xecs::system
         T_SYSTEM&                           getSystem               ( void
                                                                     ) const noexcept;
         template
+        < typename T_FUNCTION = xecs::tools::empty_lambda
+        > requires
+        ( xcore::function::is_callable_v<T_FUNCTION>
+        ) __inline
+        [[nodiscard]] bool                  findEntity              ( xecs::component::entity Entity
+                                                                    , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
+                                                                    ) noexcept;
+        template
         < typename T_SHARE_COMPONENT
         > __inline
         const xecs::component::share_filter*

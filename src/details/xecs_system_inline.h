@@ -294,6 +294,21 @@ instance::Foreach
     }
 
     //-------------------------------------------------------------------------------------------
+
+    template
+    < typename T_FUNCTION
+    > requires
+    ( xcore::function::is_callable_v<T_FUNCTION>
+    ) __inline
+    bool instance::findEntity
+    ( xecs::component::entity Entity
+    , T_FUNCTION&&            Function
+    ) noexcept
+    {
+        return m_GameMgr.findEntity( Entity, std::forward<T_FUNCTION>(Function) );
+    }
+
+    //-------------------------------------------------------------------------------------------
     template
     < typename T_SYSTEM
     > constexpr
