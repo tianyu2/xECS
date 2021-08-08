@@ -271,7 +271,7 @@ instance::AddOrRemoveComponents
     {
         if( Entity.isZombie() ) return true;
         const auto& GlobalEntity = m_GameMgr.m_ComponentMgr.m_lEntities[ Entity.m_GlobalIndex ];
-        return GlobalEntity.m_Validation.m_bZombie || GlobalEntity.m_Validation != Entity.m_Validation;
+        return GlobalEntity.m_Validation != Entity.m_Validation;
     }
     
     //-------------------------------------------------------------------------------------------
