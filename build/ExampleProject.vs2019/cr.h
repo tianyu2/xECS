@@ -729,6 +729,19 @@ static bool cr_exists(const std::string &path) {
 static bool cr_copy(const std::string &from, const std::string &to) {
     CR_WINDOWS_ConvertPath(_from, from);
     CR_WINDOWS_ConvertPath(_to, to);
+
+    // Wait for file to be ready to copy
+    HANDLE hFile;
+    while ((hFile = CreateFile(_from.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE)
+    {
+        if (GetLastError() == ERROR_SHARING_VIOLATION) {
+            Sleep(100);
+        }
+        else
+            break; // some other error occurred
+    }
+    if(hFile) CloseHandle(hFile);
+
     return CopyFile(_from.c_str(), _to.c_str(), FALSE) ? true : false;
 }
 

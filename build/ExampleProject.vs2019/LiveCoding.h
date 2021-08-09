@@ -87,11 +87,26 @@ namespace live
             */
         }
 
+        void DeleteOldVersions( std::string& Str )
+        {
+            //
+            // Erase previous backed up versions (if any)
+            //
+            std::string temppath;
+            for (unsigned int i = 1; i < 10000; i++) 
+            {
+                CR_WINDOWS_ConvertPath(_path, cr_version_path(Str, i, temppath));
+                if( false == DeleteFile(_path.c_str()) ) break;
+                cr_del(cr_replace_extension(cr_version_path(Str, i, temppath), ".pdb"));
+            }
+        }
+
         bool Load( const char* pString ) noexcept
         {
             assert(m_LiveInfo.m_pRenderer);
 
             m_FullPath = std::filesystem::canonical(pString).string();
+            DeleteOldVersions(m_FullPath);
 
             if( false == cr_plugin_open( m_CRInstance, m_FullPath.c_str() ) )
             {

@@ -126,9 +126,14 @@ void GlutPrint(const int x, const int y, const char* const pFmt, T_ARGS&&... Arg
 
 //-----------------------------------------------------------------------------
 
-DWORD handler(cr_plugin& ctx, DWORD code)
+void printStack(const char* pTempPath, CONTEXT* ctx);
+
+//-----------------------------------------------------------------------------
+
+DWORD handler( cr_plugin& ctx, DWORD code, _EXCEPTION_POINTERS* ex )
 {
     printf("\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ EXCEPTION HAPPEN @@@@@@@@@@@@@@@@@@@@@@\n");
+    printStack("", ex->ContextRecord);
 
     // If we loaded the default dll and failed then we are dead...
     if (ctx.version == 1) 
@@ -211,7 +216,7 @@ CR_EXPORT int cr_main(struct cr_plugin* ctx, enum cr_op operation)
             {
                 MyGame.m_GameMgr->Run();
             }
-            __except (handler(*ctx, GetExceptionCode()))
+            __except (handler( *ctx, GetExceptionCode(), GetExceptionInformation() ))
             {
                 return -1;
             }
