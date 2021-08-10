@@ -273,7 +273,27 @@ instance::AddOrRemoveComponents
         const auto& GlobalEntity = m_GameMgr.m_ComponentMgr.m_lEntities[ Entity.m_GlobalIndex ];
         return GlobalEntity.m_Validation != Entity.m_Validation;
     }
-    
+
+    //-------------------------------------------------------------------------------------------
+
+    [[nodiscard]] xecs::archetype::instance& instance::getArchetype(xecs::component::entity Entity) const noexcept
+    {
+        return m_GameMgr.getArchetype(Entity);
+    }
+
+    //-------------------------------------------------------------------------------------------
+    template
+    < typename... T_COMPONENTS
+    > requires
+    ( xecs::tools::assert_valid_tuple_components_v< std::tuple<T_COMPONENTS...> >
+    ) __inline
+    bool instance::hasComponents( xecs::component::entity Entity ) const noexcept
+    {
+        auto& Archetype = getArchetype(Entity);
+        auto& Bits      = Archetype.getComponentBits();
+        return ( Bits.getBit( xecs::component::type::info_v<T_COMPONENTS>.m_BitID ) || ... );
+    }
+
     //-------------------------------------------------------------------------------------------
 
     template
@@ -307,7 +327,8 @@ instance::Foreach
     template
     < typename T_FUNCTION
     > requires
-    ( xcore::function::is_callable_v<T_FUNCTION>
+    ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+      && (false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>)
     ) __inline
     bool instance::findEntity
     ( xecs::component::entity Entity

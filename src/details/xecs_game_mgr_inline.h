@@ -184,7 +184,10 @@ namespace xecs::game_mgr
     //---------------------------------------------------------------------------
 
     template< typename T_FUNCTION>
-    requires( xcore::function::is_callable_v<T_FUNCTION> )
+    requires
+    ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+        && (false == xecs::tools::function_has_share_component_args_v<T_FUNCTION> ) 
+    )
     bool instance::findEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
     {
         if( Entity.isZombie() ) return false;
@@ -193,14 +196,23 @@ namespace xecs::game_mgr
         {
             if constexpr ( !std::is_same_v< T_FUNCTION, xecs::tools::empty_lambda> )
             {
-                [&] <typename... T_COMPONENTS>(std::tuple<T_COMPONENTS...>*) constexpr noexcept
-                {
-                    Function(Entry.m_pPool->getComponent<std::remove_reference_t<T_COMPONENTS>>(Entry.m_PoolIndex) ...);
-                }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
+                auto Pointers = xecs::archetype::details::GetDataComponentPointerArray
+                ( *Entry.m_pPool, Entry.m_PoolIndex, xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
+                xecs::archetype::details::CallFunction( std::forward<T_FUNCTION>(Function), Pointers );
             }
             return true;
         }
         return false;
+    }
+
+    //---------------------------------------------------------------------------
+
+    [[nodiscard]] xecs::archetype::instance& instance::getArchetype( xecs::component::entity Entity ) const noexcept
+    {
+        assert(Entity.isZombie() == false);
+        auto& Entry = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+        assert( Entity.m_Validation == Entry.m_Validation );
+        return *Entry.m_pArchetype;
     }
 
     //---------------------------------------------------------------------------

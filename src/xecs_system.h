@@ -285,11 +285,23 @@ namespace xecs::system
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
-        ( xcore::function::is_callable_v<T_FUNCTION>
+        ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+          && (false == xecs::tools::function_has_share_component_args_v<T_FUNCTION>)
         ) __inline
         [[nodiscard]] bool                  findEntity              ( xecs::component::entity Entity
                                                                     , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
+        __inline
+        [[nodiscard]] xecs::archetype::instance& 
+                                            getArchetype            ( xecs::component::entity Entity
+                                                                    ) const noexcept;
+        template
+        < typename... T_COMPONENTS
+        > requires
+        ( xecs::tools::assert_valid_tuple_components_v< std::tuple<T_COMPONENTS...> >
+        ) __inline
+        bool                                hasComponents           ( xecs::component::entity Entity
+                                                                    ) const noexcept;
         template
         < typename T_SHARE_COMPONENT
         > __inline
