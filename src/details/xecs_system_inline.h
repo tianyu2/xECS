@@ -291,7 +291,7 @@ instance::AddOrRemoveComponents
     {
         auto& Archetype = getArchetype(Entity);
         auto& Bits      = Archetype.getComponentBits();
-        return ( Bits.getBit( xecs::component::type::info_v<T_COMPONENTS>.m_BitID ) || ... );
+        return ( Bits.getBit( xecs::component::type::info_v<T_COMPONENTS>.m_BitID ) && ... );
     }
 
     //-------------------------------------------------------------------------------------------
