@@ -862,7 +862,10 @@ instance::_CreateEntities
         // Make sure that we are in sync with the pool entity
         auto& PoolEntity = GlobalEntry.m_pPool->getComponent<xecs::component::entity>(GlobalEntry.m_PoolIndex);
         if( PoolEntity != Entity )
+        {
+            if( &PoolEntity != &Entity ) Entity.m_Validation.m_bZombie = true;
             return;
+        }
 
         //
         // Add pull to the pending list

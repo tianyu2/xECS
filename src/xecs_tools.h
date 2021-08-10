@@ -81,6 +81,7 @@ namespace xecs::tools
     {
         static_assert(((std::is_same_v< T_ARGS, std::remove_const_t<T_ARGS>>) && ...), "You can not have const in the parameters");
         static_assert( (( std::is_reference_v<T_ARGS>) && ...), "All the parameters of a setter should be references, we found at least one that it was not");
+        static_assert((( false == std::is_same_v< xcore::types::decay_full_t<T_ARGS>, xecs::component::entity>) && ...), "You can not have the entity component as part of the parameters of the function");
         return true;
     }( xcore::types::null_tuple_v< typename xcore::function::template traits<T_CALLABLE>::args_tuple> );
 
