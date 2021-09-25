@@ -388,6 +388,10 @@ instance::AddOrRemoveComponents
             {
                 if( false == isRead )
                 {
+                    // We will save at least one entry even if the validation is zero
+                    // because we don't want to deal with the case where there is block does not save
+                    C = 1;
+
                     //
                     // Determine the max index we want to write
                     //
