@@ -128,11 +128,14 @@ namespace xecs::component
             consteval info CreateInfo(void) noexcept;
 
             template< typename T >
-            static constexpr auto info_v = CreateInfo<T>();
+            struct info_var
+            {
+                inline static constexpr auto value = CreateInfo<T>();
+            };
         }
         template< typename T_COMPONENT >
         requires( []{ static_assert( type::is_valid_v<xcore::types::decay_full_t<T_COMPONENT>> ); return true; }() )
-        constexpr auto& info_v = details::info_v<xcore::types::decay_full_t<T_COMPONENT>>;
+        constexpr auto& info_v = details::info_var<xcore::types::decay_full_t<T_COMPONENT>>::value;
     } 
 
     //
