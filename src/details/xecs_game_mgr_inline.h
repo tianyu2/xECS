@@ -418,6 +418,12 @@ instance::AddOrRemoveComponents
         //
         for( int iArchetype=0; iArchetype < ArchetypeCount; ++iArchetype)
         {
+            enum serialized_mode : std::int8_t
+            { MODE_NONE
+            , MDOE_SERIALIZER
+            , MDOE_PROPERTY            
+            };
+
             //
             // Archetype main header
             //
@@ -428,6 +434,7 @@ instance::AddOrRemoveComponents
             int                                 nTagTypes       {};
             int                                 nFamilies       {};
             xecs::archetype::guid               ArchetypeGuid   {};
+            std::array<std::int8_t,256>         SerializedModes {};
 
             if( false == isRead )
             {
@@ -509,6 +516,17 @@ instance::AddOrRemoveComponents
                             // Set the info into the structure this includes tags
                             Infos[i] = pInfo;
                         }
+
+                        // We need to know how this type was serialized when loading. This is only relevant when
+                        // we saved with properties and then we add the serializing function, for the loader to do the
+                        // right thing it should used the properties loader since this is how it was saved with.
+                        if( isRead == false )
+                        {
+                            if( Infos[i]->m_pSerilizeFn         ) SerializedModes[i] = serialized_mode::MDOE_SERIALIZER;
+                            else if (Infos[i]->m_pPropertyTable ) SerializedModes[i] = serialized_mode::MDOE_PROPERTY;
+                            else                                  SerializedModes[i] = serialized_mode::MODE_NONE;
+                        }
+                        TextFile.Field("SerializationMode", SerializedModes[i]).clear();
                     }
                 )) return Error;
 
@@ -643,14 +661,14 @@ instance::AddOrRemoveComponents
 
                         for( auto iType = 0, end = (int)pP->m_ComponentInfos.size(); iType != end; iType++ )
                         {
-                            if( pP->m_ComponentInfos[iType]->m_pSerilizeFn )
+                            if( SerializedModes[iType] == serialized_mode::MDOE_SERIALIZER && pP->m_ComponentInfos[iType]->m_pSerilizeFn)
                             {
                                 int Count = 0;
                                 Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn(TextFile, isRead, pP->m_pComponent[iType], Count);
                                 if (Error) return Error;
                                 assert(Count == nEntitiesInPool);
                             }
-                            else if( pP->m_ComponentInfos[iType]->m_pPropertyTable )
+                            else if( SerializedModes[iType] == serialized_mode::MDOE_PROPERTY && pP->m_ComponentInfos[iType]->m_pPropertyTable )
                             {
                                 int             Count    = nEntitiesInPool;
                                 std::byte*      pData    = pP->m_pComponent[iType];
@@ -658,7 +676,7 @@ instance::AddOrRemoveComponents
                                 auto&           Table    = *pP->m_ComponentInfos[iType]->m_pPropertyTable;
                                 property::entry PropEntry;
 
-                                for (int i = 0; i < Count; ++i)
+                                for( int i = 0; i < Count; ++i )
                                 {
                                     if( TextFile.Record
                                     (   Error
@@ -701,6 +719,7 @@ instance::AddOrRemoveComponents
                                     {
                                         if( Error.getCode().getState<xcore::textfile::error_state>() == xcore::textfile::error_state::UNEXPECTED_RECORD )
                                         {
+                                            printf( "Warning: We were expecting a table but we failed to find it");
                                             Error.clear();
                                         }
                                         else
@@ -712,6 +731,23 @@ instance::AddOrRemoveComponents
                             }
                             else
                             {
+                                if( SerializedModes[iType] != serialized_mode::MODE_NONE )
+                                {
+                                    if( SerializedModes[iType] == serialized_mode::MDOE_SERIALIZER )
+                                    {
+                                        return xerr_failure_s("Error: TextFile should have a skip record function, but none the less we failed to load file because we don't have serialized functions any more");
+                                    }
+                                    else if( SerializedModes[iType] == serialized_mode::MDOE_PROPERTY )
+                                    {
+                                        //TextFile.SkipRecord();
+                                        return xerr_failure_s("Error: TextFile should have a skip record function, but none the less we failed to load file because we don't have properties any more");
+                                    }
+                                    else
+                                    {
+                                        assert(false);
+                                    }
+                                }
+
                                 continue;
                             }
         
@@ -753,13 +789,13 @@ instance::AddOrRemoveComponents
                         for( auto iType=0, end = (int)pP->m_ComponentInfos.size(); iType != end; iType++ )
                         {
                             auto& PropInfo = *pP->m_ComponentInfos[iType];
-                            if( PropInfo.m_pSerilizeFn )
+                            if( SerializedModes[iType] == serialized_mode::MDOE_SERIALIZER )
                             {
                                 int Count = pP->Size();
                                 Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn( TextFile, isRead, pP->m_pComponent[iType], Count );
                                 if(Error) return Error;
                             }
-                            else if( PropInfo.m_pPropertyTable )
+                            else if( SerializedModes[iType] == serialized_mode::MDOE_PROPERTY )
                             {
                                 int         Count    = pP->Size();
                                 std::byte*  pData    = pP->m_pComponent[iType];
@@ -850,6 +886,7 @@ instance::AddOrRemoveComponents
                             }
                             else
                             {
+                                assert( SerializedModes[iType] == serialized_mode::MODE_NONE );
                                 continue;
                             }
                         }
