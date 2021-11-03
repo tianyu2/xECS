@@ -15,6 +15,7 @@ Each of the lessons will be place at different branches. Please read the README.
 5. [Lesson05 const and improvements](https://github.com/LIONant-depot/xECS/tree/Lesson05_Const_and_improvements)
 6. [Lesson06 Serializing](https://github.com/LIONant-depot/xECS/tree/Lesson06_Serializing)
 7. [Lesson07 Live Coding](https://github.com/LIONant-depot/xECS/tree/Lesson07_LiveCoding)
+8. [Lesson08 Properties](https://github.com/LIONant-depot/xECS/tree/Lesson08_Properties)
 
 ## To use in your projects
 Any of the versions could be a good starting point.
