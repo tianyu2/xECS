@@ -348,12 +348,36 @@ instance::AddOrRemoveComponents
     , bool        isBinary
     ) noexcept
     {
+        // visual studio crashes when-ever I make this into a constant expression
+        constexpr static auto textfile_property_types_v = []() constexpr
+        {
+            std::array<xcore::textfile::user_defined_types, std::variant_size_v<property::settings::data_variant> > List{};
+
+                                                                                                           // prop_types   textfile types
+                                                                                                           // ------------ -------------
+            List[xcore::types::variant_t2i_v<int,                       property::settings::data_variant>] = { "d",         "d"  };
+            List[xcore::types::variant_t2i_v<bool,                      property::settings::data_variant>] = { "b",         "c"  };
+            List[xcore::types::variant_t2i_v<float,                     property::settings::data_variant>] = { "f",         "f"  };
+            List[xcore::types::variant_t2i_v<string_t,                  property::settings::data_variant>] = { "s",         "s"  };
+            List[xcore::types::variant_t2i_v<xcore::math::vector2,      property::settings::data_variant>] = { "v2",        "ff" };
+            List[xcore::types::variant_t2i_v<xecs::component::entity,   property::settings::data_variant>] = { "entity",    "G"  };
+            List[xcore::types::variant_t2i_v<std::int16_t,              property::settings::data_variant>] = { "C",         "C"  };
+
+            static_assert( std::variant_size_v<property::settings::data_variant> == 7, "You need to change code inside this function ");
+            return List;
+        }();
+
         std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareEntities{};
         std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> ShareKeys    {};
 
         xcore::textfile::stream     TextFile;
         xcore::err                  Error;
 
+        //
+        // Have the file system know the mapping of the property types
+        //
+        TextFile.AddUserTypes( textfile_property_types_v );
+         
         //
         // Make sure that we are all up to date
         //
@@ -675,6 +699,7 @@ instance::AddOrRemoveComponents
                                 auto            TypeSize = pP->m_ComponentInfos[iType]->m_Size;
                                 auto&           Table    = *pP->m_ComponentInfos[iType]->m_pPropertyTable;
                                 property::entry PropEntry;
+                                xcore::crc<32>  CRCType;
 
                                 for( int i = 0; i < Count; ++i )
                                 {
@@ -687,27 +712,38 @@ instance::AddOrRemoveComponents
                                         }
                                         , [&](std::size_t, xcore::err& Err) noexcept
                                         {
-                                            std::int8_t TypeName;
-
                                             if( Err = TextFile.Field( "Name",     PropEntry.first ); Err ) return;
-                                            if( Err = TextFile.Field( "Type", TypeName        ); Err ) return;
 
-                                            switch(TypeName)
+                                            TextFile.ReadFieldUserType( CRCType, "Data:?" ).clear();
+                                            switch(CRCType.m_Value)
                                             {
-                                                case 'i': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<int>()     ); Err) return; break;
-                                                case 'f': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<float>()   ); Err) return; break;
-                                                case 'b': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<bool>()    ); Err) return; break;
-                                                case 's': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<string_t>()); Err) return; break;
-                                                case '2': 
+                                                case textfile_property_types_v[xcore::types::variant_t2i_v<int,             property::settings::data_variant>].m_CRC.m_Value:
+                                                    if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<int>()     ); Err) return; 
+                                                    break;
+                                                case textfile_property_types_v[xcore::types::variant_t2i_v<float,           property::settings::data_variant>].m_CRC.m_Value:
+                                                    if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<float>()   ); Err) return; 
+                                                    break;
+                                                case textfile_property_types_v[xcore::types::variant_t2i_v<bool,            property::settings::data_variant>].m_CRC.m_Value:
+                                                    if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<bool>()    ); Err) return; 
+                                                    break;
+                                                case textfile_property_types_v[xcore::types::variant_t2i_v<string_t,        property::settings::data_variant>].m_CRC.m_Value:
+                                                    if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<string_t>()); Err) return; 
+                                                    break;
+                                                case textfile_property_types_v[xcore::types::variant_t2i_v<xcore::vector2,  property::settings::data_variant>].m_CRC.m_Value:
                                                 {
                                                     auto& V2 = PropEntry.second.emplace<xcore::vector2>();
                                                     if( Err = TextFile.Field("Data:?", V2.m_X, V2.m_Y ); Err ) return; break;
                                                     break;
                                                 }
-                                                case 'e': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<xecs::component::entity>().m_Value ); Err) return; break;
-                                                case 'C': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<std::int16_t>()                    ); Err) return; break;
+                                                case textfile_property_types_v[xcore::types::variant_t2i_v<xecs::component::entity, property::settings::data_variant>].m_CRC.m_Value:
+                                                    if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<xecs::component::entity>().m_Value ); Err) return; 
+                                                    break;
+                                                case textfile_property_types_v[xcore::types::variant_t2i_v<std::int16_t,            property::settings::data_variant>].m_CRC.m_Value:
+                                                    if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<std::int16_t>() ); Err) return; 
+                                                    break;
                                                 default: assert(false);
                                             }
+                                            static_assert(std::variant_size_v<property::settings::data_variant> == 7, "You need to change code inside this function ");
 
                                             if( false == property::set( Table, pData, PropEntry.first.c_str(), PropEntry.second ) )
                                             {
@@ -826,60 +862,49 @@ instance::AddOrRemoveComponents
                                         }
                                         , [&](std::size_t c, xcore::err& Error) noexcept
                                         {
-                                            std::int8_t TypeName;
                                             auto&       Entry       = PropertyList[c];
 
                                             if( auto Err = TextFile.Field( "Name", Entry.first ); Err ) return;
 
                                             std::visit( [&]( auto&& Value )
                                             {
-                                                using T = std::decay_t<decltype( Value )>;
+                                                using           T           = std::decay_t<decltype( Value )>;
+                                                constexpr auto  prop_type_v = xcore::types::variant_t2i_v<T, property::settings::data_variant>;
+                                                constexpr auto  CRC         = textfile_property_types_v[prop_type_v].m_CRC;
 
                                                 if constexpr ( std::is_same_v<T, int> )
                                                 {
-                                                    TypeName = 'i';
-                                                    if (auto Err = TextFile.Field( "Type", TypeName ); Err ) return;
-                                                    if (auto Err = TextFile.Field( "Data:?", Value ); Err) return;
+                                                    if (auto Err = TextFile.Field(CRC, "Data:?", Value ); Err) return;
                                                 }
                                                 else if constexpr ( std::is_same_v<T, float> )
                                                 {
-                                                    TypeName = 'f';
-                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
-                                                    if (auto Err = TextFile.Field("Data:?", Value); Err) return;
+                                                    if (auto Err = TextFile.Field(CRC, "Data:?", Value); Err) return;
                                                 }
                                                 else if constexpr ( std::is_same_v<T, bool> )
                                                 {
-                                                    TypeName = 'b';
-                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
-                                                    if (auto Err = TextFile.Field("Data:?", Value); Err) return;
+                                                    if (auto Err = TextFile.Field(CRC, "Data:?", Value); Err) return;
                                                 }
                                                 else if constexpr ( std::is_same_v<T, string_t> )
                                                 {
-                                                    TypeName = 's';
-                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
-                                                    if (auto Err = TextFile.Field("Data:?", Value); Err) return;
+                                                    if (auto Err = TextFile.Field(CRC, "Data:?", Value); Err) return;
                                                 }
                                                 else if constexpr ( std::is_same_v<T, xcore::vector2> )
                                                 {
-                                                    TypeName = '2';
-                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
-                                                    if (auto Err = TextFile.Field("Data:?", Value.m_X, Value.m_Y ); Err) return;
+                                                    if (auto Err = TextFile.Field(CRC, "Data:?", Value.m_X, Value.m_Y ); Err) return;
                                                 }
                                                 else if constexpr (std::is_same_v<T, xecs::component::entity>)
                                                 {
-                                                    TypeName = 'e';
-                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
-                                                    if (auto Err = TextFile.Field("Data:?", Value.m_Value); Err) return;
+                                                    if (auto Err = TextFile.Field(CRC, "Data:?", Value.m_Value); Err) return;
                                                 }
                                                 else if constexpr (std::is_same_v<T, std::int16_t>)
                                                 {
-                                                    TypeName = 'C';
-                                                    if (auto Err = TextFile.Field("Type", TypeName ); Err) return;
-                                                    if (auto Err = TextFile.Field("Data:?", Value ); Err) return;
+                                                    if (auto Err = TextFile.Field(CRC, "Data:?", Value ); Err) return;
                                                 }
                                                 else static_assert( always_false<T>::value, "We are not covering all the cases!" );
                                             }
                                             , Entry.second );
+                                            
+
                                         }
                                     );
                                 }
