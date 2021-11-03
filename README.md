@@ -1,9 +1,10 @@
-# xECS -Lesson 07, Live Coding
+# xECS -Lesson 08, Properties
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
-* How to add the xcore::properties to xECS for saving and loading. This mixes together with the normali serialization.
-  Typical use is used properties, and user the specialized serialization functions to make things go faster.
+* How to add the xcore::properties to xECS for saving and loading. This mixes together with the normal serialization.
+  Typical use: First used properties (for serialization and development), Step 2 pecialized key component serialization
+  by adding the official serialization functions to make things go faster.
 * Still uses the [CR.h](https://github.com/fungos/cr) but now the project is built from the main solution
   
 ## To build
