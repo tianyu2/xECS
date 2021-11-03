@@ -458,7 +458,7 @@ instance::AddOrRemoveComponents
             int                                 nTagTypes       {};
             int                                 nFamilies       {};
             xecs::archetype::guid               ArchetypeGuid   {};
-            std::array<std::int8_t,256>         SerializedModes {};
+            std::array<std::int8_t, xecs::settings::max_components_per_entity_v> SerializedModes {};
 
             if( false == isRead )
             {
