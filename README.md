@@ -2,24 +2,9 @@
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
 We cover.
-* Simple project organization
-  * Game into its own project
-     * xCore
-     * xECS
-     * Components and System per file
-  * Main framework app
-     * Could be an editor or game, etc.
-* Serializing the game state
-  * Remove field errors 
-* Live Coding
-  * add new project dependency [CR.h](https://github.com/fungos/cr)
-  * Create Plugin API
-  * Hooking and the plugin with the game and framework
-  * Try handle exceptions correctly
-* CLUT WARNING
-  * Seems like CLUT is corrupting memory
-  * Used winDBG to find out, also can be seem allocating too much memory. 
-        Note that could be a combo of OpenGL and CLUT...
+* How to add the xcore::properties to xECS for saving and loading. This mixes together with the normali serialization.
+  Typical use is used properties, and user the specialized serialization functions to make things go faster.
+* Still uses the [CR.h](https://github.com/fungos/cr) but now the project is built from the main solution
   
 ## To build
 1. Go to the build directory 
