@@ -94,7 +94,7 @@ struct my_game final : live::game
 
     virtual const char* SaveGameState(const char* pFileName) noexcept override
     {
-        auto Error = m_GameMgr->SerializeGameState(pFileName, false, true);
+        auto Error = m_GameMgr->SerializeGameState(pFileName, false, false);
         assert(!Error);
         return Error ? Error.getCodeAndClear().m_pString : nullptr;
     }
@@ -108,7 +108,7 @@ struct my_game final : live::game
         m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
         RegisterElements();
 
-        auto Error = m_GameMgr->SerializeGameState(pFileName, true, true);
+        auto Error = m_GameMgr->SerializeGameState(pFileName, true, false);
         assert(!Error);
         return Error ? Error.getCodeAndClear().m_pString : nullptr;
     }

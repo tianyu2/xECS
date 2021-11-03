@@ -10,8 +10,14 @@ struct position
     constexpr static auto typedef_v = xecs::component::type::data
     {
         .m_pName = "Position"
-    ,   .m_pSerilizeFn = Serialize
+//    ,   .m_pSerilizeFn = Serialize
     };
 
     xcore::vector2 m_Value;
 };
+
+property_begin(position)
+{ property_var(m_Value)
+}
+property_end()
+

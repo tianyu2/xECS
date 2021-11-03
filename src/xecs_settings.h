@@ -1,3 +1,7 @@
+#ifndef XECS_SETTINGS_H
+#define XECS_SETTINGS_H
+#pragma once
+
 namespace xecs::settings
 {
     constexpr auto max_component_types_v                = 128;
@@ -16,3 +20,4 @@ namespace xecs::settings
     static_assert( max_component_types_v > (max_tags_components_per_entity_v + max_components_per_entity_v) );
     static_assert( max_entities_v > max_entity_count_per_pool_v );
 }
+#endif

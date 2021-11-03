@@ -165,6 +165,7 @@
     <ClInclude Include="..\..\..\src\xecs_event_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_game_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_pool.h" />
+    <ClInclude Include="..\..\..\src\xecs_predefinitions.h" />
     <ClInclude Include="..\..\..\src\xecs_query.h" />
     <ClInclude Include="..\..\..\src\xecs_query_iterator.h" />
     <ClInclude Include="..\..\..\src\xecs_settings.h" />

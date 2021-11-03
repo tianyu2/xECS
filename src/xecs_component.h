@@ -1,3 +1,7 @@
+#ifndef XECS_COMPONENT_H
+#define XECS_COMPONENT_H
+#pragma once
+
 namespace xecs::component
 {
     //
@@ -118,6 +122,7 @@ namespace xecs::component
             copy_fn* const              m_pCopyFn;              // Copy function for the component
             compute_key_fn* const       m_pComputeKeyFn;        // Computes the key from a share component
             full_serialize_fn* const    m_pSerilizeFn;          // This is the serialize function
+            const property::table*      m_pPropertyTable;       // Properties for the component
             mutable type::share::key    m_DefaultShareKey;      // Default value for this share component
             const char* const           m_pName;                // Friendly Human readable string name for the component type
         };
@@ -261,3 +266,4 @@ struct std::hash< xecs::component::type::share::key >
     auto operator()(const typename xecs::component::type::share::key obj) const { return hash<std::uint64_t>()(obj.m_Value); }
 };
 
+#endif

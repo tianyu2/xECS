@@ -643,13 +643,78 @@ instance::AddOrRemoveComponents
 
                         for( auto iType = 0, end = (int)pP->m_ComponentInfos.size(); iType != end; iType++ )
                         {
-                            if (pP->m_ComponentInfos[iType]->m_pSerilizeFn == nullptr) continue;
+                            if( pP->m_ComponentInfos[iType]->m_pSerilizeFn )
+                            {
+                                int Count = 0;
+                                Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn(TextFile, isRead, pP->m_pComponent[iType], Count);
+                                if (Error) return Error;
+                                assert(Count == nEntitiesInPool);
+                            }
+                            else if( pP->m_ComponentInfos[iType]->m_pPropertyTable )
+                            {
+                                int             Count    = nEntitiesInPool;
+                                std::byte*      pData    = pP->m_pComponent[iType];
+                                auto            TypeSize = pP->m_ComponentInfos[iType]->m_Size;
+                                auto&           Table    = *pP->m_ComponentInfos[iType]->m_pPropertyTable;
+                                property::entry PropEntry;
 
-                            int Count = 0;
-                            Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn(TextFile, isRead, pP->m_pComponent[iType], Count);
-                            if (Error) return Error;
-                            assert(Count == nEntitiesInPool);
+                                for (int i = 0; i < Count; ++i)
+                                {
+                                    if( TextFile.Record
+                                    (   Error
+                                        , "Props"
+                                        , [&](std::size_t& C, xcore::err&) noexcept
+                                        {
+                                            // No need to care about how many properties we need to read...
+                                        }
+                                        , [&](std::size_t, xcore::err& Err) noexcept
+                                        {
+                                            std::int8_t TypeName;
 
+                                            if( Err = TextFile.Field( "Name",     PropEntry.first ); Err ) return;
+                                            if( Err = TextFile.Field( "Type", TypeName        ); Err ) return;
+
+                                            switch(TypeName)
+                                            {
+                                                case 'i': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<int>()     ); Err) return; break;
+                                                case 'f': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<float>()   ); Err) return; break;
+                                                case 'b': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<bool>()    ); Err) return; break;
+                                                case 's': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<string_t>()); Err) return; break;
+                                                case '2': 
+                                                {
+                                                    auto& V2 = PropEntry.second.emplace<xcore::vector2>();
+                                                    if( Err = TextFile.Field("Data:?", V2.m_X, V2.m_Y ); Err ) return; break;
+                                                    break;
+                                                }
+                                                case 'e': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<xecs::component::entity>().m_Value ); Err) return; break;
+                                                case 'C': if( Err = TextFile.Field("Data:?", PropEntry.second.emplace<std::int16_t>()                    ); Err) return; break;
+                                                default: assert(false);
+                                            }
+
+                                            if( false == property::set( Table, pData, PropEntry.first.c_str(), PropEntry.second ) )
+                                            {
+                                                printf("Warning failt to set a property while loading: %s", PropEntry.first.c_str() );
+                                            }
+                                            pData += TypeSize;
+                                        }
+                                    ); Error )
+                                    {
+                                        if( Error.getCode().getState<xcore::textfile::error_state>() == xcore::textfile::error_state::UNEXPECTED_RECORD )
+                                        {
+                                            Error.clear();
+                                        }
+                                        else
+                                        {
+                                            return Error;
+                                        }
+                                    }
+                                } // for
+                            }
+                            else
+                            {
+                                continue;
+                            }
+        
                             // Are we dealing with the entities?
                             if( iType == 0 )
                             {
@@ -687,10 +752,106 @@ instance::AddOrRemoveComponents
                     {
                         for( auto iType=0, end = (int)pP->m_ComponentInfos.size(); iType != end; iType++ )
                         {
-                            if( pP->m_ComponentInfos[iType]->m_pSerilizeFn == nullptr ) continue;
-                            int Count = pP->Size();
-                            Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn( TextFile, isRead, pP->m_pComponent[iType], Count );
-                            if(Error) return Error;
+                            auto& PropInfo = *pP->m_ComponentInfos[iType];
+                            if( PropInfo.m_pSerilizeFn )
+                            {
+                                int Count = pP->Size();
+                                Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn( TextFile, isRead, pP->m_pComponent[iType], Count );
+                                if(Error) return Error;
+                            }
+                            else if( PropInfo.m_pPropertyTable )
+                            {
+                                int         Count    = pP->Size();
+                                std::byte*  pData    = pP->m_pComponent[iType];
+                                auto        TypeSize = PropInfo.m_Size;
+                                auto&       Table    = *PropInfo.m_pPropertyTable;
+
+                                std::vector<property::entry> PropertyList;
+                                for( int i=0; i<Count; ++i )
+                                {
+                                    // Collect all the properties for a single component
+                                    PropertyList.clear();
+                                    property::SerializeEnum( Table, pData + TypeSize * i, [&]( std::string_view PropertyName, property::data&& Data, const property::table&, std::size_t, property::flags::type Flags )
+                                    {
+                                        // If we are dealing with a scope that is not an array someone may have change the SerializeEnum to a DisplayEnum they only show up there.
+                                        assert( Flags.m_isScope == false || PropertyName.back() == ']' );
+                                        if( Flags.m_isDontSave || Flags.m_isScope ) return;
+                                        PropertyList.push_back( property::entry { PropertyName, Data } );
+                                    });
+
+                                    // Serialize the properties for the give component
+                                    TextFile.Record
+                                    (   Error
+                                        , "Props"
+                                        , [&](std::size_t& C, xcore::err&) noexcept
+                                        {
+                                            assert(isRead == false);
+                                            C = PropertyList.size();
+                                        }
+                                        , [&](std::size_t c, xcore::err& Error) noexcept
+                                        {
+                                            std::int8_t TypeName;
+                                            auto&       Entry       = PropertyList[c];
+
+                                            if( auto Err = TextFile.Field( "Name", Entry.first ); Err ) return;
+
+                                            std::visit( [&]( auto&& Value )
+                                            {
+                                                using T = std::decay_t<decltype( Value )>;
+
+                                                if constexpr ( std::is_same_v<T, int> )
+                                                {
+                                                    TypeName = 'i';
+                                                    if (auto Err = TextFile.Field( "Type", TypeName ); Err ) return;
+                                                    if (auto Err = TextFile.Field( "Data:?", Value ); Err) return;
+                                                }
+                                                else if constexpr ( std::is_same_v<T, float> )
+                                                {
+                                                    TypeName = 'f';
+                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
+                                                    if (auto Err = TextFile.Field("Data:?", Value); Err) return;
+                                                }
+                                                else if constexpr ( std::is_same_v<T, bool> )
+                                                {
+                                                    TypeName = 'b';
+                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
+                                                    if (auto Err = TextFile.Field("Data:?", Value); Err) return;
+                                                }
+                                                else if constexpr ( std::is_same_v<T, string_t> )
+                                                {
+                                                    TypeName = 's';
+                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
+                                                    if (auto Err = TextFile.Field("Data:?", Value); Err) return;
+                                                }
+                                                else if constexpr ( std::is_same_v<T, xcore::vector2> )
+                                                {
+                                                    TypeName = '2';
+                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
+                                                    if (auto Err = TextFile.Field("Data:?", Value.m_X, Value.m_Y ); Err) return;
+                                                }
+                                                else if constexpr (std::is_same_v<T, xecs::component::entity>)
+                                                {
+                                                    TypeName = 'e';
+                                                    if (auto Err = TextFile.Field("Type", TypeName); Err) return;
+                                                    if (auto Err = TextFile.Field("Data:?", Value.m_Value); Err) return;
+                                                }
+                                                else if constexpr (std::is_same_v<T, std::int16_t>)
+                                                {
+                                                    TypeName = 'C';
+                                                    if (auto Err = TextFile.Field("Type", TypeName ); Err) return;
+                                                    if (auto Err = TextFile.Field("Data:?", Value ); Err) return;
+                                                }
+                                                else static_assert( always_false<T>::value, "We are not covering all the cases!" );
+                                            }
+                                            , Entry.second );
+                                        }
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                continue;
+                            }
                         }
                     }
                 }

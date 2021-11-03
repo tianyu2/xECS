@@ -169,7 +169,7 @@ int main(int argc, char** argv)
     GamePlugin.Initialize( s_Render );
 
     // Load the plugin
-    GamePlugin.Load("Game/x64/Debug/Game.dll");
+    GamePlugin.Load("x64/Debug/Game.dll");
 
     //
     // Create the graphics and main loop

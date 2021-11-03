@@ -8,3 +8,9 @@ struct bullet
 
     xecs::component::entity m_ShipOwner;
 };
+
+property_begin(bullet)
+{
+    property_var(m_ShipOwner)
+}
+property_end()

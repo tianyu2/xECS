@@ -121,6 +121,21 @@ namespace xecs::component
         }();
 
         //---------------------------------------------------------------------------------
+        
+        template< typename T_COMPONENT >
+        constexpr const xcore::property::table* getPropertyTable( void ) noexcept
+        {
+            if constexpr ( property::isValidTable<T_COMPONENT>() )
+            {
+                return &xcore::property::getTableByType<T_COMPONENT>();
+            }
+            else
+            {
+                return nullptr;
+            }
+        }
+
+        //---------------------------------------------------------------------------------
 
         template< typename T_COMPONENT >
         consteval
@@ -179,6 +194,7 @@ namespace xecs::component
                                             };
                                       }()
             ,   .m_pSerilizeFn      = serialize_v<T_COMPONENT>
+            ,   .m_pPropertyTable   = getPropertyTable<T_COMPONENT>()
             ,   .m_pName            = T_COMPONENT::typedef_v.m_pName
                                         ? T_COMPONENT::typedef_v.m_pName
                                         : __FUNCSIG__

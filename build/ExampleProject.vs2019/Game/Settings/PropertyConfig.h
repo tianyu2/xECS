@@ -1,13 +1,12 @@
 
-using string_t = xcore::string::ref<char>;
+#include "xecs_predefinitions.h"
+#include "xecs_settings.h"
+#include "xecs_component.h"
 
-//--------------------------------------------------------------------------------------------
-// Some structure to show that you can add your own atomic structures
-//--------------------------------------------------------------------------------------------
-struct oobb
-{
-    float m_Min{}, m_Max{};
-};
+#include "xcore_math.h"
+#include "xcore_math_vector2.h"
+
+using string_t = xcore::string::ref<char>;
 
 //--------------------------------------------------------------------------------------------
 // User settings
@@ -133,7 +132,9 @@ namespace property
             , bool
             , float
             , string_t
-            , oobb
+            , xcore::math::vector2
+            , xecs::component::entity
+            , std::int16_t
         >;
     
         //--------------------------------------------------------------------------------------------
