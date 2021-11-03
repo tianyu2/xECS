@@ -18,3 +18,12 @@ struct grid_cell
     std::int16_t m_X;
     std::int16_t m_Y;
 };
+
+property_begin(grid_cell)
+{
+    property_var(m_X)
+        .Flags( property::flags::SHOW_READONLY)
+,   property_var(m_Y)
+        .Flags( property::flags::SHOW_READONLY)
+}
+property_end()
