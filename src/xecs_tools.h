@@ -1,6 +1,6 @@
 namespace xecs::tools
 {
-    using empty_lambda = decltype([]() {});
+    using empty_lambda = decltype([](){});
 
     //------------------------------------------------------------------------------
 

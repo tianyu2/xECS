@@ -332,7 +332,6 @@ namespace xecs::archetype
         //
         std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> AllKeys;
         std::array<std::byte*,                          xecs::settings::max_share_components_per_entity_v> DataInOrder;
-        std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareComponentEntityRefs;
 
         xecs::pool::family::guid FamilyGuid{ m_Guid.m_Value };
         for( int i=0; i< m_nShareComponents; i++ )
@@ -364,6 +363,7 @@ namespace xecs::archetype
         //
         // Make sure all the share components exists and the references are set to the correct amount
         //
+        std::array<xecs::component::entity, xecs::settings::max_share_components_per_entity_v> ShareComponentEntityRefs;
         for (int i = 0; i < m_nShareComponents; i++)
         {
             auto pInfo = m_InfoData[m_nDataComponents + i];
@@ -408,6 +408,89 @@ namespace xecs::archetype
         , std::span{ AllKeys.data(),                        static_cast<std::size_t>(m_nShareComponents) }
         );
 
+    }
+
+    //--------------------------------------------------------------------------------------------
+    inline
+    xecs::pool::family& instance::getOrCreatePoolFamily( xecs::pool::family& OtherArchetypeFamily ) noexcept
+    {
+        // This family should no be from the same archetype
+        xassert( OtherArchetypeFamily.m_pArchetypeInstance != this );
+
+        // Make sure we have the same share components
+        xassert( OtherArchetypeFamily.m_ShareInfos.size() == m_nShareComponents );
+        xassert( [&]{for( int i=0, end = (int)OtherArchetypeFamily.m_ShareInfos.size(); i<end; ++i) xassert( OtherArchetypeFamily.m_ShareInfos[i] == m_InfoData[ m_nDataComponents + i] ); return true; }() );
+
+        // Compute the GUID
+        std::array<xecs::component::type::share::key, xecs::settings::max_share_components_per_entity_v> AllKeys;
+        std::array<std::byte*,                        xecs::settings::max_share_components_per_entity_v> DataInOrder;
+
+        xecs::pool::family::guid FamilyGuid{ m_Guid.m_Value };
+        for( int i=0, end = (int)OtherArchetypeFamily.m_ShareInfos.size(); i<end; ++i )
+        {
+            auto& Details = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails( OtherArchetypeFamily.m_ShareDetails[i].m_Entity );
+            auto& Pool    = *Details.m_pPool;
+            auto  iType   = [&]{ for( int i=1, end = (int)Pool.m_ComponentInfos.size(); i<end; ++i ) if( Pool.m_ComponentInfos[i] == OtherArchetypeFamily.m_ShareInfos[i] ) return i; return -1; }();
+            xassert(iType != -1 );
+
+            DataInOrder[i] = &Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Pool.m_ComponentInfos[iType]->m_Size];
+
+            if( OtherArchetypeFamily.m_ShareInfos[i]->m_bGlobalScoped ) AllKeys[i] = OtherArchetypeFamily.m_ShareDetails[i].m_Key;
+            else                                                        AllKeys[i] = xecs::component::type::details::ComputeShareKey(m_Guid, *OtherArchetypeFamily.m_ShareInfos[i], DataInOrder[i] );
+
+            FamilyGuid.m_Value += AllKeys[i].m_Value;
+        }
+
+        if (auto It = m_Mgr.m_PoolFamily.find(FamilyGuid); It != m_Mgr.m_PoolFamily.end())
+            return *It->second;
+
+        //
+        // Make sure all the share components exists and the references are set to the correct amount
+        //
+        std::array<xecs::component::entity, xecs::settings::max_share_components_per_entity_v> ShareComponentEntityRefs;
+        for (int i = 0; i < m_nShareComponents; i++)
+        {
+            auto pInfo = m_InfoData[m_nDataComponents + i];
+
+            //
+            // Does this share component exists?
+            //
+            if( auto It = m_Mgr.m_ShareComponentEntityMap.find(AllKeys[i]); It == m_Mgr.m_ShareComponentEntityMap.end() )
+            {
+                xecs::component::entity Entity;
+                if(DataInOrder[i])
+                {
+                    Entity = m_ShareArchetypesArray[i]->CreateEntity
+                    ( { &pInfo,          1u }
+                    , { &DataInOrder[i], 1u }
+                    );
+                }
+                else 
+                {
+                    Entity = m_ShareArchetypesArray[i]->CreateEntity({},{});
+                }
+
+                m_Mgr.m_ShareComponentEntityMap.emplace( AllKeys[i], Entity );
+                ShareComponentEntityRefs[i] = Entity;
+            }
+            else
+            {
+                ShareComponentEntityRefs[i] = It->second;
+                m_Mgr.m_GameMgr.getEntity(ShareComponentEntityRefs[i], [](xecs::component::ref_count& RefCount )
+                {
+                    RefCount.m_Value++;
+                });
+            }
+        }
+
+        //
+        // Create new Pool Family
+        //
+        return CreateNewPoolFamily
+        ( FamilyGuid
+        , std::span{ ShareComponentEntityRefs.data(),       static_cast<std::size_t>(m_nShareComponents) }
+        , std::span{ AllKeys.data(),                        static_cast<std::size_t>(m_nShareComponents) }
+        );
     }
 
     //--------------------------------------------------------------------------------------------

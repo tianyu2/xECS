@@ -4,6 +4,7 @@ namespace xecs::tools
     constexpr
     void bits::setBit(int Bit) noexcept
     {
+        xassert(Bit >= 0 && Bit <= 63);
         int x = Bit / 64;
         int y = Bit % 64;
         m_Bits[x] |= (1ull << y);
@@ -13,6 +14,7 @@ namespace xecs::tools
     constexpr
     void bits::clearBit(int Bit) noexcept
     {
+        xassert(Bit>=0 && Bit <= 63);
         int x = Bit / 64;
         int y = Bit % 64;
         m_Bits[x] &= ~(1ull << y);
@@ -22,6 +24,7 @@ namespace xecs::tools
     constexpr
     bool bits::getBit(int Bit) const noexcept
     {
+        xassert(Bit >= 0 && Bit <= 63);
         int x = Bit / 64;
         int y = Bit % 64;
         return m_Bits[x] & (1ull << y);

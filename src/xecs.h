@@ -47,6 +47,7 @@
 #include "xecs_system.h"
 #include "xecs_system_mgr.h"
 #include "xecs_game_mgr.h"
+#include "xecs_prefabs.h"
 
 //--------------------------------------------------------------
 // INLINE FILES
@@ -65,5 +66,6 @@
 #include "details/xecs_query_inline.h"
 #include "details/xecs_event_inline.h"
 #include "details/xecs_event_mgr_inline.h"
+#include "details/xecs_prefabs_inline.h"
 
 #endif

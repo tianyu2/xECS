@@ -57,9 +57,9 @@ namespace xecs::game_mgr
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
         ( xecs::tools::assert_standard_function_v<T_FUNCTION>
-         && (false == xecs::tools::function_has_share_component_args_v<T_FUNCTION> )
         ) __inline
-        [[nodiscard]] bool                  findEntity              ( xecs::component::entity Entity
+        [[nodiscard]] xecs::component::entity
+                                            findEntity              ( xecs::component::entity Entity
                                                                     , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         __inline
@@ -69,9 +69,10 @@ namespace xecs::game_mgr
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
-        ( xcore::function::is_callable_v<T_FUNCTION>
+        ( xecs::tools::assert_standard_function_v<T_FUNCTION>
         ) __inline
-        void                                getEntity               ( xecs::component::entity Entity
+        [[nodiscard]] xecs::component::entity
+                                            getEntity               ( xecs::component::entity Entity
                                                                     , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         template
@@ -110,6 +111,15 @@ namespace xecs::game_mgr
                 ) &&... )
         )
         archetype::instance&                getOrCreateArchetype    ( void 
+                                                                    ) noexcept;
+
+        template
+        < typename T_FUNCTION = xecs::tools::empty_lambda
+        > requires
+        ( xecs::tools::assert_standard_setter_function_v<T_FUNCTION> 
+        ) [[nodiscard]] xecs::component::entity             
+                                            CreatePrefabInstance    ( xecs::component::entity PrefabEntity
+                                                                    , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         template
         <   typename T_FUNCTION

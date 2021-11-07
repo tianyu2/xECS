@@ -186,23 +186,161 @@ namespace xecs::game_mgr
     template< typename T_FUNCTION>
     requires
     ( xecs::tools::assert_standard_function_v<T_FUNCTION>
-        && (false == xecs::tools::function_has_share_component_args_v<T_FUNCTION> ) 
-    )
-    bool instance::findEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
+    ) [[nodiscard]] xecs::component::entity 
+    instance::findEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
     {
-        if( Entity.isZombie() ) return false;
-        auto& Entry = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
-        if( Entry.m_Validation == Entity.m_Validation )
+        //
+        // is the entity already dead?
+        //
+        if (Entity.isZombie()) return {};
+
+        auto& EntityDetails = m_ComponentMgr.getEntityDetails(Entity);
+        if (EntityDetails.m_Validation != EntityDetails.m_Validation) return {};
+
+        //
+        // does the user want to do anything?
+        //
+        if constexpr (!std::is_same_v< T_FUNCTION, xecs::tools::empty_lambda>) return Entity;
+        else
+
+        //
+        // Time to do some work...
+        //
+        if constexpr ( xecs::tools::function_has_share_component_args_v<T_FUNCTION> )
         {
-            if constexpr ( !std::is_same_v< T_FUNCTION, xecs::tools::empty_lambda> )
+            // TODO: We could optimize for cases with all const shares (since those cant move)
+            [&] < typename...T_ARGS > (std::tuple<T_ARGS...>*) mutable
             {
-                auto Pointers = xecs::archetype::details::GetDataComponentPointerArray
-                ( *Entry.m_pPool, Entry.m_PoolIndex, xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
-                xecs::archetype::details::CallFunction( std::forward<T_FUNCTION>(Function), Pointers );
-            }
-            return true;
+                using sorted_shares_t = xecs::component::type::details::sort_tuple_t<xecs::component::type::details::share_only_tuple_t<std::tuple<T_ARGS...>>>;
+                using shares_t        = xecs::component::type::details::sort_tuple_t<xecs::component::type::details::share_only_tuple_t<std::tuple<xcore::types::decay_full_t<T_ARGS>...>>>;
+                using data_t          = xecs::component::type::details::sort_tuple_t<xecs::component::type::details::data_only_tuple_t<std::tuple<T_ARGS...>>>;
+                using share_index     = std::array< std::int8_t, std::tuple_size_v<shares_t> >;
+
+                [&]< typename...T_SHARE_ARGS >( std::tuple<T_SHARE_ARGS...>* )
+                {
+                    constexpr auto we_have_share_pointers_v = ((std::is_pointer_v< std::tuple_element< xcore::types::tuple_t2i_v<T_SHARE_ARGS, shares_t>, sorted_shares_t > >) || ... );
+
+                    auto&           Family      = *EntityDetails.m_pPool->m_pMyFamily;
+                    int             i           = 0;
+                    share_index     ShareIndex  {};
+                    std::uint64_t   KeySum      = 0;
+
+                    //
+                    // Copy all the share data
+                    //
+                    shares_t Shares{ [&] < typename T_SHARE >(T_SHARE*) constexpr noexcept
+                    {
+                        if constexpr (std::is_pointer_v< std::tuple_element< xcore::types::tuple_t2i_v<T_SHARE, shares_t>, sorted_shares_t > >)
+                        {
+                            while (Family.m_ShareInfos[i] != &xecs::component::type::info_v<T_SHARE>) ++i;
+                        }
+                        else
+                        {
+                            int n = i;
+                            while (Family.m_ShareInfos[i] != &xecs::component::type::info_v<T_SHARE>)
+                            {
+                                i++;
+                                if (i == static_cast<int>(Family.m_ShareInfos.size()))
+                                {
+                                    i = n;
+                                    ShareIndex[xcore::types::tuple_t2i_v<T_SHARE, shares_t>] = -1;
+                                    return T_SHARE{};
+                                }
+                            }
+                        }
+
+                        KeySum += Family.m_ShareDetails[i].m_Key.m_Value;
+                        ShareIndex[xcore::types::tuple_t2i_v<T_SHARE, shares_t>] = i;
+                        auto& Details = m_ComponentMgr.getEntityDetails(Family.m_ShareDetails[i].m_Entity);
+
+                        // get ready for the next type
+                        i++;
+                        return Details.m_pPool->getComponent<T_SHARE>(Details.m_PoolIndex);
+
+                    }(static_cast<T_SHARE_ARGS*>(nullptr)) ... };
+
+                    //
+                    // get the data pointers
+                    //
+                    auto Pointers = xecs::archetype::details::GetDataComponentPointerArray( *EntityDetails.m_pPool, EntityDetails.m_PoolIndex, xcore::types::null_tuple_v<data_t> );
+
+                    //
+                    // Call the user function
+                    //
+                    Function
+                    (
+                        [&]<typename T>(std::tuple<T>*) constexpr noexcept -> T
+                        {
+                            if constexpr ( xecs::component::type::info_v<T>.m_Type == xecs::component::type::id::SHARE )
+                            {
+                                if constexpr( std::is_pointer_v<T> )  return reinterpret_cast<T>( ShareIndex[ xcore::types::tuple_t2i_v<T, sorted_shares_t> ] == -1 ? nullptr : &std::get< xcore::types::decay_full_t<T> >(Shares) );
+                                else                                  return std::get< xcore::types::decay_full_t<T> >(Shares);
+                            }
+                            else
+                            {
+                                if constexpr ( std::is_pointer_v<T> ) return reinterpret_cast<T>(  Pointers[ std::tuple_element< T, data_t >::value ] );
+                                else                                  return reinterpret_cast<T>( *Pointers[ std::tuple_element< T, data_t >::value ] );
+                            }
+                        }( xcore::types::make_null_tuple_v<T_ARGS> ) ...
+                    );
+
+                    //
+                    // Check if we need to move our entity
+                    //
+                    std::uint64_t                                                                NewKeySum          = 0;
+                    std::array< xecs::component::type::share::key, std::tuple_size_v<shares_t> > NewShareKeys       {};
+                    std::array< std::byte*, std::tuple_size_v<shares_t> >                        PointerToShares    {};
+                    i=0;
+                    ( ([&] < typename T_SHARE >(T_SHARE*) constexpr noexcept
+                    {
+                        if constexpr (std::is_pointer_v< std::tuple_element< xcore::types::tuple_t2i_v<T_SHARE, shares_t>, sorted_shares_t > >)
+                        {
+                            if( ShareIndex[xcore::types::tuple_t2i_v<T_SHARE, shares_t>] == -1) return;
+                        }
+
+                        PointerToShares[i] = reinterpret_cast<std::byte*>(&std::get<T_SHARE>(Shares));
+                        NewShareKeys[i]    = xecs::component::type::details::ComputeShareKey(EntityDetails.m_pArchetype->getGuid(), xecs::component::type::info_v<T_SHARE>, PointerToShares[i] );                        
+                        NewKeySum += NewShareKeys[i];
+                        i++;
+
+                    }(static_cast<T_SHARE_ARGS*>(nullptr)) ), ... );
+
+                    if( NewKeySum != KeySum )
+                    {
+                        xecs::tools::bits UpdatedComponentsBits;
+                        UpdatedComponentsBits.AddFromComponents<xcore::types::tuple_decay_full_t<T_SHARE_ARGS>... >();
+
+                        //
+                        // Get the new family and move the entity there
+                        //
+                        EntityDetails.m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
+                        ( EntityDetails.m_pPool->m_pMyFamily
+                        , UpdatedComponentsBits
+                        , { PointerToShares.data(), static_cast<std::size_t>(i) }
+                        , { NewShareKeys.data(), static_cast<std::size_t>(i) }
+                        )
+                        .MoveIn
+                        ( *this
+                        , EntityDetails.m_pPool->m_pMyFamily
+                        , EntityDetails.m_pPool
+                        , EntityDetails.m_PoolIndex
+                        );
+                    }
+
+                }( xcore::types::null_tuple_v<shares_t> );
+
+            }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
         }
-        return false;
+        else
+        {
+            auto Pointers = xecs::archetype::details::GetDataComponentPointerArray( *EntityDetails.m_pPool
+                                                                                  , EntityDetails.m_PoolIndex
+                                                                                  , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple> 
+                                                                                  );
+            xecs::archetype::details::CallFunction( std::forward<T_FUNCTION>(Function), Pointers );
+        }
+
+        return Entity;
     }
 
     //---------------------------------------------------------------------------
@@ -218,11 +356,12 @@ namespace xecs::game_mgr
     //---------------------------------------------------------------------------
 
     template< typename T_FUNCTION>
-    requires( xcore::function::is_callable_v<T_FUNCTION> )
-    void instance::getEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
+    requires( xecs::tools::assert_standard_function_v<T_FUNCTION> )
+    [[nodiscard]] xecs::component::entity instance::getEntity( xecs::component::entity Entity, T_FUNCTION&& Function ) noexcept
     {
         auto b = findEntity( Entity, std::forward<T_FUNCTION&&>(Function) );
-        assert(b);
+        assert( b.isValid() );
+        return b;
     }
 
     //---------------------------------------------------------------------------
@@ -945,4 +1084,128 @@ instance::AddOrRemoveComponents
 
         return Error;
     }
+
+    //---------------------------------------------------------------------------
+    namespace details::create_prefab_instance
+    {
+        template< typename T >
+        struct filter;
+
+        template< typename...T >
+        struct filter< std::tuple<T...> >
+        {
+            static constexpr bool value = sizeof...(T) > 0 && (((xecs::component::type::info_v<T>.m_TypeID == xecs::component::type::id::SHARE) || ...));
+            using                 type  = std::conditional_t< value, std::tuple< std::remove_reference_t<T> ... >, std::tuple<> >;
+        };
+    }
+
+    template
+    < typename T_FUNCTION
+    > requires ( xecs::tools::assert_standard_setter_function_v<T_FUNCTION> )
+    [[nodiscard]] xecs::component::entity instance::CreatePrefabInstance( xecs::component::entity PrefabEntity, T_FUNCTION&& Function ) noexcept
+    {
+        using           info_t          = details::create_prefab_instance::filter<xcore::function::traits<T_FUNCTION>::args_tuple>;
+        using           tuple_ref       = info_t::type;
+        constexpr bool  modify_shares_v = info_t::value;
+        tuple_ref       Data{};
+
+        if constexpr (modify_shares_v)
+        {
+            [&] < typename...T_ARGS > (std::tuple<T_ARGS...>*) constexpr noexcept
+            {
+                (void)findEntity( PrefabEntity, [&]( const T_ARGS... Args ) constexpr noexcept
+                {
+                    ((std::get<std::remove_reference_t<T_ARGS>>(Data) = Args), ...);
+                    Function( std::get< std::remove_reference_t<T_ARGS> >(Data) ... );
+                });
+
+            }( xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple> );
+        }
+
+        auto& PrefabArchetype = getArchetype(PrefabEntity);
+        auto  Bits            = PrefabArchetype.getComponentBits();
+
+        // Lets make sure that this is in fact a prefab
+        xassert( Bits.getBit(xecs::component::type::info_v<xecs::prefab::exclusive_tag>.m_BitID) );
+
+        // Lets convert the bits to prefab instance
+        // TODO: Note the syntax is stupid here because visual studio is crashing other wise...
+        Bits.clearBit( []{return xecs::component::type::info_v<xecs::prefab::exclusive_tag>.m_BitID; }() );
+
+        //TODO: This is only needed when we are dealing with editors
+        //TODO: Note the syntax is stupid here because visual studio is crashing other wise...
+        Bits.setBit([]{ return xecs::component::type::info_v<xecs::prefab::override_tracker>.m_BitID; }() );
+
+        // Lets get the archetype of the prefab instance
+        auto& InstanceArchetype = m_ArchetypeMgr.getOrCreateArchetype(Bits);
+
+
+        auto& PrefabDetails   = m_ComponentMgr.getEntityDetails(PrefabEntity);
+
+        //
+        auto  InstanceEntity  = (PrefabArchetype.m_nShareComponents == 0u) ? InstanceArchetype.CreateEntity()
+        : [&]
+        {
+            if constexpr (modify_shares_v == false)
+            {
+                auto& Family = InstanceArchetype.getOrCreatePoolFamily(*PrefabDetails.m_pPool->m_pMyFamily);
+                return InstanceArchetype.CreateEntity(Family, xecs::tools::empty_lambda{});
+            }
+            else
+            {
+                auto& Family = InstanceArchetype.getOrCreatePoolFamily(*PrefabDetails.m_pPool->m_pMyFamily);
+                return InstanceArchetype.CreateEntity(Family, xecs::tools::empty_lambda{});
+            }
+        }();
+
+        auto& InstanceDetails = m_ComponentMgr.getEntityDetails(InstanceEntity);
+        auto& PrefabPool      = *PrefabDetails.m_pPool;
+        auto& InstancePool    = *InstanceDetails.m_pPool;
+
+        // Copy all the data
+        for( int i=1, k = 0, end = static_cast<int>(PrefabPool.m_ComponentInfos.size()); i<end; ++i )
+        {
+            auto& TypeInfo = *PrefabPool.m_ComponentInfos[i];
+
+            //TODO: This is only needed when we are dealing with editors
+            if( TypeInfo.m_BitID != InstancePool.m_ComponentInfos[i+k]->m_BitID )
+            {
+                xassert(k==0);
+                xassert( InstancePool.m_ComponentInfos[i+k]->m_BitID == xecs::component::type::info_v<xecs::prefab::override_tracker>.m_BitID );
+                k++;
+            }
+
+            xassert(InstancePool.m_ComponentInfos[i+k]->m_BitID == TypeInfo.m_BitID);
+            if( TypeInfo.m_pCopyFn )
+            {
+                TypeInfo.m_pCopyFn( &InstancePool.m_pComponent[i+k][InstanceDetails.m_PoolIndex.m_Value * TypeInfo.m_Size]
+                                  , &PrefabPool  .m_pComponent[i]  [PrefabDetails.m_PoolIndex.m_Value   * TypeInfo.m_Size]
+                                  );
+            }
+            else
+            {
+                std::memcpy( &InstancePool.m_pComponent[i+k][InstanceDetails.m_PoolIndex.m_Value * TypeInfo.m_Size]
+                           , &PrefabPool  .m_pComponent[i]  [PrefabDetails.m_PoolIndex.m_Value   * TypeInfo.m_Size]
+                           , TypeInfo.m_Size 
+                           );
+            }
+        }
+
+        // Let the user do what he must
+        if constexpr (!std::is_same_v< T_FUNCTION, xecs::tools::empty_lambda>)
+        {
+            auto Pointers = xecs::archetype::details::GetDataComponentPointerArray
+            (*InstanceDetails.m_pPool, InstanceDetails.m_PoolIndex, xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
+                xecs::archetype::details::CallFunction(std::forward<T_FUNCTION>(Function), Pointers);
+        }
+
+        //TODO: Only because the editor
+        // Update the prefab tracker
+        (void)getEntity( InstanceEntity, [&]( xecs::prefab::override_tracker& Tracker ) constexpr noexcept
+        {
+            Tracker.m_PrefabEntity = PrefabEntity;
+        });
+        return InstanceEntity;
+    }
+
 }

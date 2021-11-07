@@ -335,6 +335,12 @@
     <ClInclude Include="..\..\..\src\xecs_predefinitions.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\xecs_prefabs.h">
+      <Filter>_Dependencies\xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\details\xecs_prefabs_inline.h">
+      <Filter>_Dependencies\xECS\Details</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\dependencies\xcore\src\xcore.cpp">

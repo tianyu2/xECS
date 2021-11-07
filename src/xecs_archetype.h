@@ -55,6 +55,9 @@ namespace xecs::archetype
         xecs::pool::family&     getOrCreatePoolFamily   ( std::span< const xecs::component::type::info* const>  TypeInfos
                                                         , std::span< std::byte* >                               MoveData
                                                         ) noexcept;
+        inline
+        xecs::pool::family&     getOrCreatePoolFamily   ( xecs::pool::family&                                   OtherArchetypeFamily
+                                                        ) noexcept;
         __inline
         xecs::component::entity CreateEntity            ( xecs::pool::family&                                   PoolFamily
                                                         , std::span< const xecs::component::type::info* const>  Infos
