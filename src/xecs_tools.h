@@ -153,6 +153,23 @@ namespace xecs::tools
         static_assert(all_components_are_share_types_v<T_SHARE_COMPONENTS...> );
         return true;
     }();
+
+    //------------------------------------------------------------------------------
+
+    template
+    < typename... T_COMPONENTS
+    > concept
+    only_const_types_v
+    = ( xcore::types::is_const_v<T_COMPONENTS> && ... );
+
+    //------------------------------------------------------------------------------
+
+    template
+    < typename T_TUPLE
+    > concept 
+    tuple_only_const_types_v 
+    = ( []<typename...T>( std::tuple<T...>* ){ return only_const_types_v< T... >;}( xcore::types::null_tuple_v<T_TUPLE> ) );
+
         
     //------------------------------------------------------------------------------
 

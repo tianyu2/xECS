@@ -30,17 +30,14 @@ struct my_game final : live::game
         std::srand(101);
 
         //
-        // Create an archetype for my prefab
-        //
-        auto& Archetype = m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell, xecs::prefab::exclusive_tag>();
-
-        //
         // Create a prefab
         //
-        auto PrefabEntity = Archetype.CreateEntity([&](position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell) noexcept
+        auto PrefabEntity = m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell, xecs::prefab::exclusive_tag>()
+        .CreateEntity([&](position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell) noexcept
         {
-            Position.m_Value = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
-                                             , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
+            Position.m_Value = xcore::vector2
+            { static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
+            , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
             };
 
             Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
@@ -55,28 +52,13 @@ struct my_game final : live::game
         //
         // Create a prefab instance
         //
-        auto PrefabInstance = m_GameMgr->CreatePrefabInstance( PrefabEntity, [&](position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell) noexcept
+        for( int i=0; i<20000; ++i )
         {
-            Position.m_Value = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
-                                             , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
-            };
-
-            Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
-
-            Velocity.m_Value.m_X = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
-            Velocity.m_Value.m_Y = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
-            Velocity.m_Value.Normalize();
-
-            Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
-        });
-
-        /*
-        m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell>()
-            .CreateEntities( 20000, [&]( position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell ) noexcept
+            auto PrefabInstance = m_GameMgr->CreatePrefabInstance( PrefabEntity, [&]( position& Position, velocity & Velocity, timer& Timer, grid_cell& Cell) noexcept
             {
-                Position.m_Value     = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth() )
-                                                     , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
-                                                     };
+                Position.m_Value = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
+                                                 , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
+                };
 
                 Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
 
@@ -84,11 +66,9 @@ struct my_game final : live::game
                 Velocity.m_Value.m_Y = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
                 Velocity.m_Value.Normalize();
 
-                Timer.m_Value        = std::rand() / static_cast<float>(RAND_MAX) * 8;
+                Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
             });
-
-            */
-        
+        }
     }
 
     //-----------------------------------------------------------------------------

@@ -116,7 +116,7 @@ namespace xecs::game_mgr
         template
         < typename T_FUNCTION = xecs::tools::empty_lambda
         > requires
-        ( xecs::tools::assert_standard_setter_function_v<T_FUNCTION> 
+        ( xecs::tools::assert_standard_function_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity             
                                             CreatePrefabInstance    ( xecs::component::entity PrefabEntity
                                                                     , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}

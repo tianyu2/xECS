@@ -428,15 +428,16 @@ namespace xecs::archetype
         xecs::pool::family::guid FamilyGuid{ m_Guid.m_Value };
         for( int i=0, end = (int)OtherArchetypeFamily.m_ShareInfos.size(); i<end; ++i )
         {
-            auto& Details = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails( OtherArchetypeFamily.m_ShareDetails[i].m_Entity );
-            auto& Pool    = *Details.m_pPool;
-            auto  iType   = [&]{ for( int i=1, end = (int)Pool.m_ComponentInfos.size(); i<end; ++i ) if( Pool.m_ComponentInfos[i] == OtherArchetypeFamily.m_ShareInfos[i] ) return i; return -1; }();
+            auto& Details           = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails( OtherArchetypeFamily.m_ShareDetails[i].m_Entity );
+            auto& Pool              = *Details.m_pPool;
+            auto& OtherShareInfo    = *OtherArchetypeFamily.m_ShareInfos[i];
+            auto  iType             = [&]{ for( int i=1, end = (int)Pool.m_ComponentInfos.size(); i<end; ++i ) if( Pool.m_ComponentInfos[i] == &OtherShareInfo ) return i; return -1; }();
             xassert(iType != -1 );
 
             DataInOrder[i] = &Pool.m_pComponent[iType][Details.m_PoolIndex.m_Value * Pool.m_ComponentInfos[iType]->m_Size];
 
             if( OtherArchetypeFamily.m_ShareInfos[i]->m_bGlobalScoped ) AllKeys[i] = OtherArchetypeFamily.m_ShareDetails[i].m_Key;
-            else                                                        AllKeys[i] = xecs::component::type::details::ComputeShareKey(m_Guid, *OtherArchetypeFamily.m_ShareInfos[i], DataInOrder[i] );
+            else                                                        AllKeys[i] = xecs::component::type::details::ComputeShareKey(m_Guid, OtherShareInfo, DataInOrder[i] );
 
             FamilyGuid.m_Value += AllKeys[i].m_Value;
         }
