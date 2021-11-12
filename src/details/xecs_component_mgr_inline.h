@@ -14,7 +14,7 @@ namespace xecs::component
         RegisterComponent<xecs::component::ref_count>();
         RegisterComponent<xecs::component::share_filter>();
         RegisterComponent<xecs::prefab::exclusive_tag>();
-        RegisterComponent<xecs::prefab::override_tracker>();
+        RegisterComponent<xecs::prefab::tracker>();
 
         // Create a link list of empty entries
         for (int i = 0, end = xecs::settings::max_entities_v - 2; i < end; ++i)
