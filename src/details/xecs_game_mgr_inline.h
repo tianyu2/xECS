@@ -1254,15 +1254,15 @@ instance::AddOrRemoveComponents
         auto  Bits            = PrefabArchetype.getComponentBits();
 
         // Lets make sure that this is in fact a prefab
-        xassert( Bits.getBit(xecs::component::type::info_v<xecs::prefab::exclusive_tag>.m_BitID) );
+        xassert( Bits.getBit(xecs::component::type::info_v<xecs::prefab::tag>.m_BitID) );
 
         // Lets convert the bits to prefab instance
         // TODO: Note the syntax is stupid here because visual studio is crashing other wise...
-        Bits.clearBit( []{ return xecs::component::type::info_v<xecs::prefab::exclusive_tag>.m_BitID; }() );
+        Bits.clearBit( []{ return xecs::component::type::info_v<xecs::prefab::tag>.m_BitID; }() );
 
         //TODO: This is only needed when we are dealing with editors
         //TODO: Note the syntax is stupid here because visual studio is crashing other wise...
-        Bits.setBit([]{ return xecs::component::type::info_v<xecs::prefab::tracker>.m_BitID; }() );
+        Bits.setBit([]{ return xecs::component::type::info_v<xecs::prefab::instance>.m_BitID; }() );
 
         // Lets get the archetype of the prefab instance
         auto& InstanceArchetype = m_ArchetypeMgr.getOrCreateArchetype(Bits);
@@ -1392,7 +1392,7 @@ instance::AddOrRemoveComponents
             if( TypeInfo.m_BitID != InstancePool.m_ComponentInfos[i+k]->m_BitID )
             {
                 xassert(k==0);
-                xassert( InstancePool.m_ComponentInfos[i+k]->m_BitID == xecs::component::type::info_v<xecs::prefab::tracker>.m_BitID );
+                xassert( InstancePool.m_ComponentInfos[i+k]->m_BitID == xecs::component::type::info_v<xecs::prefab::instance>.m_BitID );
                 k++;
             }
 
@@ -1486,7 +1486,7 @@ instance::AddOrRemoveComponents
 
         // TODO: This is needed Only because the editor
         // Update the prefab tracker
-        (void)getEntity( InstanceEntity, [&]( xecs::prefab::tracker& Tracker ) constexpr noexcept
+        (void)getEntity( InstanceEntity, [&]( xecs::prefab::instance& Tracker ) constexpr noexcept
         {
             Tracker.m_PrefabEntity = PrefabEntity;
         });

@@ -32,7 +32,7 @@ struct my_game final : live::game
         //
         // Create a prefab
         //
-        auto PrefabEntity = m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell, xecs::prefab::exclusive_tag>()
+        auto PrefabEntity = m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell, xecs::prefab::tag>()
         .CreateEntity([&](position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell) noexcept
         {
             Position.m_Value = xcore::vector2
