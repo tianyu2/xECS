@@ -45,6 +45,9 @@ namespace xecs::tools
         inline
         int                     getIndexOfComponent     ( int BitIndex
                                                         ) const noexcept;
+        template< typename T_CALLBACK > // Call back Should take ( int Index, const xecs::component::type::info& )
+        int                     Foreach                 ( T_CALLBACK&& Function
+                                                        ) const noexcept;
 
         std::array<std::uint64_t, ((xecs::settings::max_component_types_v-1)/64)+1> m_Bits{};
     };

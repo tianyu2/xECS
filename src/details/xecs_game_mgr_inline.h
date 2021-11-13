@@ -1494,4 +1494,119 @@ instance::AddOrRemoveComponents
         return InstanceEntity;
     }
 
+    //---------------------------------------------------------------------------
+
+    void instance::setProperty( xecs::component::entity      Entity
+                              , xecs::component::type::guid  TypeGuid
+                              , property::entry              PropertyData
+                              ) noexcept
+    {
+        auto& Details = m_ComponentMgr.getEntityDetails(Entity);
+        if (Entity.m_Validation != Details.m_Validation ) return;
+
+        auto                               Bits  = Details.m_pArchetype->getComponentBits();
+        int                                Index = 0;
+        const xecs::component::type::info* pInfo = nullptr;
+        Bits.Foreach( [&]( int i, const xecs::component::type::info& Info ) constexpr noexcept
+        {
+            if( Info.m_Guid == TypeGuid ) 
+            {
+                pInfo = &Info;
+                Index = i;
+            }
+        });
+    
+        // Could not find the requested component
+        assert( pInfo );
+        assert( pInfo->m_pPropertyTable );
+
+        if( pInfo->m_TypeID == xecs::component::type::id::DATA )
+        {
+            property::set( *pInfo->m_pPropertyTable, &Details.m_pPool->m_pComponent[Index][Details.m_PoolIndex.m_Value * pInfo->m_Size], PropertyData.first.c_str(), PropertyData.second );
+
+            // Check if we are dealing with an prefab Instance
+            if( Bits.getBit( xecs::component::type::info_v<xecs::prefab::instance>.m_BitID ) )
+            {
+                auto& PrefabInstance = Details.m_pPool->getComponent<xecs::prefab::instance>(Details.m_PoolIndex);
+
+                for( int i=0; i<PrefabInstance.m_lComponents.size(); ++i)
+                {
+                    if( PrefabInstance.m_lComponents[i].m_ComponentTypeGuid == TypeGuid )
+                        return;
+                }
+
+                PrefabInstance.m_lComponents.emplace_back
+                ( xecs::prefab::instance::component
+                { .m_ComponentTypeGuid = TypeGuid
+                , .m_PropertyOverrides = { PropertyData.first }
+                , .m_Type              = xecs::prefab::instance::component::type::OVERRIDES
+                });
+            }
+        }
+        else
+        {
+            assert( pInfo->m_TypeID == xecs::component::type::id::SHARE );
+            Index -= Details.m_pArchetype->m_nDataComponents;
+
+            auto& Family = *Details.m_pPool->m_pMyFamily;
+
+            assert( Family.m_ShareInfos[Index]->m_Guid == TypeGuid );
+
+
+            auto& ShareComponentDetails = m_ComponentMgr.getEntityDetails(Family.m_ShareDetails[Index].m_Entity);
+            void* pComponent            = nullptr;
+
+            for( int i=1, end = (int)ShareComponentDetails.m_pPool->m_ComponentInfos.size(); i<end; ++i )
+            {
+                if(ShareComponentDetails.m_pPool->m_ComponentInfos[i]->m_Guid == TypeGuid)
+                {
+                    pComponent = &ShareComponentDetails.m_pPool->m_pComponent[i][ ShareComponentDetails.m_PoolIndex.m_Value * ShareComponentDetails.m_pPool->m_ComponentInfos[i]->m_Size ];
+                    break;
+                }
+            }
+            assert(pComponent);
+
+            // Copy the data to temporary buffer
+            auto pData = xcore::memory::AlignedMalloc( xcore::units::bytes{pInfo->m_Size}, 16 );
+            if( pInfo->m_pCopyFn )
+            {
+                pInfo->m_pCopyFn( reinterpret_cast<std::byte*>(pData), reinterpret_cast<std::byte*>(pComponent) );
+            }
+            else
+            {
+                std::memcpy(pData, pComponent, pInfo->m_Size);
+            }
+
+            // Set the property
+            property::set(*pInfo->m_pPropertyTable, pData, PropertyData.first.c_str(), PropertyData.second);
+
+            auto Key = xecs::component::type::details::ComputeShareKey( Details.m_pArchetype->getGuid(), *pInfo, reinterpret_cast<std::byte*>(pData) );
+
+            //
+            // get the new family if we have to
+            //
+            if( Key != Family.m_ShareDetails[Index].m_Key )
+            {
+                xecs::tools::bits Bits;
+
+                Bits.setBit(pInfo->m_BitID);
+                Details.m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
+                ( Family
+                , Bits
+                , { reinterpret_cast<std::byte**>(&pData), 1ull }
+                , { &Key, 1ull }
+                ).MoveIn
+                ( *this
+                , Family
+                , *Details.m_pPool
+                , Details.m_PoolIndex
+                );
+            }
+
+            //
+            // Free the temp memory
+            //
+            xcore::memory::AlignedFree(pData);
+        }
+    }
 }

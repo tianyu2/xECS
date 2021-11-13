@@ -121,6 +121,12 @@ namespace xecs::game_mgr
                                             CreatePrefabInstance    ( xecs::component::entity PrefabEntity
                                                                     , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
+        inline
+        void                                setProperty             ( xecs::component::entity      Entity
+                                                                    , xecs::component::type::guid  TypeGuid
+                                                                    , property::entry              PropertyData
+                                                                    ) noexcept;
+
         template
         <   typename T_FUNCTION
         ,   auto     T_SHARE_AS_DATA_V = false

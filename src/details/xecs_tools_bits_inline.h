@@ -127,27 +127,12 @@ namespace xecs::tools
     inline
     int bits::ToInfoArray( xecs::component::entity::info_array& InfoArray ) const noexcept
     {
-        int nComponents = 0;
-        int GlobalBit   = 0;
-        for( int i=0; i< m_Bits.size(); ++i )
+        const auto Count = Foreach( [&]( int Index, const xecs::component::type::info& Info ) constexpr noexcept
         {
-            std::uint64_t V = m_Bits[i];
-            if (V)
-            {
-                int nBit = 0;
-                do
-                {
-                    const int c = std::countr_zero(V);
-                    nBit += c;
-                    InfoArray[nComponents++] = xecs::component::mgr::s_BitsToInfo[GlobalBit + nBit];
-                    V >>= (1 + c);
-                    nBit++;
-                } while (V);
-            }
+            InfoArray[Index] = &Info;
+        });
 
-            GlobalBit += 64;
-        }
-        assert( CountComponents() == nComponents );
+        assert(Count == CountComponents());
 
         //
         // Sanity Check
@@ -155,13 +140,13 @@ namespace xecs::tools
 #if _DEBUG
 
         // Make sure that all the components are sorted
-        for (int i = 1; i < nComponents; ++i)
+        for( int i = 1, end = Count; i < end; ++i )
         {
             assert( xecs::component::type::details::CompareTypeInfos(InfoArray[i-1], InfoArray[i]) );
         }
 #endif
 
-        return nComponents;
+        return Count;
     }
 
     //------------------------------------------------------------------------------------
@@ -178,5 +163,33 @@ namespace xecs::tools
 
         while(x) Count += std::popcount(m_Bits[--x]);
         return Count;
+    }
+
+    //------------------------------------------------------------------------------------
+    template< typename T_CALLBACK >
+    int bits::Foreach( T_CALLBACK&& Function ) const noexcept
+    {
+        int nComponents = 0;
+        int GlobalBit   = 0;
+        for( int i=0; i< m_Bits.size(); ++i )
+        {
+            std::uint64_t V = m_Bits[i];
+            if (V)
+            {
+                int nBit = 0;
+                do
+                {
+                    const int c = std::countr_zero(V);
+                    nBit += c;
+                    Function( nComponents++, *xecs::component::mgr::s_BitsToInfo[GlobalBit + nBit] );
+                    V >>= (1 + c);
+                    nBit++;
+                } while (V);
+            }
+
+            GlobalBit += 64;
+        }
+
+        return nComponents;
     }
 }
