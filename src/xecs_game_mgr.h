@@ -75,9 +75,8 @@ namespace xecs::game_mgr
                                             getEntity               ( xecs::component::entity Entity
                                                                     , T_FUNCTION&&            Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
-        template
-        < typename... T_COMPONENTS
-        > [[nodiscard]] std::vector<archetype::instance*>
+        inline
+        [[nodiscard]] std::vector<archetype::instance*>
                                             Search                  ( const xecs::query::instance& Query
                                                                     ) const noexcept;
         inline
@@ -122,11 +121,11 @@ namespace xecs::game_mgr
                                                                     , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         inline
-        void                                setProperty             ( xecs::component::entity      Entity
-                                                                    , xecs::component::type::guid  TypeGuid
-                                                                    , property::entry              PropertyData
+        void                                setProperty             ( xecs::component::entity       Entity
+                                                                    , xecs::component::type::guid   TypeGuid
+                                                                    , property::entry               PropertyData
+                                                                    , bool                          isOverride = true
                                                                     ) noexcept;
-
         template
         <   typename T_FUNCTION
         ,   auto     T_SHARE_AS_DATA_V = false
@@ -165,5 +164,6 @@ namespace xecs::game_mgr
         xecs::component::mgr                                m_ComponentMgr      {};
         xecs::archetype::mgr                                m_ArchetypeMgr      {*this};
         bool                                                m_isRunning         = false;
+        xcore::log::channel                                 m_LogChannel        { "xecs" };
     };
 }

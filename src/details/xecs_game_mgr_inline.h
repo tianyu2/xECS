@@ -78,7 +78,6 @@ namespace xecs::game_mgr
 
     //---------------------------------------------------------------------------
 
-    template< typename... T_COMPONENTS >
     std::vector<archetype::instance*> instance::Search( const xecs::query::instance& Query ) const noexcept
     {
         std::vector<archetype::instance*> ArchetypesFound;
@@ -1499,53 +1498,70 @@ instance::AddOrRemoveComponents
     void instance::setProperty( xecs::component::entity      Entity
                               , xecs::component::type::guid  TypeGuid
                               , property::entry              PropertyData
+                              , const bool                   isOverride
                               ) noexcept
     {
-        auto& Details = m_ComponentMgr.getEntityDetails(Entity);
-        if (Entity.m_Validation != Details.m_Validation ) return;
-
-        auto                               Bits  = Details.m_pArchetype->getComponentBits();
-        int                                Index = 0;
-        const xecs::component::type::info* pInfo = nullptr;
-        Bits.Foreach( [&]( int i, const xecs::component::type::info& Info ) constexpr noexcept
+        const auto pTypeInfo = m_ComponentMgr.findComponentTypeInfo(TypeGuid);
+        if( pTypeInfo == nullptr )
         {
-            if( Info.m_Guid == TypeGuid ) 
-            {
-                pInfo = &Info;
-                Index = i;
-            }
-        });
-    
-        // Could not find the requested component
-        assert( pInfo );
-        assert( pInfo->m_pPropertyTable );
+            XLOG_CHANNEL_WARNING( m_LogChannel, "You are trying to set a component's property, but the component is not register.");
+            return;
+        }
+        assert(pTypeInfo->m_pPropertyTable);
 
-        if( pInfo->m_TypeID == xecs::component::type::id::DATA )
+        const auto& Details = m_ComponentMgr.getEntityDetails(Entity);
+        if( Entity.m_Validation != Details.m_Validation ) 
         {
-            property::set( *pInfo->m_pPropertyTable, &Details.m_pPool->m_pComponent[Index][Details.m_PoolIndex.m_Value * pInfo->m_Size], PropertyData.first.c_str(), PropertyData.second );
+            XLOG_CHANNEL_WARNING(m_LogChannel, "You are trying to set an entity component's property, but the entity does not exist.");
+            return;
+        }
 
-            // Check if we are dealing with an prefab Instance
-            if( Bits.getBit( xecs::component::type::info_v<xecs::prefab::instance>.m_BitID ) )
+        const auto Bits  = Details.m_pArchetype->getComponentBits();
+        if ( Bits.getBit(pTypeInfo->m_BitID) == false )
+        {
+            // This entity does not have the requested component
+            return;
+        }
+
+        auto Index = Bits.getIndexOfComponent(pTypeInfo->m_BitID);
+
+        //
+        // If we are an override then we need to check if we are dealing with an prefab Instance
+        //
+        if( isOverride && Bits.getBit(xecs::component::type::info_v<xecs::prefab::instance>.m_BitID) )
+        {
+            auto& PrefabInstance = Details.m_pPool->getComponent<xecs::prefab::instance>(Details.m_PoolIndex);
+
+            // Was this property previously overwritten?
+            bool bAlreadyOverriten = false;
+            for (int i = 0; i < PrefabInstance.m_lComponents.size(); ++i)
             {
-                auto& PrefabInstance = Details.m_pPool->getComponent<xecs::prefab::instance>(Details.m_PoolIndex);
-
-                for( int i=0; i<PrefabInstance.m_lComponents.size(); ++i)
+                if( PrefabInstance.m_lComponents[i].m_ComponentTypeGuid == TypeGuid )
                 {
-                    if( PrefabInstance.m_lComponents[i].m_ComponentTypeGuid == TypeGuid )
-                        return;
+                    bAlreadyOverriten = true;
+                    break;
                 }
+            }
 
+            // add the override officially
+            if( bAlreadyOverriten == false )
+            {
                 PrefabInstance.m_lComponents.emplace_back
                 ( xecs::prefab::instance::component
-                { .m_ComponentTypeGuid = TypeGuid
-                , .m_PropertyOverrides = { PropertyData.first }
-                , .m_Type              = xecs::prefab::instance::component::type::OVERRIDES
+                { .m_ComponentTypeGuid  = TypeGuid
+                , .m_PropertyOverrides  = { PropertyData.first }
+                , .m_Type               = xecs::prefab::instance::component::type::OVERRIDES
                 });
             }
         }
+
+        if( pTypeInfo->m_TypeID == xecs::component::type::id::DATA )
+        {
+            property::set( *pTypeInfo->m_pPropertyTable, &Details.m_pPool->m_pComponent[Index][Details.m_PoolIndex.m_Value * pTypeInfo->m_Size], PropertyData.first.c_str(), PropertyData.second );
+        }
         else
         {
-            assert( pInfo->m_TypeID == xecs::component::type::id::SHARE );
+            assert(pTypeInfo->m_TypeID == xecs::component::type::id::SHARE );
             Index -= Details.m_pArchetype->m_nDataComponents;
 
             auto& Family = *Details.m_pPool->m_pMyFamily;
@@ -1567,20 +1583,20 @@ instance::AddOrRemoveComponents
             assert(pComponent);
 
             // Copy the data to temporary buffer
-            auto pData = xcore::memory::AlignedMalloc( xcore::units::bytes{pInfo->m_Size}, 16 );
-            if( pInfo->m_pCopyFn )
+            auto pData = xcore::memory::AlignedMalloc( xcore::units::bytes{ pTypeInfo->m_Size}, 16 );
+            if( pTypeInfo->m_pCopyFn )
             {
-                pInfo->m_pCopyFn( reinterpret_cast<std::byte*>(pData), reinterpret_cast<std::byte*>(pComponent) );
+                pTypeInfo->m_pCopyFn( reinterpret_cast<std::byte*>(pData), reinterpret_cast<std::byte*>(pComponent) );
             }
             else
             {
-                std::memcpy(pData, pComponent, pInfo->m_Size);
+                std::memcpy(pData, pComponent, pTypeInfo->m_Size);
             }
 
             // Set the property
-            property::set(*pInfo->m_pPropertyTable, pData, PropertyData.first.c_str(), PropertyData.second);
+            property::set(*pTypeInfo->m_pPropertyTable, pData, PropertyData.first.c_str(), PropertyData.second);
 
-            auto Key = xecs::component::type::details::ComputeShareKey( Details.m_pArchetype->getGuid(), *pInfo, reinterpret_cast<std::byte*>(pData) );
+            auto Key = xecs::component::type::details::ComputeShareKey( Details.m_pArchetype->getGuid(), *pTypeInfo, reinterpret_cast<std::byte*>(pData) );
 
             //
             // get the new family if we have to
@@ -1589,7 +1605,7 @@ instance::AddOrRemoveComponents
             {
                 xecs::tools::bits Bits;
 
-                Bits.setBit(pInfo->m_BitID);
+                Bits.setBit(pTypeInfo->m_BitID);
                 Details.m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
                 ( Family
                 , Bits
@@ -1607,6 +1623,115 @@ instance::AddOrRemoveComponents
             // Free the temp memory
             //
             xcore::memory::AlignedFree(pData);
+        }
+
+        //
+        // Check if our entity is a prefab if so we must update every instance and update it
+        //
+        if( Bits.getBit( xecs::component::type::info_v<xecs::prefab::tag>.m_BitID ) == false ) return;
+
+        //
+        // First we need to update Variants before regular entities
+        //
+        {
+            xecs::query::instance Query;
+            Query.m_Must.AddFromComponents<xecs::prefab::instance, xecs::prefab::tag>();
+
+            auto S = Search(Query);
+            Foreach( S, [&]( xecs::component::entity& VariantEntity, xecs::prefab::instance& Instance ) constexpr noexcept
+            {
+                if( Instance.m_PrefabEntity == Entity )
+                {
+                    setProperty( VariantEntity, TypeGuid, PropertyData, false );
+                }
+
+                /*
+                std::array<xecs::component::entity, 32> Array;
+                int                                     Index       = 0;
+                bool                                    bValidList  = false;
+
+                if( Instance.m_PrefabEntity == Entity )
+                {
+                    bValidList     = true;
+                    Array[Index++] = Entity;
+                }
+                else
+                {
+                    std::function<void(xecs::component::entity)> SearchFunction = [&]( xecs::component::entity VariantEntity )
+                    {
+                        (void)getEntity(VariantEntity, [&]( const xecs::prefab::instance* pInstance ) constexpr noexcept
+                        {
+                            if( pInstance == nullptr )
+                            {
+                                bValidList = false;
+                                return;
+                            }
+
+                            // If this variant points to our prefab then we should try to set the property
+                            if( pInstance->m_PrefabEntity == Entity )
+                            {
+                                bValidList = true;
+
+                                auto& VariantArchetype = getArchetype( VariantEntity );
+
+                                // We can return if we dont longer have this component
+                                if( false == VariantArchetype.getComponentBits().getBit(Index) )
+                                {
+                                    return;
+                                }
+
+                                // We can return if this variant overrote the property
+                                for( const auto& Comp : pInstance->m_lComponents )
+                                {
+                                    if( Comp.m_ComponentTypeGuid == TypeGuid )
+                                    {
+                                        for( const auto& OV : Comp.m_PropertyOverrides )
+                                        {
+                                            if( OV == PropertyData.first )
+                                                return;
+                                        }
+                                    }
+                                }
+
+                                // Other wise we can set the value
+                                setProperty( VariantEntity, TypeGuid, PropertyData );
+                            }
+                            else
+                            {
+                                SearchFunction( pInstance->m_PrefabEntity );
+                                if(bValidList) Array[Index++] = VariantEntity;
+                            }
+                        });
+                    };
+
+                    SearchFunction(Instance.m_PrefabEntity);
+                }
+
+                if( bValidList == false ) return;
+
+                //
+                // todo ...
+                //
+                    */
+            });
+        }
+
+        //
+        // Now lets update all the entity instances
+        //
+        {
+            xecs::query::instance Query;
+            Query.m_Must.AddFromComponents<xecs::prefab::instance>();
+            Query.m_NoneOf.AddFromComponents<xecs::prefab::tag>();
+
+            auto S = Search(Query);
+            Foreach(S, [&]( xecs::component::entity& RegularEntity, xecs::prefab::instance& Instance) constexpr noexcept
+            {
+                if( Instance.m_PrefabEntity == Entity )
+                {
+                    setProperty( RegularEntity, TypeGuid, PropertyData, false);
+                }
+            });
         }
     }
 }
