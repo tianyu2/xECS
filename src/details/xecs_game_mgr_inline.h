@@ -1523,12 +1523,10 @@ instance::AddOrRemoveComponents
             return;
         }
 
-        auto Index = Bits.getIndexOfComponent(pTypeInfo->m_BitID);
-
         //
-        // If we are an override then we need to check if we are dealing with an prefab Instance
+        // if we are dealing with an prefab Instance
         //
-        if( isOverride && Bits.getBit(xecs::component::type::info_v<xecs::prefab::instance>.m_BitID) )
+        if( Bits.getBit(xecs::component::type::info_v<xecs::prefab::instance>.m_BitID) )
         {
             auto& PrefabInstance = Details.m_pPool->getComponent<xecs::prefab::instance>(Details.m_PoolIndex);
 
@@ -1536,25 +1534,46 @@ instance::AddOrRemoveComponents
             bool bAlreadyOverriten = false;
             for (int i = 0; i < PrefabInstance.m_lComponents.size(); ++i)
             {
-                if( PrefabInstance.m_lComponents[i].m_ComponentTypeGuid == TypeGuid )
+                auto& CompInfo = PrefabInstance.m_lComponents[i];
+                if( CompInfo.m_ComponentTypeGuid == TypeGuid )
                 {
-                    bAlreadyOverriten = true;
+                    for( auto& E : CompInfo.m_PropertyOverrides )
+                    {
+                        if( E == PropertyData.first )
+                        {
+                            bAlreadyOverriten = true;
+                            break;
+                        }
+                    }
                     break;
                 }
             }
 
-            // add the override officially
-            if( bAlreadyOverriten == false )
+            if( isOverride )
             {
-                PrefabInstance.m_lComponents.emplace_back
-                ( xecs::prefab::instance::component
-                { .m_ComponentTypeGuid  = TypeGuid
-                , .m_PropertyOverrides  = { PropertyData.first }
-                , .m_Type               = xecs::prefab::instance::component::type::OVERRIDES
-                });
+                // add the override officially
+                if( bAlreadyOverriten == false )
+                {
+                    PrefabInstance.m_lComponents.emplace_back
+                    ( xecs::prefab::instance::component
+                    { .m_ComponentTypeGuid  = TypeGuid
+                    , .m_PropertyOverrides  = { PropertyData.first }
+                    , .m_Type               = xecs::prefab::instance::component::type::OVERRIDES
+                    });
+                }
+            }
+            else
+            {
+                // If we are not overwriting and we have overrode it in the past then there is nothing to do
+                if( bAlreadyOverriten == true )
+                    return;
             }
         }
 
+        //
+        // Set the property
+        //
+        auto Index = Bits.getIndexOfComponent(pTypeInfo->m_BitID);
         if( pTypeInfo->m_TypeID == xecs::component::type::id::DATA )
         {
             property::set( *pTypeInfo->m_pPropertyTable, &Details.m_pPool->m_pComponent[Index][Details.m_PoolIndex.m_Value * pTypeInfo->m_Size], PropertyData.first.c_str(), PropertyData.second );
@@ -1644,75 +1663,6 @@ instance::AddOrRemoveComponents
                 {
                     setProperty( VariantEntity, TypeGuid, PropertyData, false );
                 }
-
-                /*
-                std::array<xecs::component::entity, 32> Array;
-                int                                     Index       = 0;
-                bool                                    bValidList  = false;
-
-                if( Instance.m_PrefabEntity == Entity )
-                {
-                    bValidList     = true;
-                    Array[Index++] = Entity;
-                }
-                else
-                {
-                    std::function<void(xecs::component::entity)> SearchFunction = [&]( xecs::component::entity VariantEntity )
-                    {
-                        (void)getEntity(VariantEntity, [&]( const xecs::prefab::instance* pInstance ) constexpr noexcept
-                        {
-                            if( pInstance == nullptr )
-                            {
-                                bValidList = false;
-                                return;
-                            }
-
-                            // If this variant points to our prefab then we should try to set the property
-                            if( pInstance->m_PrefabEntity == Entity )
-                            {
-                                bValidList = true;
-
-                                auto& VariantArchetype = getArchetype( VariantEntity );
-
-                                // We can return if we dont longer have this component
-                                if( false == VariantArchetype.getComponentBits().getBit(Index) )
-                                {
-                                    return;
-                                }
-
-                                // We can return if this variant overrote the property
-                                for( const auto& Comp : pInstance->m_lComponents )
-                                {
-                                    if( Comp.m_ComponentTypeGuid == TypeGuid )
-                                    {
-                                        for( const auto& OV : Comp.m_PropertyOverrides )
-                                        {
-                                            if( OV == PropertyData.first )
-                                                return;
-                                        }
-                                    }
-                                }
-
-                                // Other wise we can set the value
-                                setProperty( VariantEntity, TypeGuid, PropertyData );
-                            }
-                            else
-                            {
-                                SearchFunction( pInstance->m_PrefabEntity );
-                                if(bValidList) Array[Index++] = VariantEntity;
-                            }
-                        });
-                    };
-
-                    SearchFunction(Instance.m_PrefabEntity);
-                }
-
-                if( bValidList == false ) return;
-
-                //
-                // todo ...
-                //
-                    */
             });
         }
 
