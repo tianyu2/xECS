@@ -121,7 +121,8 @@ namespace xecs::game_mgr
                                                                     , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         inline
-        void                                setProperty             ( xecs::component::entity       Entity
+        void                                EditorSetEntityComponentProperty
+                                                                    ( xecs::component::entity       Entity
                                                                     , xecs::component::type::guid   TypeGuid
                                                                     , property::entry               PropertyData
                                                                     , bool                          isOverride = true

@@ -1495,11 +1495,12 @@ instance::AddOrRemoveComponents
 
     //---------------------------------------------------------------------------
 
-    void instance::setProperty( xecs::component::entity      Entity
-                              , xecs::component::type::guid  TypeGuid
-                              , property::entry              PropertyData
-                              , const bool                   isOverride
-                              ) noexcept
+    void instance::EditorSetEntityComponentProperty
+    ( xecs::component::entity      Entity
+    , xecs::component::type::guid  TypeGuid
+    , property::entry              PropertyData
+    , const bool                   isOverride
+    ) noexcept
     {
         const auto pTypeInfo = m_ComponentMgr.findComponentTypeInfo(TypeGuid);
         if( pTypeInfo == nullptr )
@@ -1661,7 +1662,7 @@ instance::AddOrRemoveComponents
             {
                 if( Instance.m_PrefabEntity == Entity )
                 {
-                    setProperty( VariantEntity, TypeGuid, PropertyData, false );
+                    EditorSetEntityComponentProperty( VariantEntity, TypeGuid, PropertyData, false );
                 }
             });
         }
@@ -1679,7 +1680,7 @@ instance::AddOrRemoveComponents
             {
                 if( Instance.m_PrefabEntity == Entity )
                 {
-                    setProperty( RegularEntity, TypeGuid, PropertyData, false);
+                    EditorSetEntityComponentProperty( RegularEntity, TypeGuid, PropertyData, false);
                 }
             });
         }
