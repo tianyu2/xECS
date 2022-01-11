@@ -46,15 +46,20 @@ struct my_game final : live::game
             Velocity.m_Value.m_Y = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
             Velocity.m_Value.Normalize();
 
+            Timer.m_Value = 0;
+        });
+
+        auto PrefabVarient = m_GameMgr->CreatePrefabVariant( PrefabEntity, [&]( timer& Timer ) noexcept
+        {
             Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
         });
 
         //
         // Create a prefab instance
         //
-        for( int i=0; i<20000; ++i )
+        for( int i=0; i<2000; ++i )
         {
-            auto PrefabInstance = m_GameMgr->CreatePrefabInstance( PrefabEntity, [&]( position& Position, velocity & Velocity, timer& Timer, grid_cell& Cell) noexcept
+            auto PrefabInstance = m_GameMgr->CreatePrefabInstance( PrefabVarient, [&]( position& Position, velocity & Velocity, timer& Timer, grid_cell& Cell) noexcept
             {
                 Position.m_Value = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
                                                  , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
@@ -111,12 +116,21 @@ struct my_game final : live::game
         >();
     }
 
+    inline static constexpr auto save_in_binary_v = false;
+
     //-----------------------------------------------------------------------------
 
     virtual const char* SaveGameState(const char* pFileName) noexcept override
     {
-        auto Error = m_GameMgr->SerializeGameState(pFileName, false, true);
+        // Serialize first the prefabs/variants
+        auto Error = m_GameMgr->SerializePrefabs("x64/Prefabs", false, false);
         assert(!Error);
+
+        // Serialize the game state
+        Error = m_GameMgr->SerializeGameState(pFileName, false, save_in_binary_v );
+        assert(!Error);
+
+        // Return error
         return Error ? Error.getCodeAndClear().m_pString : nullptr;
     }
 
@@ -129,7 +143,7 @@ struct my_game final : live::game
         m_GameMgr = std::make_unique<xecs::game_mgr::instance>();
         RegisterElements();
 
-        auto Error = m_GameMgr->SerializeGameState(pFileName, true, true);
+        auto Error = m_GameMgr->SerializeGameState(pFileName, true, save_in_binary_v );
         assert(!Error);
         return Error ? Error.getCodeAndClear().m_pString : nullptr;
     }

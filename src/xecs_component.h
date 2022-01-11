@@ -13,6 +13,14 @@ namespace xecs::component
         using full_serialize_fn     = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept;
         using serialize_fn          = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData ) noexcept;
 
+        // Tells the component type how we should serialize the component
+        enum class serialize_mode : std::uint8_t
+        { AUTO                                      // (Default) Automatically chooses one option from below. Serializer always has higher priority.
+        , BY_SERIALIZER                             // Produces the same output as the Auto by this is explicit 
+        , BY_PROPERTIES                             // When a component type have both a serializer function and properties choose properties.
+        , DONT_SERIALIZE                            // It may not a serializer but may have properties but yet we do not want to serialize at all.
+        };
+
         // The order of this enum is very important as the system relies in this order
         // This is the general shorting order of components Data, then Share components, then Tags
         enum class id : std::uint8_t
@@ -31,6 +39,7 @@ namespace xecs::component
             const char*             m_pName             {"Unnamed data component"};
             serialize_fn*           m_pSerilizeFn       { nullptr };
             full_serialize_fn*      m_pFullSerializeFn  { nullptr };
+            serialize_mode          m_SerializeMode     { serialize_mode::AUTO };
         };
 
         struct tag
@@ -67,11 +76,13 @@ namespace xecs::component
 
             guid                    m_Guid              {};
             const char*             m_pName             { "Unnamed share component" };
-            bool                    m_bGlobalScoped     { true };
-            bool                    m_bBuildFilter      { false };
+            bool                    m_bGlobalScoped     { true };                           // TODO: To be deleted! Global Scoped vs Archetype Scoped. If you want a per-family (Such every family has a bbox)? This is a TODO for the future.
+            //bool                  m_bDeleteOnZeroRef  { true };                           // TODO: Potentially add this feature.
+            bool                    m_bBuildFilter      { false };                          // Tells xECS to automatically create a reference to all its references "a filter". So if we want to find all entities that have a share of a particular value we can do it quickly.
             compute_key_fn*         m_ComputeKeyFn      { nullptr };
             serialize_fn*           m_pSerilizeFn       { nullptr };
             full_serialize_fn*      m_pFullSerializeFn  { nullptr };
+            serialize_mode          m_SerializeMode     { serialize_mode::AUTO };
         };
 
         namespace details
@@ -124,6 +135,7 @@ namespace xecs::component
             full_serialize_fn* const    m_pSerilizeFn;          // This is the serialize function
             const property::table*      m_pPropertyTable;       // Properties for the component
             mutable type::share::key    m_DefaultShareKey;      // Default value for this share component
+            serialize_mode              m_SerializeMode;        // Tells the component how it should serialize itself
             const char* const           m_pName;                // Friendly Human readable string name for the component type
         };
 

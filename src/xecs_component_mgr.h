@@ -37,9 +37,9 @@ namespace xecs::component
         inline
         void                                LockComponentTypes      ( void 
                                                                     ) noexcept;
-        inline 
+        inline static
         const xecs::component::type::info*  findComponentTypeInfo   ( xecs::component::type::guid Guid
-                                                                    ) const noexcept;
+                                                                    ) noexcept;
         inline static
         void                                resetRegistrations      ( void 
                                                                     ) noexcept;
@@ -48,8 +48,8 @@ namespace xecs::component
 
         std::unique_ptr<entity::global_info[]>              m_lEntities         = std::make_unique<entity::global_info[]>(xecs::settings::max_entities_v);
         int                                                 m_EmptyHead         = 0;
-        component_info_map                                  m_ComponentInfoMap  {};
 
+        inline static component_info_map                    m_ComponentInfoMap  {};
         inline static xecs::tools::bits                     s_ShareBits         {};
         inline static xecs::tools::bits                     s_DataBits          {};
         inline static xecs::tools::bits                     s_TagsBits          {};

@@ -113,11 +113,20 @@ namespace xecs::game_mgr
                                                                     ) noexcept;
 
         template
-        < typename T_FUNCTION = xecs::tools::empty_lambda
+        < bool     T_IS_VARIANT = false
+        , typename T_FUNCTION   = xecs::tools::empty_lambda
         > requires
         ( xecs::tools::assert_standard_function_v<T_FUNCTION>
         ) [[nodiscard]] xecs::component::entity             
                                             CreatePrefabInstance    ( xecs::component::entity PrefabEntity
+                                                                    , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
+                                                                    ) noexcept;
+        template
+        < typename T_FUNCTION   = xecs::tools::empty_lambda
+        > requires
+        ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+        ) xforceinline [[nodiscard]] xecs::component::entity             
+                                            CreatePrefabVariant     ( xecs::component::entity PrefabEntity
                                                                     , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         inline
@@ -138,10 +147,19 @@ namespace xecs::game_mgr
         bool                                Foreach                 ( std::span<xecs::archetype::instance* const>   List
                                                                     , T_FUNCTION&&                                  Function 
                                                                     ) noexcept;
-        inline
+        template
+        <   typename T_FUNCTION
+        ,   auto     T_SHARE_AS_DATA_V = false
+        > requires
+        ( xecs::tools::assert_is_callable_v<T_FUNCTION>
+          && (   xecs::tools::function_return_v<T_FUNCTION, bool >
+              || xecs::tools::function_return_v<T_FUNCTION, void > )
+        ) __inline
+        bool                                Foreach                 ( const std::vector<const xecs::archetype::instance*>&   List
+                                                                    , T_FUNCTION&&                                           Function 
+                                                                    ) noexcept;
         void                                Run                     ( void 
                                                                     ) noexcept;
-        inline
         void                                Stop                    ( void 
                                                                     ) noexcept;
         template
@@ -154,10 +172,30 @@ namespace xecs::game_mgr
         > __inline
         T_SYSTEM&                           getSystem               ( void
                                                                     ) noexcept;
-        inline
         xcore::err                          SerializeGameState      ( const char* pFileName
                                                                     , bool        isRead
                                                                     , bool        isBinary = false
+                                                                    ) noexcept;
+        xcore::err                          SerializePrefabs        ( const char*   pFolderName
+                                                                    , bool          isRead
+                                                                    , bool          isBinary = false
+                                                                    ) noexcept;
+        xcore::err                          SerializeGameStateV2    ( const char* pFileName
+                                                                    , bool        isRead
+                                                                    , bool        isBinary = false
+                                                                    ) noexcept;
+        xcore::err                          SerializeComponentWithProperties
+                                                                    ( bool                                  isRead
+                                                                    , xcore::textfile::stream&              TextFile
+                                                                    , std::string&                          PropName
+                                                                    , xcore::property::data&                PropData
+                                                                    ) noexcept;
+        xcore::err                          SerializeComponentWithProperties
+                                                                    ( bool                                          isRead
+                                                                    , xcore::textfile::stream&                      TextFile
+                                                                    , const xecs::component::entity::global_info&   EntityInfo
+                                                                    , const xecs::component::type::info&            Info
+                                                                    , std::byte*                                    pDataBase
                                                                     ) noexcept;
 
         xecs::system::mgr                                   m_SystemMgr         {};

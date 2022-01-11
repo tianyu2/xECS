@@ -158,7 +158,7 @@ namespace xecs::component
 
     //---------------------------------------------------------------------------
 
-    const xecs::component::type::info* mgr::findComponentTypeInfo( xecs::component::type::guid Guid ) const noexcept
+    const xecs::component::type::info* mgr::findComponentTypeInfo( xecs::component::type::guid Guid ) noexcept
     {
         auto It = m_ComponentInfoMap.find(Guid);
         if( It == m_ComponentInfoMap.end() ) return nullptr;

@@ -149,7 +149,7 @@ namespace xecs::component
             ,   .m_Size             = xcore::types::static_cast_safe<std::uint16_t>(sizeof(T_COMPONENT))
             ,   .m_TypeID           = T_COMPONENT::typedef_v.id_v
             ,   .m_bGlobalScoped    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bGlobalScoped; else return false; }()
-            ,   .m_bBuildShareFilter    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bBuildFilter; else return false; }()
+            ,   .m_bBuildShareFilter= []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bBuildFilter; else return false; }()
             ,   .m_bExclusiveTag    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG)   return T_COMPONENT::typedef_v.exclusive_v;     else return false; }()
             ,   .m_pConstructFn     = std::is_trivially_constructible_v<T_COMPONENT>
                                         ? nullptr
@@ -195,6 +195,35 @@ namespace xecs::component
                                       }()
             ,   .m_pSerilizeFn      = serialize_v<T_COMPONENT>
             ,   .m_pPropertyTable   = getPropertyTable<T_COMPONENT>()
+            ,   .m_SerializeMode    = []() consteval noexcept -> serialize_mode
+                                      {
+                                        if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) 
+                                        {
+                                            return serialize_mode::DONT_SERIALIZE;
+                                        }
+                                        else
+                                        {
+                                            if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::AUTO )
+                                            {
+                                                if constexpr ( T_COMPONENT::typedef_v.m_pSerilizeFn || T_COMPONENT::typedef_v.m_pFullSerializeFn ) return serialize_mode::BY_SERIALIZER;
+                                                else if constexpr ( getPropertyTable<T_COMPONENT>() ) return serialize_mode::BY_PROPERTIES;
+                                                else return serialize_mode::DONT_SERIALIZE;
+                                            }
+                                            else
+                                            {
+                                                if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES )
+                                                {
+                                                    static_assert( T_COMPONENT::typedef_v.m_pSerilizeFn || T_COMPONENT::typedef_v.m_pFullSerializeFn );
+                                                }
+                                                else if constexpr ( T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES )
+                                                {
+                                                    static_assert(getPropertyTable<T_COMPONENT>());
+                                                }
+
+                                                return T_COMPONENT::typedef_v.m_SerializeMode;
+                                            }
+                                        }
+                                      }()
             ,   .m_pName            = T_COMPONENT::typedef_v.m_pName
                                         ? T_COMPONENT::typedef_v.m_pName
                                         : __FUNCSIG__

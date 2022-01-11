@@ -25,6 +25,9 @@
     <Filter Include="_Dependencies\Settings">
       <UniqueIdentifier>{a3885b00-7017-4618-acd2-c24de067ed8d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="xECS Documentation">
+      <UniqueIdentifier>{468c7355-2d51-438b-8484-31fc2817bdbc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore.h">
@@ -354,5 +357,22 @@
     </ClCompile>
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="..\..\..\src\xecs.cpp">
+      <Filter>_Dependencies\xECS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\src\details\xecs_game_mgr.cpp">
+      <Filter>_Dependencies\xECS\Details</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\doc\editor_entity_serialization.md">
+      <Filter>xECS Documentation</Filter>
+    </None>
+    <None Include="..\..\..\doc\editor_prefab_serialization.md">
+      <Filter>xECS Documentation</Filter>
+    </None>
+    <None Include="..\..\..\doc\main.md">
+      <Filter>xECS Documentation</Filter>
+    </None>
   </ItemGroup>
 </Project>
