@@ -38,6 +38,7 @@
 #include "xecs_component.h"
 #include "xecs_tools.h"
 #include "xecs_tools_bits.h"
+#include "xecs_scene.h"
 #include "xecs_component_mgr.h"
 #include "xecs_pool.h"
 #include "xecs_archetype.h"

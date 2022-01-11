@@ -1,5 +1,11 @@
 namespace xecs::component
 {
+    struct range
+    {
+        std::size_t         m_StardingAddress;
+        xecs::scene::guid   m_SceneGuid;
+    };
+
     //
     // MGR
     //

@@ -72,7 +72,7 @@ namespace xecs::game_mgr
         assert(Entity.isZombie() == false);
         auto& Info = m_ComponentMgr.getEntityDetails(Entity);
         assert(Info.m_Validation == Entity.m_Validation);
-        Info.m_pArchetype->DestroyEntity(Entity);
+        Info.m_pPool->m_pArchetype->DestroyEntity(Entity);
     }
 
 
@@ -402,7 +402,7 @@ namespace xecs::game_mgr
                             }
 
                             PointerToShares[i] = reinterpret_cast<std::byte*>(&std::get<T_SHARE>(Shares));
-                            NewShareKeys[i]    = xecs::component::type::details::ComputeShareKey(EntityDetails.m_pArchetype->getGuid(), xecs::component::type::info_v<T_SHARE>, PointerToShares[i] );                        
+                            NewShareKeys[i]    = xecs::component::type::details::ComputeShareKey(EntityDetails.m_pPool->m_pArchetype->getGuid(), xecs::component::type::info_v<T_SHARE>, PointerToShares[i] );                        
                             NewKeySum         += NewShareKeys[i].m_Value;
                             i++;
 
@@ -416,7 +416,7 @@ namespace xecs::game_mgr
                             //
                             // Get the new family and move the entity there
                             //
-                            EntityDetails.m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
+                            EntityDetails.m_pPool->m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
                             ( *EntityDetails.m_pPool->m_pMyFamily
                             , UpdatedComponentsBits
                             , { PointerToShares.data(), static_cast<std::size_t>(i) }
@@ -455,7 +455,7 @@ namespace xecs::game_mgr
         assert(Entity.isZombie() == false);
         auto& Entry = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
         assert( Entity.m_Validation == Entry.m_Validation );
-        return *Entry.m_pArchetype;
+        return *Entry.m_pPool->m_pArchetype;
     }
 
     //---------------------------------------------------------------------------

@@ -185,6 +185,7 @@ namespace xecs::pool
 
         m_ComponentInfos            = Span;
         m_pMyFamily                 = &Family;
+        m_pArchetype                = Family.m_pArchetypeInstance;
 
         // Reserve virtual memory for our data components
         for( int i=0, end = static_cast<int>(m_ComponentInfos.size()); i<end; ++i )

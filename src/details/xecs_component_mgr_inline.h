@@ -100,7 +100,6 @@ namespace xecs::component
         m_EmptyHead = Entry.m_PoolIndex.m_Value;
 
         Entry.m_PoolIndex  = PoolIndex;
-        Entry.m_pArchetype = &Archetype;
         Entry.m_pPool      = &Pool;
         return
         {

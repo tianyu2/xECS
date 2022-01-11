@@ -89,6 +89,7 @@ namespace xecs::pool
         std::uint32_t                                       m_DeleteGlobalIndex         { invalid_delete_global_index_v };
         std::uint32_t                                       m_DeleteMoveIndex           { invalid_delete_global_index_v };
         pointer_array                                       m_pComponent                {};
+        xecs::archetype::instance*                          m_pArchetype                {};
         instance*                                           m_pPendingStructuralChanges { nullptr };
         xecs::pool::family*                                 m_pMyFamily                 { nullptr };
         std::unique_ptr<instance>                           m_Next                      {};

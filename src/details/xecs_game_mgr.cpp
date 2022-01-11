@@ -636,7 +636,6 @@ namespace xecs::game_mgr
 
                                     assert( Global.m_Validation == Entity.m_Validation );
                                     Global.m_PoolIndex  = xecs::pool::index{i};
-                                    Global.m_pArchetype = pArchetype;
                                     Global.m_pPool      = pP;
                                 }
                             }
@@ -808,7 +807,7 @@ namespace xecs::game_mgr
             return;
         }
 
-        const auto Bits  = Details.m_pArchetype->getComponentBits();
+        const auto Bits  = Details.m_pPool->m_pArchetype->getComponentBits();
         if ( Bits.getBit(pTypeInfo->m_BitID) == false )
         {
             // This entity does not have the requested component
@@ -873,7 +872,7 @@ namespace xecs::game_mgr
         else
         {
             assert(pTypeInfo->m_TypeID == xecs::component::type::id::SHARE );
-            Index -= Details.m_pArchetype->m_nDataComponents;
+            Index -= Details.m_pPool->m_pArchetype->m_nDataComponents;
 
             auto& Family = *Details.m_pPool->m_pMyFamily;
 
@@ -907,7 +906,7 @@ namespace xecs::game_mgr
             // Set the property
             property::set(*pTypeInfo->m_pPropertyTable, pData, PropertyData.first.c_str(), PropertyData.second);
 
-            auto Key = xecs::component::type::details::ComputeShareKey( Details.m_pArchetype->getGuid(), *pTypeInfo, reinterpret_cast<std::byte*>(pData) );
+            auto Key = xecs::component::type::details::ComputeShareKey( Details.m_pPool->m_pArchetype->getGuid(), *pTypeInfo, reinterpret_cast<std::byte*>(pData) );
 
             //
             // get the new family if we have to
@@ -917,7 +916,7 @@ namespace xecs::game_mgr
                 xecs::tools::bits Bits;
 
                 Bits.setBit(pTypeInfo->m_BitID);
-                Details.m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
+                Details.m_pPool->m_pArchetype->getOrCreatePoolFamilyFromSameArchetype
                 ( Family
                 , Bits
                 , { reinterpret_cast<std::byte**>(&pData), 1ull }
@@ -1159,7 +1158,7 @@ namespace xecs::game_mgr
                             , Stream
                             , Details
                             , Info
-                            , Details.m_pPool->m_pComponent[ Details.m_pArchetype->getComponentBits().getIndexOfComponent(Info.m_BitID) ]
+                            , Details.m_pPool->m_pComponent[ Details.m_pPool->m_pArchetype->getComponentBits().getIndexOfComponent(Info.m_BitID) ]
                             ) ) return;
                         }
                     }

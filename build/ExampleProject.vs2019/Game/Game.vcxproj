@@ -170,6 +170,7 @@
     <ClInclude Include="..\..\..\src\xecs_prefabs.h" />
     <ClInclude Include="..\..\..\src\xecs_query.h" />
     <ClInclude Include="..\..\..\src\xecs_query_iterator.h" />
+    <ClInclude Include="..\..\..\src\xecs_scene.h" />
     <ClInclude Include="..\..\..\src\xecs_settings.h" />
     <ClInclude Include="..\..\..\src\xecs_system.h" />
     <ClInclude Include="..\..\..\src\xecs_system_mgr.h" />

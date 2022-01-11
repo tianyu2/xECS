@@ -937,7 +937,7 @@ instance::_CreateEntities
         auto& GlobalEntry = m_Mgr.m_GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
 
         if( Entity.m_Validation != GlobalEntry.m_Validation
-        || GlobalEntry.m_pArchetype != this ) 
+        || GlobalEntry.m_pPool->m_pArchetype != this )
         {
             assert(Entity.m_Validation != GlobalEntry.m_Validation);
             return;
@@ -999,8 +999,8 @@ instance::_MoveInEntity
         // Ready to move then...
         //
         auto&       GlobalEntity  = m_Mgr.m_GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
-        auto&       FromArchetype = *GlobalEntity.m_pArchetype;
         auto&       FromPool      = *GlobalEntity.m_pPool;
+        auto&       FromArchetype = *FromPool.m_pArchetype;
 
         //
         // Move entity
@@ -1014,7 +1014,6 @@ instance::_MoveInEntity
             m_Mgr.AddToStructuralPendingList(FromPool);
             const auto  NewPoolIndex = ToPool.MoveInFromPool( ToIndex, GlobalEntity.m_PoolIndex, FromPool );
 
-            GlobalEntity.m_pArchetype = this;
             GlobalEntity.m_PoolIndex  = NewPoolIndex;
             GlobalEntity.m_pPool      = &ToPool;
 
@@ -1079,8 +1078,8 @@ instance::_MoveInEntity
         }
 
         auto&       FromEntityDetails   = m_Mgr.m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
-        auto&       FromArchetype       = *FromEntityDetails.m_pArchetype;
         auto&       FromFamily          = *FromEntityDetails.m_pPool->m_pMyFamily;
+        auto&       FromArchetype       = *FromEntityDetails.m_pPool->m_pArchetype;
 
         xecs::tools::bits ShareOverlappingComponentsBits;
         for( int i=0; i< ShareOverlappingComponentsBits.m_Bits.size(); ++i ) 

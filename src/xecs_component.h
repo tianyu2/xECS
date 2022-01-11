@@ -200,11 +200,11 @@ namespace xecs::component
             global_info( const global_info&) = delete;
             global_info() = default;
 
-            xecs::archetype::instance*      m_pArchetype    {};
             xecs::pool::instance*           m_pPool         {};
             xecs::pool::index               m_PoolIndex     {};
             validation                      m_Validation    {};
         };
+        static_assert( sizeof(global_info) == (8*2), "We are assuming here 64 bit pointers.");
 
         // This is the actual entity component data members. It boils down to an
         // index to the global record as shown above and a validation.
