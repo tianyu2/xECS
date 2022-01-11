@@ -453,7 +453,7 @@ namespace xecs::game_mgr
     [[nodiscard]] xecs::archetype::instance& instance::getArchetype( xecs::component::entity Entity ) const noexcept
     {
         assert(Entity.isZombie() == false);
-        auto& Entry = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+        auto& Entry = m_ComponentMgr.getEntityDetails(Entity);
         assert( Entity.m_Validation == Entry.m_Validation );
         return *Entry.m_pPool->m_pArchetype;
     }

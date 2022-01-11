@@ -1,5 +1,39 @@
 namespace xecs::component
 {
+    constexpr auto sub_ranges_count_per_range_v         = 512;
+    constexpr auto runtime_range_count_v                = 1024;
+    constexpr auto editor_scene_range_count_overflow_v  = 10024;     // You can grow by 10 Million entities
+    constexpr auto sub_range_entity_count_v             = 256;
+    constexpr auto sub_range_byte_count_v               = xecs::settings::virtual_page_size_v; // == sub_range_entity_count_v * sizeof(entity::global_info)
+
+    namespace details
+    {
+        struct global_info_mgr
+        {
+            entity::global_info*    m_pGlobalInfo          =  nullptr;
+            int                     m_EmptyHead            = -1;
+            int                     m_LastRuntimeSubrange  = -1;
+            int                     m_MaxSceneRange;
+
+            inline
+                                           ~global_info_mgr     ( void ) noexcept;
+            inline
+            void                            Initialize          ( int LastKnownSceneRanged ) noexcept;
+            inline
+            entity::global_info&            getEntityDetails    ( xecs::component::entity Entity ) noexcept;
+            inline
+            const entity::global_info&      getEntityDetails    ( xecs::component::entity Entity ) const noexcept;
+            inline
+            entity                          AllocInfo           ( pool::index PoolIndex, xecs::pool::instance& Pool ) noexcept;
+            inline
+            void                            FreeInfo            ( std::uint32_t GlobalIndex, xecs::component::entity& SwappedEntity ) noexcept;
+            inline
+            void                            FreeInfo            ( std::uint32_t GlobalIndex ) noexcept;
+            inline 
+            void                            AppendNewSubrange   ( void ) noexcept;
+        };
+    }
+
     struct range
     {
         std::size_t         m_StardingAddress;
@@ -52,9 +86,7 @@ namespace xecs::component
         using bits_to_info_array = std::array<const xecs::component::type::info*, xecs::settings::max_component_types_v>;
         using component_info_map = std::unordered_map<xecs::component::type::guid, const xecs::component::type::info*>;
 
-        std::unique_ptr<entity::global_info[]>              m_lEntities         = std::make_unique<entity::global_info[]>(xecs::settings::max_entities_v);
-        int                                                 m_EmptyHead         = 0;
-
+        details::global_info_mgr                            m_GlobalEntityInfos {};
         inline static component_info_map                    m_ComponentInfoMap  {};
         inline static xecs::tools::bits                     s_ShareBits         {};
         inline static xecs::tools::bits                     s_DataBits          {};

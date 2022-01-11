@@ -10,16 +10,18 @@ A Scene range is a particular allocation of **xecs::component::type::entity::glo
 | Fact about Ranges                                                                                  |
 |----------------------------------------------------------------------------------------------------|
 | Addressable Entity Index  = 2^32                                                                   |
-| Info Size                 = 16 bytes = sizeof( xecs::component::type::entity::global_info )        |
-| entity Size               = 1 info size = ( Since there is one global_info per entity )            |
+| Info Size                 = 16 bytes <= sizeof( xecs::component::type::entity::global_info )       |
+| entity Size               = 1 info size <= ( Since there is one global_info per entity )           |
 | Cache Line                = 64 bytes                                                               |
 | Virtual Page Size         = 4096 bytes                                                             |
-| Sub-Range Size (entities) = 256 entities = Virtual Page Size / Info Size                           |
-| Range Size (sub-ranges)   = 512 sub-ranges = (( Chosen by the architect ))                         |
-| Range Size (entities)     = 131,072 entities = (Range(sub ranges)) * (Sub-Range Size(entities))    |
-| Total Ranges              = 32,768 ranges = (Addressable Entity Index) / (Range Size(entities))    |
-| Max Entities              = 4,294,967,296 entities = Total Ranges * (Range Size(entities))         |
-| Max Memory Usage          = 68.719,476,736 GB = Max Entities * Info Size                           |
+| Sub-Range Size (bytes)    = Virtual Page Size                                                      |
+| Sub-Range Size (entities) = 256 entities <= Virtual Page Size / Info Size                          |
+| Range Size (sub-ranges)   = 512 sub-ranges <= (( Chosen by the architect ))                        |
+| Range Size (entities)     = 131,072 entities <= (Range(sub ranges)) * (Sub-Range Size(entities))   |
+| Range Size (byte)         = 2.097,152 MB <= (Range Size (sub-ranges)) * (Sub-Range Size (bytes))   |
+| Total Ranges              = 32,768 ranges <= (Addressable Entity Index) / (Range Size(entities))   |
+| Max Entities              = 4,294,967,296 entities <= Total Ranges * (Range Size(entities))        |
+| Max Memory Usage          = 68.719,476,736 GB <= Max Entities * Info Size                          |
 |----------------------------------------------------------------------------------------------------|
 ~~~
 
@@ -30,9 +32,9 @@ There are a few ranges that are preallocated by the system for the runtime. This
 ~~~cpp
 |----------------------------------------------------------------------------------------------------|
 | Preallocated Ranges = 1,024 (( Chosen by the architect ))                                          |
-| Total Sub-Ranges    = 524,288 sub-ranges = Preallocated Ranges * (Range Size (sub-ranges))         |
-| Total Entities      = 134,217,728 entities = Preallocated Ranges * Range Size (entities)           |
-| Total Memory Usage  = 2.147,483,648 GB = Total Entities * Info Size                                |
+| Total Sub-Ranges    = 524,288 sub-ranges <= Preallocated Ranges * (Range Size (sub-ranges))        |
+| Total Entities      = 134,217,728 entities <= Preallocated Ranges * Range Size (entities)          |
+| Total Memory Usage  = 2.147,483,648 GB <= Total Entities * Info Size                               |
 |----------------------------------------------------------------------------------------------------|
 ~~~
 
@@ -83,6 +85,4 @@ We will have also a Scene mgr which keeps track of the scenes
 ~~~cpp
     auto                   SceneArray = std::array<std::unique_ptr<xecs::scene::instance>, max_scenes_v>
     int                    nScenes    = ...
-
-    Where from the previous code you can SceneArray[SceneIndex]->...
 ~~~

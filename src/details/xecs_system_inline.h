@@ -270,7 +270,7 @@ instance::AddOrRemoveComponents
     bool instance::isEntityDead( const xecs::component::entity Entity ) const noexcept
     {
         if( Entity.isZombie() ) return true;
-        const auto& GlobalEntity = m_GameMgr.m_ComponentMgr.m_lEntities[ Entity.m_GlobalIndex ];
+        const auto& GlobalEntity = m_GameMgr.m_ComponentMgr.getEntityDetails( Entity );
         return GlobalEntity.m_Validation != Entity.m_Validation;
     }
 

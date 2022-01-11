@@ -138,7 +138,7 @@ namespace xecs::pool
             assert( &FromPool != &ToPool );
 
             const auto  Entity  = FromPool.getComponent<xecs::component::entity>(FromIndex);
-            auto&       Details = GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+            auto&       Details = GameMgr.m_ComponentMgr.m_GlobalEntityInfos.getEntityDetails(Entity);
 
             // Move the entity
             ToPool.MoveInFromPool( ToIndex, FromIndex, FromPool );
@@ -431,7 +431,7 @@ namespace xecs::pool
         //
         while( m_DeleteGlobalIndex != invalid_delete_global_index_v )
         {
-            auto&       Entry                   = ComponentMgr.m_lEntities[m_DeleteGlobalIndex];
+            auto&       Entry                   = ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo[m_DeleteGlobalIndex];
             auto&       PoolEntity              = reinterpret_cast<xecs::component::entity&>(m_pComponent[0][sizeof(xecs::component::entity)*Entry.m_PoolIndex.m_Value]);
             const auto  NextDeleteGlobalIndex   = PoolEntity.m_Validation.m_Generation;
             assert(PoolEntity.m_Validation.m_bZombie);

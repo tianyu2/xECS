@@ -934,7 +934,7 @@ instance::_CreateEntities
         //
         // Validate the crap out of the entity
         //
-        auto& GlobalEntry = m_Mgr.m_GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+        auto& GlobalEntry = m_Mgr.m_GameMgr.m_ComponentMgr.m_GlobalEntityInfos.getEntityDetails(Entity);
 
         if( Entity.m_Validation != GlobalEntry.m_Validation
         || GlobalEntry.m_pPool->m_pArchetype != this )
@@ -998,7 +998,7 @@ instance::_MoveInEntity
         //
         // Ready to move then...
         //
-        auto&       GlobalEntity  = m_Mgr.m_GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+        auto&       GlobalEntity  = m_Mgr.m_GameMgr.m_ComponentMgr.m_GlobalEntityInfos.getEntityDetails(Entity);
         auto&       FromPool      = *GlobalEntity.m_pPool;
         auto&       FromArchetype = *FromPool.m_pArchetype;
 

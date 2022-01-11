@@ -130,7 +130,7 @@ mgr::AddOrRemoveComponents
         // Deal with events
         //
         {
-            auto& GlobalEntity = m_GameMgr.m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+            auto& GlobalEntity = m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
             if (GlobalEntity.m_Validation != Entity.m_Validation) return { 0xffffffffffffffff };
 
             auto& FromArchetype = *GlobalEntity.m_pPool->m_pArchetype;

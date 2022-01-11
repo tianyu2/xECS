@@ -185,6 +185,7 @@ namespace xecs::game_mgr
     , bool        isBinary
     ) noexcept
     {
+#if 0
         std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareEntities{};
         std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> ShareKeys    {};
 
@@ -781,6 +782,8 @@ namespace xecs::game_mgr
         }
 
         return Error;
+#endif
+        return {};
     }
 
     //---------------------------------------------------------------------------
