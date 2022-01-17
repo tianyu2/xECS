@@ -35,27 +35,27 @@ These are components that are going to be share across all entities independentl
 
 ***Questions:***
 
-> Can the user change a share component directly?
+> Can the user change a share component directly?<br>
 In xECS that atomic unity is the Entity, so there is not way to change a share component directly. 
 
-> What happens if I have an entity which has a share component with a box and I change it to a cat?
+> What happens if I have an entity which has a share component with a box and I change it to a cat?<br>
 That entity will be moved from the family that has the share containing the box to the family with the share of a cat.
 
-> What happens if after a change my entity from box to cat and that was the last entity that had a box?
+> What happens if after a change my entity from box to cat and that was the last entity that had a box?<br>
 What xECS should do is to move the entity to their new family and delete the previous family, since there are not more entities in there. By deleting those families the references to the share will be decrease and so shares which their references reach zero will be deleted. However we may add a flag to share component types so that it leaves a global share alone even when it reaches zero references.
 
-> What happens if before loading a scene I delete a particular share type?
+> What happens if before loading a scene I delete a particular share type?<br>
 The Loader will do its base to recreate the scene assuming that this share never existed. 
 
 There are 3 kinds of share entities:
 
-1. **Global Shares** - These are components that are going to be share across all entities independenly of archetype or families.
+1. **Global Shares** - These are components that are going to be share across all entities independently of archetype or families.
 2. **Anchetype Shares** - These are components that are going to be share per archetype. This means that if I made a change to this component only the entities for that given archetype will notice.
 3. **Family Shares** - These are components that belong to a particular family and share with any entities inside that family. So when that component changes only the entities inside the family will know it. Note that the Key for this component is its value mix with the archetype and with the family as well.
 
-:warning: **Note: that currently no share (family) is supported.**
-:warning: **Note: There may be a bug in the xECS Family Guid, and possible with share (Archetype, or Family) since everytime one of these shares changes their guid must also be updated.**
-:warning: **Note: There may be a bug in the xECS shares and their Guid, Because if the share changes their guid/key value also changes, which currently is been ignore in the system.**
+:warning: **Note: that currently no share (family) is supported.**<br>
+:warning: **Note: There may be a bug in the xECS Family Guid, and possible with share (Archetype, or Family) since everytime one of these shares changes their guid must also be updated.**<Br>
+:warning: **Note: There may be a bug in the xECS shares and their Guid, Because if the share changes their guid/key value also changes, which currently is been ignore in the system.**<Br>
 
 Shares have a guid which is generated base on their type and value. However their hash look up should be:
 1. **Global Shares** - Should be just their type guid.
@@ -114,22 +114,20 @@ Here we must let the system which component types this particular archetype need
 
 ***Questions:***
 
-**What happens if the user deletes a component type from the scripts?**
+>What happens if the user deletes a component type from the scripts?<br>
 What it will happen is that those components will be removed from those entities.
 
-**What happens if the components change their properties?**
+> What happens if the components change their properties?<br>
 If they are saved by (mode 2, properties) then those won't get loaded unless the user provides some properties that will remap between the old and the new version. If they are saved by (mode 1, serialization function) Then if the user does not proving a remapping those properties will be ignore. But not matter what it should not crash. 
 
-**Will adding new properties to components work?**
+> Will adding new properties to components work? <br>
 There should work fine. However their value will be whatever their constructor does. 
 
-**If the user saved the component with the serialize function and then added properties will it matter?**
+> If the user saved the component with the serialize function and then added properties will it matter? <br>
 No, the serialization system always prioritizes the serialization function over properties. However you do need to keep the serialization function updated.
 
-**If the user saved the component with properties and then added the serialization function will it matter?**
+> If the user saved the component with properties and then added the serialization function will it matter? <br>
 No, the loading of old scenes will be done with the properties systems but future serialization will be done with the serialization function.
 
-**What about if I serialize with the serialize function and then added properties and removed the serialization function?**
+> What about if I serialize with the serialize function and then added properties and removed the serialization function? <br>
 This would be a problem because old scenes still depends on the serialization function. This will cause the component to be created but its values will set the the default constructed values.
-
----

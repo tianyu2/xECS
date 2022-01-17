@@ -9,10 +9,10 @@ When saving regular Entities (meaning no prefab instances) the saving is a bit l
 
 ***Questions:***
 
-> What happens when a share-component changes its data?
+> What happens when a share-component changes its data?<br>
 Since links to the share components are done via their entity this should be ok. 
 
-> When loading an entity will it be in the same pool?
+> When loading an entity will it be in the same pool?<br>
 Pools may be compactify at loading time to minimize the wasted memory.
 
 :warning: this remains to be define a bit more
