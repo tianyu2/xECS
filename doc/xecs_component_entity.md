@@ -11,14 +11,13 @@ The Entity represents the concept of an object, and this objects are the atomic 
 
 Like we mention before entities don't have types however the entire object representation of an entity (So entities and its components) can represent a dynamic type. This dynamic type is call an Archetype. So an Archetype is a unique collection of components. Entities are place inside of one of this Archetypes at run time, and as component are added or removed the entity will migrate to different Archetypes.
 
-Ones you start dealing with Scenes you will realize that there are two kinds of entities:
+There are different kinds of types of entities:
 
 * **Local-Entities** Entities that can not have references across different scenes.
 * **Global-Entities** Entities that can be refer by any other entity independently of which scene you are. Please note that even if you have a reference to the global entity does not mean you can get access it because the scene may not be loaded.
+* **Share-Entities** Entities that are share across all scenes. This entities are not created by the user rather this entities are created by the system and their job is to keep the share-components.
 
 To learn more about [Entity in Scenes check this]()
-
-There is one more concept about Entities and it has to do with prefabs. Entities can either be created raw or they can be created via a prefab. If you create an entity using a prefab then what you have is a prefab instance which is also an entity. To [learn more about prefabs check this]()
 
 ## Entity Component Details
 
@@ -68,7 +67,18 @@ The global_info is consider a detail for most users in xECS and really no one ne
 
 There is an array of global_info this array is virtual because it uses virtual memory so it can be very large (up to 2^32 entries). However the actual break down in really is about ***~140 million entities*** reserved for local-entities for the runtime part, and the rest is for global-entities and their ranges. So xECS should be able to handle a large amount of entities. 
 
-
-
 Global entities are a fascinated subject which You can learn more about [global_info ranges](xecs_scene_ranges.md)
 
+## Creating Entities
+
+Entities can be created in a variety of ways:
+
+* Directly created by scripts through the GameMgr or by a System.
+* Directly created by Instantiating an Entity-Prefab or a Scene-Prefab.
+* Indirectly loading Scenes.
+* Indirectly created by using share-components
+* Directly created by using the editor
+
+When instantiating entities is faster to create them at ones rather than one by one. The secret of an ECS is to group and executed.
+
+---
