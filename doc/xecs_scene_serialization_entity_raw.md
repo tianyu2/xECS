@@ -1,8 +1,7 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
+
 # [xECS](xECS.md) / [Scene](editor.md) / [Serialization]() / [Entity]() / Raw
 
-
-## Introduction
 When saving regular Entities (meaning no prefab instances) the saving is a bit less abstract (meaning it is more better defined), there are for it the system can be faster at serialization. However there are plenty of challenges to overcome:
 
 1. Removal of components
@@ -10,11 +9,12 @@ When saving regular Entities (meaning no prefab instances) the saving is a bit l
 
 ***Questions:***
 
-**What happens when a share-component changes its data?**
+> What happens when a share-component changes its data?
 Since links to the share components are done via their entity this should be ok. 
 
-**When loading an entity will it be in the same pool?**
+> When loading an entity will it be in the same pool?
 Pools may be compactify at loading time to minimize the wasted memory.
+
 :warning: this remains to be define a bit more
 
 ## Family Info
@@ -88,4 +88,3 @@ We will serialize each of the component types together for better efficiency. Th
 * **Name** - is the name of the property in string form
 * **Data** - is the property type (;v2) and then the data associated with the type 0.74.., 0.62.. Note that v2 was one of the original type of the properties that we indicated at the top.
 
----
