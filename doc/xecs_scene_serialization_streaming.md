@@ -1,7 +1,6 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-# [xECS](xECS.md) / [Scene](editor.md) / [Serialization](editor.md) / Streaming
 
-## Introduction
+# [xECS](xECS.md) / [Scene](editor.md) / [Serialization](editor.md) / Streaming
 
 Streaming is an important part of the Scene features, because it allows to have levels that extend forever. This should happen Asynchronously from the actual game so that it can appear transparent to the user. To do this the Scene loading needs to gro throw different stages.
 
