@@ -1,7 +1,6 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-# [xECS](xECS.md) / [Scene](editor.md) / [Serialization]() / Entity
 
-## Introduction
+# [xECS](xECS.md) / [Scene](editor.md) / [Serialization]() / Entity
 
 Scenes knows which entities they need to save because they have a list of those entities. This is the same list that is used to map entity references. These are contexts cases when user want to save Scenes:
 

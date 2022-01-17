@@ -1,7 +1,6 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-# [xECS](xECS.md) / [Scene](editor.md) / [Serialization]() / [Entity]() / Prefab Instance
 
-## Introduction
+# [xECS](xECS.md) / [Scene](editor.md) / [Serialization]() / [Entity]() / Prefab Instance
 
 When saving prefab instance entities we need to save the minimum information that we need to recreate the instance. To recreate the instance we need to follow these steps:
 
