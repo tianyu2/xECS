@@ -211,7 +211,7 @@ namespace xecs::component
         std::uint64_t       m_Value{ invalid_entity_v };
         struct
         {
-            std::uint32_t   m_GlobalIndex;      // Index of the entity in the global pool in the game_mgr
+            std::uint32_t   m_GlobalInfoIndex;  // Index to the global_info
             validation      m_Validation;       // Determine the state and give an additional unique element
         };
 

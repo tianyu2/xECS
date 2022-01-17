@@ -1,4 +1,4 @@
-# [xECS](xECS.md)/[Components](components.md)/[Types](component_Types.md)/[Share Component](component_type_share.md)
+# [xECS](xECS.md) / [Components](components.md) / [Types](component_Types.md) / Share Component
 
 ## Introduction
 Share components are components that are been share with other entities. Why is this desirable?

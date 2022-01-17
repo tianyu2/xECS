@@ -496,7 +496,7 @@ namespace xecs::pool
         auto& Entity = getComponent<xecs::component::entity>(Index);
         assert(Entity.m_Validation.m_bZombie);
         Entity.m_Validation.m_Generation = m_DeleteGlobalIndex;
-        m_DeleteGlobalIndex = Entity.m_GlobalIndex;
+        m_DeleteGlobalIndex = Entity.m_GlobalInfoIndex;
     }
 
     //--------------------------------------------------------------------------------------------

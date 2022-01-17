@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-# [xECS](xECS.md)/[Editor](editor.md)/[Scene Serialization](editor_scene_serialization.md)
+# [xECS](xECS.md) / [Scene](editor.md) / Serialization
 
 ## Introduction
 The serialization of entities for the use of the editor requires us to make certain compromises. For instance future proving is more important than performance. Since things will be changing and we don't want to loose our work.

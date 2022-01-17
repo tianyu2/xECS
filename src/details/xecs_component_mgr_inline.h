@@ -32,7 +32,7 @@ namespace xecs::component
         entity::global_info& global_info_mgr::getEntityDetails( xecs::component::entity Entity ) noexcept
         {
             assert(Entity.isValid());
-            auto& Entry = m_pGlobalInfo[Entity.m_GlobalIndex];
+            auto& Entry = m_pGlobalInfo[Entity.m_GlobalInfoIndex];
             assert(Entry.m_Validation == Entity.m_Validation);
             return Entry;
         }
@@ -41,7 +41,7 @@ namespace xecs::component
         const entity::global_info& global_info_mgr::getEntityDetails( xecs::component::entity Entity ) const noexcept
         {
             assert(Entity.isValid());
-            auto& Entry = m_pGlobalInfo[Entity.m_GlobalIndex];
+            auto& Entry = m_pGlobalInfo[Entity.m_GlobalInfoIndex];
             assert(Entry.m_Validation == Entity.m_Validation);
             return Entry;
         }
@@ -101,7 +101,7 @@ namespace xecs::component
             Entry.m_pPool     = &Pool;
             return
             {
-                .m_GlobalIndex = static_cast<std::uint32_t>(iEntityIndex)
+                .m_GlobalInfoIndex = static_cast<std::uint32_t>(iEntityIndex)
             ,   .m_Validation = Entry.m_Validation
             };
         }
@@ -111,7 +111,7 @@ namespace xecs::component
         void global_info_mgr::FreeInfo( std::uint32_t GlobalIndex, xecs::component::entity& SwappedEntity ) noexcept
         {
             auto& Entry = m_pGlobalInfo[GlobalIndex];
-            m_pGlobalInfo[SwappedEntity.m_GlobalIndex].m_PoolIndex = Entry.m_PoolIndex;
+            m_pGlobalInfo[SwappedEntity.m_GlobalInfoIndex].m_PoolIndex = Entry.m_PoolIndex;
 
             Entry.m_Validation.m_Generation++;
             Entry.m_Validation.m_bZombie = false;
@@ -197,7 +197,7 @@ namespace xecs::component
 
     void mgr::MovedGlobalEntity( xecs::pool::index PoolIndex, xecs::component::entity& SwappedEntity ) noexcept
     {
-        m_GlobalEntityInfos.m_pGlobalInfo[SwappedEntity.m_GlobalIndex].m_PoolIndex = PoolIndex;
+        m_GlobalEntityInfos.m_pGlobalInfo[SwappedEntity.m_GlobalInfoIndex].m_PoolIndex = PoolIndex;
     }
 
     //---------------------------------------------------------------------------

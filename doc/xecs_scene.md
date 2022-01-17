@@ -1,14 +1,20 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-# [xECS](xECS.md)/[Editor](editor.md)/[Scene](editor_scene_serialization.md)
+# [xECS](xECS.md) / Scene
 
 ## Introduction
-Scenes are how xECS manages entity grouping for serialization and organization purposes. There are two kinds of scenes:
 
-* **Global Scenes** These are scenes that are meant to be always loaded. Their purpose is to provide Local-Scenes access to common objects across them, things like the player for instance. So local-scenes can have references to Entities inside Global-Scenes.
-* **Local Scenes** These type of scenes are used to separate different grouping of entities and are pretty much separated from each other. However you can load several Local-Scenes at the same time. This allows things like transitions from one area of the map to another simple. However the limitation is that they can not have references to other entities outside themselves.
-* **Overlapped Scene** These is a type of scene that can have be overlap by an specific set of neighbors. This means that a given range could be overlap by other overlapped-Scenes as long as they are not their neighbors. This is a nice way to create infinite worlds by keep reusing ranges. A typical example of these type of scenes are world made out of a grid scenes. Each of those scenes will be an overlapped scene.  
+The best way to think of a scene is as a glorified spawner of entities, A scene is a container of entities. There are two main types of context when we talk about an entity:
 
-There is one more concept worth mentioning and is the run-time. The run-time is the common space across all scenes. While there may be entities that have logic created in Local Scenes those entities won't ever be saved by the game. Those entities that must be saved by the game should be created by spawners from scenes in the run-time. A typical thing would be to span an entity in the run-time which contain a component with a global state, such pickup information (like a sword), then the actual Player Entity can pick that Object.
+* **Runtime Context** which is when the entity is in the actual game. 
+* **Scene Context** which is when the entity is just in a scene and has nothing to do with runtime.
+
+A scene has different ways to store entities:
+
+* **Global Entities** The main concept of storing entities this way is to allow any other entity to have access to them. This is useful when creating references to these entities. So in away these entities are similar to global variables in programming terms. This means that ***xecs::component::entity.m_GlobalIndex*** must remain static both at runtime and in the scene itself. To solve keeping this global index unique without been overriden by another entity in some other scene we assign [ranges, (Read more here)]().
+
+* **Local Entities** They should be the more common type. They are meant to hold entities that will be spawn into the runtime when the scenes are loaded. Entities store in this type of scenes can not have references to other Scene Local-Entities, only to other Scenes Global-Entities. This means that when the system loads the local-entities their ids will be remapped. This is why any component that has reference to other entities has to provide a function helper in its xecs::component::typedef/(xecs::component::type::info).
+
+Note: Remember the concept of **Overlapped Scene**, which it will try to minimize global-info ranges by knowing which other scenes are its neighbors.
 
 All the files related to the scenes will be located in the same directory. The range file will contain the ranges and could be consider the master file as it needs to be loaded first. This file is the one that should never be checkout unless you deleting or creating a new scene or you are requesting to increase the ranges of one scene.
 
@@ -19,21 +25,34 @@ All the files related to the scenes will be located in the same directory. The r
 +--------------+      +--------------+
                       +--------------+
                       |              |
-                      | Guid01.local |  // Example of local-scene file
+                      | Guid01.scene |  // Example of a scene file
                       |              |
                       +--------------+
                       +--------------+
                       |              |
-                      | Guid02.global|  // Example of global scene file
+                      | Guid02.scene |
                       |              |
                       +--------------+
                       +--------------+
                       |              |
-                      |Guid03.overlap|  // Example of overlapped scene file
+                      | ...          | 
                       |              |
                       +--------------+
-                      // ... etc
 ~~~
+
+## Editor perspective
+
+From an editor perspective there are two contexts:
+
+* **Editor Context** an Entity which has a reference to a scene-entity.
+* **Runtime Context**
+
+This means that a single 
+
+## Working with multiple users
+
+You need to have a way to exclusively check-out file or else you will have problems...
+
 
 ## Dependencies
 

@@ -1,31 +1,11 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-# [xECS](xECS.md)/[Component Manager](component_manager.md)/[Entity](component_types.md)
+# [xECS](xECS.md) / [Scene](component_manager.md) / References
 
 ## Introduction
 
-Global entities is a data structure in the component manager that allows to have references to the actual entities that are located in pools in some archetype. These global entities are also what allow us to keep a unique identifier for entities. In fact the value inside the ***xecs::component::entity.m_GlobalIndex*** is literally an index to one of these global entities. 
+Entity Global Info (*global-infos* in short) is a data structure in the component manager that allows to have references to the actual entities that are located in pools in some archetype. These global entities are also what allow us to keep a unique identifier for entities. In fact the value inside the ***xecs::component::entity.m_GlobalIndex*** is literally an index to one of these global entities. 
 
-There are two kinds of Entity ID ranges. The ones reserve by the Scenes (Please note that a Scene can reserve more than one range), and the ranges reserve by the runtime (Which basically are the non-Scene ranges). Every time a range is reserve it needs to be recorded by a project object. This project object must be loaded every time the editor is used and every time the game runs.
-
-~~~cpp
-+--------------+       +---------+
-| Project      |------>|         | Ranges
-+--------------+       | Scene 0 |
-                       |         |
-                       +---------+
-                       |         | Ranges
-                       | Scene 1 |
-                       |         |
-                       +---------+
-                       |         | Ranges
-                       | Scene 2 |
-                       |         |
-                       +---------+
-                       |         | 
-                       | ...     |
-                       |         |
-                       +---------+
-~~~
+There are a few types of scenes and depending of the type of scene you may have different types of problems with Global entities. There is a document that talk about the [different scenes here](xecs_scene_instance.md). But basically the way to think about a scene is that is a spawner of entities. When a local-scene is spawn all its entities ids need to be re-mapped into the runtime-global-info ranges. See more about these [ranges in this document](). Global-Scenes they will have reserved global-info Index Ranges (*ranges*) those ranges are directly mapped into the virtual space of the global-info.
 
 ### Concepts to keep in mind
 
@@ -38,23 +18,55 @@ Some of these concepts are not guaranteed to make it to the final design but imp
 | Global accessability  | Entity that can be access by any other entity from any other scene. This concept will be used in the Scenes. |
 | Local accessability   | Entity that can only be access by run-time entities and other entities in the same scene. This concept will be used in the Scenes. |
 | Run-Time              | Runtime Entities are separate in concept from Scene Entities as Scene entities when created from the editor don't have access to the runtime. |
-| info Remap Function   | Add to a component info a function that given a "from entity" and a "to entity" will replace any references, <br> since the user would be adding this note that there is room for user mistakes. (Such they forgot to add the function) |
+| info Remap Functions   | Add to a component info a function that given a "from entity" and a "to entity" will replace any references |
 | Repacking Entity IDs  | This could be done to minimize fragmentation of the entity IDs within one (Local) Scene  |
+
+
+### Info Remap Function
+
+We could add set of functions in the **xecs::component::type::info** structure that would allow give components the ability to remap an entity ID to another entity ID. The functions could look as like this:
+
+~~~cpp
+// References is a vector that the user would need to fill up with Pointers to entity references to be remap 
+// Most time would be all entity references 
+using collect_references = void( std::vector< xecs::component::type::entity* >& References ) noexcept;
+~~~
+
+This could solve the following issues:
+
+1. When a scene loads all entities IDs in the game could be remapped to a new IDs without a problem.
+2. Scene-Prefabs would work as well
+3. Moving entities from one local-scene to another would be possible without the need of ranges
+4. When moving entities from one local-scene to another we could detect any reference by another local entity.
+
+However we would have the following issues:
+
+1. The user would need to know about this detail.
+2. Since is user based there could be user errors such the user forgot to include the remapping function.
+3. ...
+
+Other directions to explorer
+
+1. Could the properties provide away such the user does not need to worry about adding these functions?
+   * We may have a problems with components that does not show these types of properties
+   * We would need to formalize the entity property and force people to use that ((**Which is very doable and desirable**))
+2. 
 
 ### Reference Issues
 
 A reference is when an Entity has a component that contains a reference to an entity. This reference could be dangerous depending the case so the following are a set of rules that we must fallow to make sure everything is ok.
 
-| From Accessability | To Accessability | Moving Single Entity Reference Issues |
-|:------------------:|:----------------:|:---------------------------:|
-| Local A            | Local B          | NOT OK |
-| Global A           | Local A          | NOT OK |
-| Local A            | Global A         | OK     |
-| Global A           | Global B         | OK     |
-| Runtime            | Local A          | OK |
-| Runtime            | Global A         | OK |
-| Local A            | Runtime          | NOT OK (IMPOSSIBLE) |
-| Global A           | Runtime          | NOT OK (IMPOSSIBLE) |
+*Moving Single Entity Due to Reference Issues*
+| From Accessability | To Accessability | Reference Issues | Reasons |
+|:------------------:|:----------------:|:---------------------------:|-----------------|
+| Local A            | Local B          | OK | Thanks to the Info Remap Function
+| Global A           | Local A          | NOT OK | Since some scenes may be not loaded, some references can't be fixed.<br> It could be fixed if we could track them... but that may be solved later
+| Local A            | Global A         | OK     | Thanks to the Info Remap Function |
+| Global A           | Global B         | NOT OK | Since some scenes may be not loaded, some references can't be fixed.<br> It could be fixed if we could track them... but that may be solved later |
+| Runtime            | Local A          | NOT OK | IMPOSSIBLE, but could thanks to the Info Remap Function |
+| Runtime            | Global A         | NOT OK | IMPOSSIBLE, but could thanks to the Info Remap Function |
+| Local A            | Runtime          | NOT OK | IMPOSSIBLE, Should not be allowed |
+| Global A           | Runtime          | NOT OK | IMPOSSIBLE, Should not be allowed |
 
 Scenes should only contain entities with short term storage in mind. As when the game is saves it should never save any entity that is not a run-time entity. If a scene needs to have an object that needs to be saved in the game the the scene should put a spawner, so that the object becomes a runtime object.
 
@@ -89,10 +101,6 @@ Merging different types of scenes and their different options
     // Size of global_info = 8*3 = 24bytes ( Would be nice to get it down to 16bytes )
     struct global_info final
     {
-        global_info( const global_info&) = delete;
-        global_info()                    = default;
-
-        xecs::archetype::instance*      m_pArchetype    {};     // [64bits] Pointer to the Archetype (May be remove this field?)
         xecs::pool::instance*           m_pPool         {};     // [64bits] Pointer to the Pool in the archetype
         xecs::pool::index               m_PoolIndex     {};     // [32bits] Current Index inside the pool
         validation                      m_Validation    {};     // [32bits] Validation Number

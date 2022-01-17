@@ -29,6 +29,8 @@ namespace xecs::scene
         xcore::cstring          m_Name;
         type                    m_Type;
         std::vector<range>      m_lRanges;
+
+        std::unordered_map<std::uint64_t, std::uint64_t> m_EntityList;
     };
 
     struct mgr
