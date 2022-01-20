@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
-# [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / Ranges
+# [xECS](xecs.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / Ranges
 
 This section is part of saving global entities. This entities are entities which their ids are allocated inside pre-allocated ranges. This ranges allows to remove conflicts with any other scene. When a particular scene runs out of ranges it must request them via the editor or by exclusively checking out the [project_global.ranges file](xecs_scene_ranges_serialization.md).
 

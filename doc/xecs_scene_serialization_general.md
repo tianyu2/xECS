@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
-# [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / General information
+# [xECS](xecs.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / General information
 
 This section contains general information about the file format and the Scene. This section objective is to give a clear state of the file with a clear general state of its contents.
 

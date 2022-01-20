@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /> <br>
-# [xECS](xECS.md) / [Scene](xecs_scene.md) / References
+# [xECS](xecs.md) / [Scene](xecs_scene.md) / References
 
 Entity Global Info (*global-infos* in short) is a data structure in the component manager that allows to have references to the actual entities that are located in pools in some archetype. These global entities are also what allow us to keep a unique identifier for entities. In fact the value inside the ***xecs::component::entity.m_GlobalIndex*** is literally an index to one of these global entities. 
 

@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /> <br>
-# [xECS](xECS.md) / [Scene](editor.md) / Editor Details
+# [xECS](xecs.md) / [Scene](editor.md) / Editor Details
 
 When adding or editing entities in the editor we will be running the editor instance of xECS. When the game runs the game will load all the entities from the Editor Instance. Since the Editor instance of xECS should be completely in sync with the Game-runtime it is possible for the Run-Time to copy over all the relevant entities from memory if we wanted to. This would allow to very fast start/stop editor states. Some Issues could exists:
 

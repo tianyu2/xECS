@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
-# [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / Entity
+# [xECS](xecs.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / Entity
 
 Serialization of a Scene mainly deals with serializing entities. Scenes knows which entities they need to save because they have a list of those entities. This is the same list that is used to map entity references. This document will talk about the common blocks when serializing the different types of entities.
 

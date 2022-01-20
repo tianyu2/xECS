@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
-# [xECS](xECS.md) / [Scene](xecs_scene.md) / Ranges
+# [xECS](xecs.md) / [Scene](xecs_scene.md) / Ranges
 
 A Scene range is a particular allocation of **xecs::component::type::entity::global_info**. Since all the global_infos are in a continues virtual array the address of each one of them is unique. A range is therefor a discrete chunk of a fixed size from this array. **A range is 16,384 (entities == global_infos)**, so whenever a scene runs out of entities it must allocate another range. To minimize how many times a Scene needs to reserver ranges (since that is an expensive operation) it may reserver several ranges at ones.
 

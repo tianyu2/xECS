@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
-# [xECS](xECS.md) / [Component](xecs_component.md) / Entity
+# [xECS](xecs.md) / [Component](xecs_component.md) / Entity
 
 The Entity represents the concept of an object, and this objects are the atomic unit of xECS. Unlike C++ Object Oriented Objects which are identified by their type and instance pointer, and Entity does not have a type and stead of a pointer it contains a Unique Identifier. In the actual xECS the entity is represented in the following ways:
 

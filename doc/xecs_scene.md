@@ -1,5 +1,5 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
-# [xECS](xECS.md) / Scene
+# [xECS](xecs.md) / Scene
 
 
 The best way to think of a scene is as a glorified spawner of entities, A scene is a container of entities. There are two main types of context when we talk about an entity:
