@@ -10,9 +10,9 @@ In order to know which version of the serialization we are using we will save a 
 ***Example:***
 ~~~cpp
 [ FileInfo ]
-{ Type:s           Version:ddd  AppCompilationDate:s   CreationDate:s }
-//---------------  -----------  --------------------  ------------------
-  "xECS - Scene"     1  0  3     "21:32:4 2/4/2022"   "21:32:4 2/4/2022"
+{ Type:s                  Version:ddd  AppCompilationDate:s   CreationDate:s     User:s }
+//----------------------  -----------  --------------------  ------------------  --------------
+  "xECS - Scene Ranges"     1  0  3     "21:32:4 2/4/2022"   "21:32:4 2/4/2022"  "Pepe"
 ~~~
 
 | Column Name        | Description |
@@ -21,6 +21,7 @@ In order to know which version of the serialization we are using we will save a 
 | Version            | Major: Breaking changes of the file format <br> Minor: changes does not break the API but it has a significant change none the less <br> Patches: Bug fixes | 
 | AppCompilationDate | The time when the application was compiled |
 | CreationDate       | The time when the file was created/exported |
+| User               | Email or Name of the user |
 
 ## Map properties types to xcore::textfile types
 xECS uses xcore::textfile to serialize its entities. Since properties are a typical way to serialize entities xECS will always create a user define block to map between the property types with the xcore::textfile types. Here is what you will see in to the of the file. Note that this may not look identical to you case as every application may have added a different set of properties.

@@ -18,10 +18,9 @@ Note: Remember the concept of **Overlapped Scene**, which it will try to minimiz
 All the files related to the scenes will be located in the same directory. The range file will contain the ranges and could be consider the master file as it needs to be loaded first. This file is the one that should never be checkout unless you deleting or creating a new scene or you are requesting to increase the ranges of one scene.
 
 ~~~cpp
-
-+--------------+      +--------------+
-| Scene Folder |----->| Scene.ranges |  // This files contains all the ranges 
-+--------------+      +--------------+
++--------------+      +-----------------------+
+| Scene Folder |----->| scene_global.ranges   |  // This files used to allocate all the ranges 
++--------------+      +-----------------------+
                       +--------------+
                       |              |
                       | Guid01.scene |  // Example of a scene file
@@ -39,9 +38,9 @@ All the files related to the scenes will be located in the same directory. The r
                       +--------------+
 ~~~
 
-Details about: 
+File details: 
 * [Scene Serialization File](xecs_scene_serialization.md)
-* [Scene Range Serialization File](xecs_scene_range_serialization.md)
+* [Scene Global Ranges Serialization File](xecs_scene_range_serialization.md)
 
 
 ## Editor perspective
