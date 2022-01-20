@@ -40,7 +40,7 @@ All the files related to the scenes will be located in the same directory. The r
 
 File details: 
 * [Scene Serialization File](xecs_scene_serialization.md)
-* [Scene Global Ranges Serialization File](xecs_scene_range_serialization.md)
+* [Scene Global Ranges Serialization File](xecs_scene_ranges_serialization.md)
 
 
 ## Editor perspective
