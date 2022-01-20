@@ -1,5 +1,4 @@
-<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-
+<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
 # [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / [Entity](xecs_scene_serialization_entity.md) / Prefab Instance
 
 When saving prefab instance entities we need to save the minimum information that we need to recreate the instance. When loading we follow these steps:

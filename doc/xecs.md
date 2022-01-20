@@ -1,4 +1,4 @@
-<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
+<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
 
 # xECS Documentation
 

@@ -1,4 +1,5 @@
-# [xECS](xECS.md) / [Components](components.md) / [Types](component_Types.md) / Share Component
+<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /> <br>
+# [xECS](xECS.md) / [Components](xecs_component.md) / [Types](component_types.md) / Share Component
 
 Share components are components that are been share with other entities. Why is this desirable?
 

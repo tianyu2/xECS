@@ -1,6 +1,7 @@
-<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-
+<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
 # [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / General information
+
+This section contains general information about the file format and the Scene. This section objective is to give a clear state of the file with a clear general state of its contents.
 
 ## FileInfo Section
 
@@ -62,7 +63,7 @@ Since all entities are mix together we need to be able to identify which entitie
 
 | Column Name       | Description |
 |:-----------------:|-------------|
-| Name              | Name of the scene |
+| Name              | Name of the scene, note that typically the name of the scene is actually some guid |
 | Guid              | Guid of this scene |
 | nSharedArchetypes | Number of share Archetypes. These are archetypes that have share-entities only. |
 | nLocalArchetypes  | Number of local Archetypes (Prefabs or not). These are archetypes that have local-entities only. | 

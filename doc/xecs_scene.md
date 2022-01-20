@@ -1,5 +1,4 @@
-<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-
+<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
 # [xECS](xECS.md) / Scene
 
 
@@ -10,7 +9,7 @@ The best way to think of a scene is as a glorified spawner of entities, A scene 
 
 A scene has different ways to store entities:
 
-* **Global Entities** The main concept of storing entities this way is to allow any other entity to have access to them. This is useful when creating references to these entities. So in away these entities are similar to global variables in programming terms. This means that ***xecs::component::entity.m_GlobalIndex*** must remain static both at runtime and in the scene itself. To solve keeping this global index unique without been overriden by another entity in some other scene we assign [ranges]().
+* **Global Entities** The main concept of storing entities this way is to allow any other entity to have access to them. This is useful when creating references to these entities. So in away these entities are similar to global variables in programming terms. This means that ***xecs::component::entity.m_GlobalIndex*** must remain static both at runtime and in the scene itself. To solve keeping this global index unique without been overriden by another entity in some other scene we assign [ranges](xecs_scene_ranges.md).
 
 * **Local Entities** They should be the more common type. They are meant to hold entities that will be spawn into the runtime when the scenes are loaded. Entities store in this type of scenes can not have references to other Scene Local-Entities, only to other Scenes Global-Entities. This means that when the system loads the local-entities their ids will be remapped. This is why any component that has reference to other entities has to provide a function helper in its xecs::component::typedef/(xecs::component::type::info).
 
@@ -41,8 +40,8 @@ All the files related to the scenes will be located in the same directory. The r
 ~~~
 
 Details about: 
-* [Scene Files and Serialization](xecs_scene_serialization.md)
-* [Scenes Range File]()
+* [Scene Serialization File](xecs_scene_serialization.md)
+* [Scene Range Serialization File](xecs_scene_range_serialization.md)
 
 
 ## Editor perspective
@@ -70,11 +69,7 @@ Each scene will save into its own file. This file can be assume to be a resource
 
 ## Ranges
 
-Scenes provide a unique id to entities, this unique id is an index to a structure call (**xecs::component::type::entity::global_info**). There for it is important that the id of one entity does not conflict with any other entity. The way the system a chive that is explained in [This document](xecs_component_mgr_global_entities.md). The important thing to know is that each scene has a set of index-ranges where it can create entities in a safe manner. However this ranges are limited inside and a scene may run out of them. When this happen the Scene can request for additional ranges to the Project. This however requires that the user do an *exclusive-checkout* of the project file so it can guarantee that the operation will be atomic across all users. 
-
-## File formats
-
-For the scene file formats you can find it in [This Document]()
+Scenes provide a unique id to entities, this unique id is an index to a structure call (**xecs::component::type::entity::global_info**). There for it is important that the id of one entity does not conflict with any other entity. The way the system a chive that is explained in [This document](xecs_component_entity.md). The important thing to know is that each scene has a set of index-ranges where it can create entities in a safe manner. However this ranges are limited inside and a scene may run out of them. When this happen the Scene can request for additional ranges to the Project. This however requires that the user do an *exclusive-checkout* of the project file so it can guarantee that the operation will be atomic across all users. 
 
 
 ---

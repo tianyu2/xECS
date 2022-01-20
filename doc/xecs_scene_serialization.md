@@ -1,5 +1,4 @@
-<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
-
+<img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
 # [xECS](xECS.md) / [Scene](xecs_scene.md) / Serialization
 
 There are a few cases when we may want to have scene and then serialize it. In other for us to know what contexts we are dealing going to be dealing with we must enumerate them:
