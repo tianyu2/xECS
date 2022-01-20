@@ -108,10 +108,4 @@ The component section does not include any distinct block, rather it starts with
 
 Some component types when they have been serialized with their serialize function may include multiple blocks (this will happen when using the full_serialize function). This is desirable as it really helps the file to remain compact but when the component type which serialized these blocks is removed we must be able to skip the blocks. The way this is handle is by making sure that they user utilizes the full_serialize function correctly. The full serialize needs to be able to report a bad header when is reading. Example:
 
-
-
-
-
-
-
---------------------------------
+---

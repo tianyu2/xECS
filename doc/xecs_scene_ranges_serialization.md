@@ -40,6 +40,8 @@ This block servers to make sure that the application and the file are 100% in sy
 
 ## Allocation Section
 
+This section should have all the ranges allocated for the project. The largest number in this list will help indicate how much virtual memory will be allocated at runtime. The hope is that all ranges will be completely full of entities, however this may not be necessary the case. But xECS maps the virtual pages into physical pages only when needed so it wont waste memory. 
+
 ~~~cpp
 [ Allocation : 3 ]
 { Address:G       Scene:G   }
@@ -55,5 +57,4 @@ This block servers to make sure that the application and the file are 100% in sy
 | Scene              | The Scene GUID, which uniquely identifies a Scene |
 
 
-
-
+---

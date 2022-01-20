@@ -21,3 +21,5 @@ In the editor for every Entity is created we will have a mirror entity. The mirr
 | exclusive tag  | editor_tag              | Will be used to differentiate between editor and regular entities |
 | tag            | editor_selected_tag     | Will be use to determine which object are selected |
 | Data           | editor_scene            | Options and such about controlling the scene in the editor |
+
+---

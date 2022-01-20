@@ -19,3 +19,5 @@ There is only one block in this section and it just give you the address of each
 | Column Name        | Description |
 |:------------------:|-------------|
 | Address            | The actual range address. Each range has a fixed size of 16,384 entities. |
+
+---

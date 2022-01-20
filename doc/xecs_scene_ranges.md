@@ -137,3 +137,5 @@ We will have also a Scene mgr which keeps track of the scenes
 
 If you have an entity that has a reference to another a global entity. But the scene gets unloaded with free-global-entities, if the entity tries to get/find the entity it will create an exception. This exception should be catch and return to the user as an error. 
 
+---
+
