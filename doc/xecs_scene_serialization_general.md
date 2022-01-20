@@ -7,7 +7,6 @@ This section contains general information about the file format and the Scene. T
 
 In order to know which version of the serialization we are using we will save a Label, Version, Date and Time.
 
-***Example:***
 ~~~cpp
 [ FileInfo ]
 { Type:s                  Version:ddd  AppCompilationDate:s   CreationDate:s     User:s }
@@ -15,7 +14,7 @@ In order to know which version of the serialization we are using we will save a 
   "xECS - Scene Ranges"     1  0  3     "21:32:4 2/4/2022"   "21:32:4 2/4/2022"  "Pepe"
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | Type               | Type of file that this is | 
 | Version            | Major: Breaking changes of the file format <br> Minor: changes does not break the API but it has a significant change none the less <br> Patches: Bug fixes | 
@@ -26,7 +25,6 @@ In order to know which version of the serialization we are using we will save a 
 ## Map properties types to xcore::textfile types
 xECS uses xcore::textfile to serialize its entities. Since properties are a typical way to serialize entities xECS will always create a user define block to map between the property types with the xcore::textfile types. Here is what you will see in to the of the file. Note that this may not look identical to you case as every application may have added a different set of properties.
 
-***Example:***
 ~~~cpp
 // New Types
 < d:d b:c f:f s:s v2:ff entity:G C:C >
@@ -54,7 +52,6 @@ The block contain information relevant to the entire scene. Remember that an arc
 
 Since all entities are mix together we need to be able to identify which entities belong to which scene. 
 
-***Example:***
 ~~~cpp
 [ SceneInfo ]
 {  Name:s         Guid:G            nSharedArchetypes:d  nLocalArchetypes:d  nGlobalArchetypes:d }
@@ -62,7 +59,7 @@ Since all entities are mix together we need to be able to identify which entitie
    "Scene Name"    #423FE34234123             5                   4                   2 
 ~~~
 
-| Column Name       | Description |
+|||
 |:-----------------:|-------------|
 | Name              | Name of the scene, note that typically the name of the scene is actually some guid |
 | Guid              | Guid of this scene |

@@ -35,7 +35,6 @@ Unlike Raw Entities Prefabs Instances have to save each entity individually. Thi
 
 This header indicates that we are entering the PrefabInstance context. It contains related information to this context.
 
-***Example:***
 ~~~cpp
 [ PrefabInstance ]
 { EntityID:G  PrefabID:G }
@@ -43,14 +42,14 @@ This header indicates that we are entering the PrefabInstance context. It contai
       #2          #0     
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | EntityID           | is the Entity ID, this may or may not need to be remap depending if we are in the global section or not |
 | PrefabID           | This is the prefabID, Since the prefabs are global-entities their IDs are consider to be good.|
 
 ## Components
+When we serialize the instance we need to know which components got add, removed, or modified. This block allows us to know this. This block will also be used to update the prefab instance component when applicable.
 
-***Example:***
 ~~~cpp
 [ Components : 1 ]
 { ComponentGuid:G    Type:d }
@@ -58,12 +57,12 @@ This header indicates that we are entering the PrefabInstance context. It contai
   #F8E0155B9ABC0972    0   
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | ComponentGuid      | Component type guid, found from xecs::component::type::info_v |
 | Type               | Tells what type of overrides we have for this component. |
 
-|Type Value | Description |
+| Type Value | Description |
 |:--:|-------------|
 | 0  | New component so all its properties go overriden. It won't care what the prefab says about this component. It will be expecting a Prop block. |
 | 1  | Some properties from this component got overriden by the entity. It will be expecting a Prop block. |
@@ -73,7 +72,6 @@ This header indicates that we are entering the PrefabInstance context. It contai
 
 Here is where either are properties serialize related to the the previous header. All components will be serialized using their properties.
 
-***Example:***
 ~~~cpp
 [ Props : 1 ]
 { Name:s            Data:?                        }
@@ -81,7 +79,7 @@ Here is where either are properties serialize related to the the previous header
   "velocity/Value"  ;v2 0.7647978663 0.6442690492
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | Name               | Name of the property |
 | Data               | Data of the property |

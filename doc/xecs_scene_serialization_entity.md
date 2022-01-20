@@ -25,7 +25,7 @@ We have a block to indicate that we are going to be dealing with entities. The c
   "local-entities"   "raw"        5
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | Name               | Is the name of the section. Usually is either "local-entities", "global-entities" or "share-entities"    |
 | SerializationMode  | When serializing components of a particular type there are 3 kinds of modes that we support.             |

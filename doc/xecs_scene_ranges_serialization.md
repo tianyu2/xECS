@@ -7,7 +7,6 @@ This file ***scene_global.ranges*** is where xECS allocates/assign globally rang
 
 In order to know which version of the serialization we are using we will save a Label, Version, Date and Time.
 
-***Example:***
 ~~~cpp
 [ FileInfo ]
 { Type:s                  Version:ddd  AppCompilationDate:s   CreationDate:s     User:s }
@@ -15,7 +14,7 @@ In order to know which version of the serialization we are using we will save a 
   "xECS - Scene Ranges"     1  0  3     "21:32:4 2/4/2022"   "21:32:4 2/4/2022"  "Pepe"
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | Type               | Type of file that this is | 
 | Version            | Major: Breaking changes of the file format <br> Minor: changes does not break the API but it has a significant change none the less <br> Patches: Bug fixes | 
@@ -34,7 +33,7 @@ This block servers to make sure that the application and the file are 100% in sy
   16384          
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | RangeSize          | Is how big a range is interns of entities. In this case there are 16384 entities in a range. |
 
@@ -51,7 +50,7 @@ This section should have all the ranges allocated for the project. The largest n
   ...
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | Address            | Which Range Address was allocated for a particular Scene. |
 | Scene              | The Scene GUID, which uniquely identifies a Scene |

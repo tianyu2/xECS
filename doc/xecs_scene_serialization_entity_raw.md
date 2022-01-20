@@ -10,7 +10,6 @@ Raw entities are entities that don't belong in the prefab instances group which 
 
 This section indicates which component types the file would will need to read and in which mode they were serialize. Please note that component tags have not data to be saved so the mode for them is ignore.
 
-***Example:***
 ~~~cpp
 // TypeInfo Details: 
 //   Guid:0000000000000000   Type:Data   Name:Entity
@@ -26,14 +25,12 @@ This section indicates which component types the file would will need to read an
   ...
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | TypeGuid           | is the GUID of the component type info. This is very important that matches with the component. |
 | SerializationMode  | When serializing components of a particular type there are 3 kinds of modes that we support.    |
 
-***SerializationModes:***
-
-|Mode|Description|
+|SerializationModes|Description|
 |:--:|-----------|
 | 0 | Means that the component type won't save any information. This is typically a component type Tag. Either that or some component had not information to serialize|
 | 1 | Means that it will use the serialize function provided by the user. This is a nice fast way to serialize entities. It also supports future proving|
@@ -63,7 +60,6 @@ This would be a problem because old scenes still depends on the serialization fu
 
 This section exists only for **Archetype Types Section** that has share-components, if it does not this section wont be included. This section specifies what share-components the entity are under. For each of the share-entity references we also include their type which is a bit verbose since that information exists already in the **Archetype Types Section**.
 
-***Example:***
 ~~~cpp
 [ FamilyShares:d ]
 { Entity:G           ShareTypeGuid:G }
@@ -71,7 +67,7 @@ This section exists only for **Archetype Types Section** that has share-componen
   #61F42A111DAF651C  #61F42A111DAF651C
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | Entity             | is the Entity-id which is based on the value which the share-entities saved themselves with in this file. |
 | ShareTypeGuid      | Share component guid which should match the Archetype Type Section, so put here for debugging reasons |
@@ -81,7 +77,7 @@ This section exists only for **Archetype Types Section** that has share-componen
 
 The component section does not include any distinct block, rather it starts with the entity component since this is always require, this block also gives the number of entities that we will be dealing with. Note that the reason to serialize component by component is that it improves the performance and possible compression of the file. However when a component serializes with properties this is not as efficient since each component will create a different block.
 
-***Example using a serialization function:***
+***Using a serialization function:***
 ~~~cpp
 //Entity
 [ 0000000000000000 : 330 ]
@@ -92,7 +88,7 @@ The component section does not include any distinct block, rather it starts with
      ...
 ~~~
 
-***Example using the properties:***
+***Using the properties:***
 ~~~cpp
 [ Props : 1 ]
 { Name:s            Data:?                        }
@@ -100,7 +96,7 @@ The component section does not include any distinct block, rather it starts with
   "velocity/Value"  ;v2 0.7647978663 0.6442690492
 ~~~
 
-| Column Name        | Description |
+|||
 |:------------------:|-------------|
 | Name               | is the name of the property in string form |
 | Data               | is the property type (;v2) and then the data associated with the type 0.74.., 0.62.. Note that v2 was one of the original type of the properties that we indicated in the ***General Sections*** |
