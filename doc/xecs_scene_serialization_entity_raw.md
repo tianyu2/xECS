@@ -1,70 +1,86 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
 
-# [xECS](xECS.md) / [Scene](editor.md) / [Serialization]() / [Entity]() / Raw
+# [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / [Entity](xecs_scene_serialization_entity.md) / Raw
 
-When saving regular Entities (meaning no prefab instances) the saving is a bit less abstract (meaning it is more better defined), there are for it the system can be faster at serialization. However there are plenty of challenges to overcome:
+Raw entities are entities that don't belong in the prefab instances group which includes:
 
-1. Removal of components
-2. Changes of component data
+* **Regular entities** - usually created directly
+* **Share-Entities** - created automatically by the system.
 
-***Questions:***
+## Archetype Types Section
 
-> What happens when a share-component changes its data?<br>
-Since links to the share components are done via their entity this should be ok. 
-
-> When loading an entity will it be in the same pool?<br>
-Pools may be compactify at loading time to minimize the wasted memory.
-
-:warning: this remains to be define a bit more
-
-## Family Info
-Each archetype has a family of pools, this is mainly used for share components where each unique set of values of share components creates a new family. For non-share component Archetypes there will only be just one Family.
+This section indicates which component types the file would will need to read and in which mode they were serialize. Please note that component tags have not data to be saved so the mode for them is ignore.
 
 ***Example:***
 ~~~cpp
-[ FamilyInfo ]
-{ nPools:d  nEntities:d }
-//--------  -----------
-     1           100     
+// TypeInfo Details: 
+//   Guid:0000000000000000   Type:Data   Name:Entity
+//   Guid:895F4D644EFB4528   Type:Data   Name:ShareFilter
+//   Guid:9912A2744953624C   Type:Data   Name:ReferenceCount
+//   Guid:B746E8DB5F35D46F   Type:Share  Name:GridCell
+//   Guid:49F9A4F507C9056B   Type:Tag    Name:ExclusiveShareAsData
+[ ArchetypeTypes : 5 ]
+{ TypeGuid:G         SerializationMode:c }
+//-----------------  -------------------
+                 #0           1         
+  #895F4D644EFB4528           0         
+  ...
 ~~~
 
-* **nPools** - the number of pools that a family has.
-* **nEntities** - the number of entities for this family. This field is really not needed but is use for debugging and such.
+| Column Name        | Description |
+|:------------------:|-------------|
+| TypeGuid           | is the GUID of the component type info. This is very important that matches with the component. |
+| SerializationMode  | When serializing components of a particular type there are 3 kinds of modes that we support.    |
 
-:warning: ***Note: xECS keeps the same number of pools when the file was serialized. This is done on purpose to minimize potential issues with anything.***
+***SerializationModes:***
 
-## Family Shares
+|Mode|Description|
+|:--:|-----------|
+| 0 | Means that the component type won't save any information. This is typically a component type Tag. Either that or some component had not information to serialize|
+| 1 | Means that it will use the serialize function provided by the user. This is a nice fast way to serialize entities. It also supports future proving|
+| 2 | Means that the component will be saved by its properties. This is the default mode, and easier mode to use. However it is not as fast as mode 1.|
 
-This is the list of share entities that belong to the family. The reason why they are entities references is that they allow us to get access to them even if their keys have change. We also add the type of the share component so that is easier to filter out in case we no longer have this component. However the order of these entities should follow the order specified in the ArchetypeTypes block. So this is a bit overkill... (may be removed)
+***Questions:***
+
+> **What happens if the user deletes a component type from the scripts?**<br>
+Those components will be removed when loading from the relevant entities.
+
+> **What happens if the components change(add/remove) their properties?**<br>
+If the user does not provide any functionality to remap between the old and the new the properties will be ignore. This is true for both modes (property and serialization function). But not matter the system won't crash.
+
+> **Will adding new properties to components work?** <br>
+There should work fine. However their value will be whatever their constructor does. 
+
+> **If the user saved the component with the serialize function and then adds properties will it matter?**<br>
+No, the serialization system always prioritizes the serialization function over properties. However you do need to keep the serialization function updated.
+
+> **If the user saved the component with properties and then added the serialization function will it matter?**<br>
+No, loading of old scenes will be done with the properties system and the future serialization will be done with the serialization function.
+
+> **What about if I serialize with the serialize function and then add properties and removed the serialization function?**<br>
+This would be a problem because old scenes still depends on the serialization function. This will cause the component to be created but its values will set the the default constructed values.
+
+## Family Shares Section (Dependent Section)
+
+This section exists only for **Archetype Types Section** that has share-components, if it does not this section wont be included. This section specifies what share-components the entity are under. For each of the share-entity references we also include their type which is a bit verbose since that information exists already in the **Archetype Types Section**.
 
 ***Example:***
 ~~~cpp
 [ FamilyShares:d ]
-{ Entity:G  ShareTypeGuid:G }
+{ Entity:G           ShareTypeGuid:G }
 //-----------------  -----------------
   #61F42A111DAF651C  #61F42A111DAF651C
 ~~~
 
-* **Entity** - Entity which contains the Index of the global entity which contains the actual share component
-* **ShareTypeGuid** - Share component guid for its type
+| Column Name        | Description |
+|:------------------:|-------------|
+| Entity             | is the Entity-id which is based on the value which the share-entities saved themselves with in this file. |
+| ShareTypeGuid      | Share component guid which should match the Archetype Type Section, so put here for debugging reasons |
 
-In case (1) the references to the share-component will ultimately be zero and ultimately be removed. Also in this case the "family" concept may be already lost as for instance the prefab may not longer have any families. 
+<a name="components_section"></a>
+## Components Section
 
-## Pool Info
-We will have X of this headers where (X = [FamilyInfo]:nPools). This header tell us how many entities should be in this particular pool. The total number of entities in a Family can be found out from the ([FamilyInfo]:nEntities).
-
-***Example:***
-~~~cpp
-[ PoolInfo ]
-{ nEntities:d }
-//-----------
-       0     
-~~~
-
-* **nEntities** - The number of entities to be found in this pool.
-  
-## Components
-We will serialize each of the component types together for better efficiency. These component types could be saved like we mention before in two ways, via a serialization function or via properties. 
+The component section does not include any distinct block, rather it starts with the entity component since this is always require, this block also gives the number of entities that we will be dealing with. Note that the reason to serialize component by component is that it improves the performance and possible compression of the file. However when a component serializes with properties this is not as efficient since each component will create a different block.
 
 ***Example using a serialization function:***
 ~~~cpp
@@ -77,7 +93,7 @@ We will serialize each of the component types together for better efficiency. Th
      ...
 ~~~
 
-***Example using the properties of a component:***
+***Example using the properties:***
 ~~~cpp
 [ Props : 1 ]
 { Name:s            Data:?                        }
@@ -85,6 +101,18 @@ We will serialize each of the component types together for better efficiency. Th
   "velocity/Value"  ;v2 0.7647978663 0.6442690492
 ~~~
 
-* **Name** - is the name of the property in string form
-* **Data** - is the property type (;v2) and then the data associated with the type 0.74.., 0.62.. Note that v2 was one of the original type of the properties that we indicated at the top.
+| Column Name        | Description |
+|:------------------:|-------------|
+| Name               | is the name of the property in string form |
+| Data               | is the property type (;v2) and then the data associated with the type 0.74.., 0.62.. Note that v2 was one of the original type of the properties that we indicated in the ***General Sections*** |
 
+
+Some component types when they have been serialized with their serialize function may include multiple blocks (this will happen when using the full_serialize function). This is desirable as it really helps the file to remain compact but when the component type which serialized these blocks is removed we must be able to skip the blocks. The way this is handle is by making sure that they user utilizes the full_serialize function correctly. The full serialize needs to be able to report a bad header when is reading. Example:
+
+
+
+
+
+
+
+--------------------------------

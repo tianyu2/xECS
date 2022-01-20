@@ -1,6 +1,5 @@
 # [xECS](xECS.md) / [Components](components.md) / [Types](component_Types.md) / Share Component
 
-## Introduction
 Share components are components that are been share with other entities. Why is this desirable?
 
 * **Less memory usage -** Since a component is been shared less instances are needed to do whatever we need to. All memory must go first through the cache by using less memory we use less cache.

@@ -1,7 +1,7 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
+
 # [xECS](xECS.md) / Scene
 
-## Introduction
 
 The best way to think of a scene is as a glorified spawner of entities, A scene is a container of entities. There are two main types of context when we talk about an entity:
 
@@ -10,7 +10,7 @@ The best way to think of a scene is as a glorified spawner of entities, A scene 
 
 A scene has different ways to store entities:
 
-* **Global Entities** The main concept of storing entities this way is to allow any other entity to have access to them. This is useful when creating references to these entities. So in away these entities are similar to global variables in programming terms. This means that ***xecs::component::entity.m_GlobalIndex*** must remain static both at runtime and in the scene itself. To solve keeping this global index unique without been overriden by another entity in some other scene we assign [ranges, (Read more here)]().
+* **Global Entities** The main concept of storing entities this way is to allow any other entity to have access to them. This is useful when creating references to these entities. So in away these entities are similar to global variables in programming terms. This means that ***xecs::component::entity.m_GlobalIndex*** must remain static both at runtime and in the scene itself. To solve keeping this global index unique without been overriden by another entity in some other scene we assign [ranges]().
 
 * **Local Entities** They should be the more common type. They are meant to hold entities that will be spawn into the runtime when the scenes are loaded. Entities store in this type of scenes can not have references to other Scene Local-Entities, only to other Scenes Global-Entities. This means that when the system loads the local-entities their ids will be remapped. This is why any component that has reference to other entities has to provide a function helper in its xecs::component::typedef/(xecs::component::type::info).
 
@@ -39,6 +39,11 @@ All the files related to the scenes will be located in the same directory. The r
                       |              |
                       +--------------+
 ~~~
+
+Details about: 
+* [Scene Files and Serialization](xecs_scene_serialization.md)
+* [Scenes Range File]()
+
 
 ## Editor perspective
 

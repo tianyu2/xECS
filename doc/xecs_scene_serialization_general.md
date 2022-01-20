@@ -1,8 +1,8 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
 
-# [xECS](xECS.md) / [Scene](editor.md) / [Serialization]() / General information
+# [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](xecs_scene_serialization.md) / General information
 
-## FileInfo
+## FileInfo Section
 
 In order to know which version of the serialization we are using we will save a Label, Version, Date and Time.
 
@@ -32,15 +32,16 @@ xECS uses xcore::textfile to serialize its entities. Since properties are a typi
 
 ***Questions:***
 
->*What would happen if a game that is trying to load the file has less propertie types?*
+> **What would happen if a game that is trying to load the file has less propertie types?**<br>
 xcore::textfile and xcore::properties are able to handle this case just fine. However the entity's properties that had those types will be ignore.
 
->*What would happens if we change the name of one of the property types?*
+> **What would happens if we change the name of one of the property types?**<br>
 If the user still provides a mapping it should still work, other wise those properties will be ignore.
 
 :warning: **TODO: We need to make this table as part of the user-settings**
 
-## SceneInfo
+<a name="scene_info"></a>
+## SceneInfo Section
 
 The block contain information relevant to the entire scene. Remember that an archetype is a unique set of components, not matter of what type they are. Also note that prefabs/variants are saved separately using a different function. So xECS serialize will ignore any archetype with the xecs::prefab::tag in it. So the scene sequence is: 
 

@@ -1,188 +1,186 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Dependencies">
-      <UniqueIdentifier>{29bdc1f7-2aa6-402a-8551-97f4b1b3648b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="TheGameFiles%28Not compiling here%29">
-      <UniqueIdentifier>{2e21764f-874c-4f37-a135-dfd897533477}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="TheGameFiles%28Not compiling here%29\xCore">
-      <UniqueIdentifier>{5a53e1d7-cbc9-4b11-9f55-1787098ec2c1}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="Example.cpp" />
-    <ClCompile Include="Game\Game.cpp">
-      <Filter>TheGameFiles%28Not compiling here%29</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\dependencies\xcore\src\xcore.cpp">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClCompile>
     <ClCompile Include="..\..\dependencies\xcore\src\xcore_profiler_1.cpp">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClCompile>
     <ClCompile Include="..\..\dependencies\xcore\src\xcore_profiler_2.cpp">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
+    </ClCompile>
+    <ClCompile Include="Game\Game.cpp">
+      <Filter>_Dependencies\Game</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cr.h" />
     <ClInclude Include="LiveCoding.h" />
-    <ClInclude Include="cr.h">
-      <Filter>Dependencies</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_arglist.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_array.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_assert.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_bits.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_cmdline.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_compression.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_context.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_crc.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_endian.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_error.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_event.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_file.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_function.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_global.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_guid.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_lock.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_lockless_pool.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_lockless_queues.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_log.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_matrix4.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_quaternion.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_radian3.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_shapes.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_transform.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector2.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector3.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_math_vector4.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_memory.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_profiler.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_ptr.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_random.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_rtti.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_channel.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_job.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_system.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_scheduler_trigger.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_serialicer.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_serializer.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_span.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_string.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_system_reg.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_target.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_textfile.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_textfile2.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_types.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_unique_span.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_units.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dependencies\xcore\src\xcore_vector.h">
-      <Filter>TheGameFiles%28Not compiling here%29\xCore</Filter>
+      <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="_Dependencies">
+      <UniqueIdentifier>{fa50e780-13d0-4b21-a01c-8b30cd5f367d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_Dependencies\xCore">
+      <UniqueIdentifier>{8670b699-1f3c-42b2-be7b-43cf4032b6a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_Dependencies\Game">
+      <UniqueIdentifier>{20614e4c-5be0-48ec-806f-b64c6a665ec1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

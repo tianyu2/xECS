@@ -1,6 +1,6 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
 
-# [xECS](xECS.md) / [Scene](editor.md) / [Serialization](editor.md) / Streaming
+# [xECS](xECS.md) / [Scene](xecs_scene.md) / [Serialization](editor.md) / Streaming
 
 Streaming is an important part of the Scene features, because it allows to have levels that extend forever. This should happen Asynchronously from the actual game so that it can appear transparent to the user. To do this the Scene loading needs to gro throw different stages.
 
@@ -32,3 +32,5 @@ Ones the Scene has finish creating all the Entities what we will have is a dupli
 One Scene load it should retain a list of entities ids that were created by the scene itself. This list is also the list used in the remapping of entities. When we unload we need to go throw each entity and destroy them. When we do this is likely that we will delete virtual pages and/or even pools.
 
 When we unload Scene we have the choice to leave behind the global entities that we may have created. So next time when we load the scene we can ask it to skip the loading of the global entities.
+
+---

@@ -1,7 +1,7 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
+
 # [xECS](xECS.md) / [Component](component_manager.md) / Entity
 
-## Introduction
 The Entity represents the concept of an object, and this objects are the atomic unit of xECS. Unlike C++ Object Oriented Objects which are identified by their type and instance pointer, and Entity does not have a type and stead of a pointer it contains a Unique Identifier. In the actual xECS the entity is represented in the following ways:
 
 | Representation | Description |
@@ -17,7 +17,7 @@ There are different kinds of types of entities:
 * **Global-Entities** Entities that can be refer by any other entity independently of which scene you are. Please note that even if you have a reference to the global entity does not mean you can get access it because the scene may not be loaded.
 * **Share-Entities** Entities that are share across all scenes. This entities are not created by the user rather this entities are created by the system and their job is to keep the share-components.
 
-To learn more about [Entity in Scenes check this]()
+To learn more about [Entity in Scenes](xecs_scene_serialization_entity.md)
 
 ## Entity Component Details
 
@@ -67,7 +67,7 @@ The global_info is consider a detail for most users in xECS and really no one ne
 
 There is an array of global_info this array is virtual because it uses virtual memory so it can be very large (up to 2^32 entries). However the actual break down in really is about ***~140 million entities*** reserved for local-entities for the runtime part, and the rest is for global-entities and their ranges. So xECS should be able to handle a large amount of entities. 
 
-Global entities are a fascinated subject which You can learn more about [global_info ranges](xecs_scene_ranges.md)
+Global entities are a fascinated subject which You can learn more about [global_info ranges](xecs_scene_serialization_ranges.md)
 
 ## Creating Entities
 

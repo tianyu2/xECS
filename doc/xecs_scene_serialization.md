@@ -1,23 +1,56 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" />
 
-# [xECS](xECS.md) / [Scene](editor.md) / Serialization
+# [xECS](xECS.md) / [Scene](xecs_scene.md) / Serialization
 
-Scenes knows which local-entities they need to save because they have a list of those entities. This is the same list that is used to remap entity references. These are contexts cases when user want to save Scenes:
+There are a few cases when we may want to have scene and then serialize it. In other for us to know what contexts we are dealing going to be dealing with we must enumerate them:
 
-1. Editor
-2. Casual app
+|  Context   |  Save   | Load |
+|:----------:|:-------:|:----:|
+| Editor     |    Y    |   Y  |
+| Casual App |    Y    |   Y  |
+| Runtime    |    N    |   Y  |
 
-Loading scenes:
 
-1. Editor
-2. Casual app
-3. Runtime
+Map of the file:
+* [General Sections](xecs_scene_serialization_general.md) - General information about the file
+* [Entity Sections](xecs_scene_serialization_entity.md) - Actual Scene data
+
+~~~html
+     Scene File
+     +------------------------------------------------+
+     | <General-Sections>                             |
+     | +--------------------------------------------+ |
+     | | ...                                        | |
+     | +--------------------------------------------+ |
+     |                                                |
+     | <Entity-Sections>                              |
+     | +--------------------------------------------+ |
+     | | Share-Entities                             | |
+     | | +----------------------------------------+ | |
+     | | | * Raw Entities                         | | |
+     | | +----------------------------------------+ | |
+     | |                                            | |
+     | | Local-Entities                             | |
+     | | +----------------------------------------+ | |
+     | | | * Raw Entities                         | | |
+     | | | * Prefab Instances Entities            | | |
+     | | +----------------------------------------+ | |
+     | |                                            | |
+     | | Global-Entities                            | |
+     | | +----------------------------------------+ | |
+     | | | * Ranges                               | | |
+     | | | * Raw Entities                         | | |
+     | | | * Prefab Instances Entities            | | |
+     | | +----------------------------------------+ | |
+     | +--------------------------------------------+ |
+     +------------------------------------------------+
+~~~
 
 These are the different kinds of entities that the file needs to be able to serialize:
 
 | Type of Entity | Prefab Instance<br>(Entity or Scene) | Comments |
 |:--------------:|:---------------:|----------|
-| Share Entity   |        N (only) | Share entities are created by the system and their job is to hold the share-components |
+| Share Entity   |        N        | Share entities are created by the system and their job is to hold the share-components |
 | Local Entity   |        N        | Regular entities created using the default API which can't have references outside their scene.<br> This entities will need their references to be remapped. |
 | Local Entity   |        Y        | Prefabs Instances  which can't have references outside their scene.<br> This entities will need their references to be remapped. |
 | Global Entity  |        N        | Regular entities that any other entities can refer to them, and their ids are created in ranges |
@@ -25,10 +58,10 @@ These are the different kinds of entities that the file needs to be able to seri
 | Prefab Entity  |        N        | Prefabs are similar to Global Entities however their range is organize a bit different. |
 | Prefab Entity  |        Y        | These are known as Variants. are similar to Global Entities however their range is organize a bit different. |
 
-## Serializer Modes
 
-Since only the entities of a particular scene needs to be saved and those are mix with all other entities we must filter out entities that don't belong 
-to achieve this the serializer may need to do multiple passes to collect the require information.
+To learn more about [Entity Serialization](xecs_scene_serialization_entity.md)
+
+## Serializer Modes
 
 There different modes to utilize the Serializer:
 
@@ -54,9 +87,5 @@ The serialization of entities for the use of the editor requires us to make cert
 
 When saving Scenes it is important to include the range allocation. Note that the Range File could be also consider part of the serialization.
 
-## Sections of the file
-
-* [Ranges]()
-* [General]()
-* [Entities]()
+---
 
