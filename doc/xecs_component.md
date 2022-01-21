@@ -32,7 +32,7 @@ Note that the component has 2 very important parts:
 
 It is very important to organize components in such a way to they don't waste memory as well as accessing them is very fast. One recommendation is to keep the components as compact as possible. So be sure that they are well align so there is not allot of wasted padding in the structure, and use the smaller types possible to represent your data. xECS will organize the components in pools. These pools are basically work like a vector of each of the components. This means that when a System needs to access them they will all be in a nice sequential order which is very good for the cache.
 
-The logical organization of xECS
+The organization of xECS
 
 ~~~cpp
  Vector<Archetype>
@@ -45,10 +45,10 @@ The logical organization of xECS
 +--------------+    | | | +-----+-----+-----+++ | | |   | +-----+-----+-----+++ |         | | +-----+-----+-----+++ | |    
 +--------------+    | | | | ptr | ptr | ptr ||| | | |   | | ptr | ptr | ptr ||| |         | | | ptr | ptr | ptr ||| | |      
 +--------------+    | | | +-----+-----+-----+++ | | |   | +-----+-----+-----+++ |         | | +-----+-----+-----+++ | |      
-                    | | +----|-----|-----|------+ | |   +----|-----|-----|------+         | +----|-----|-----|------+ |      
-                    | +------|-----|-----|--------+ |       ...   ...   ...               +------|-----|-----|--------+      
-                    +--------|-----|-----|----------+                                           ...   ...   ...              
-                             |     |    ...                                                       
+                    | | +----|-----|------------+ | |   +-----------------------+         | +-----------------------+ |      
+                    | +------|-----|--------------+ |                                     +---------------------------+      
+                    +--------|-----|----------------+      
+                             |     |                                         
                       +------+     +------+                                   
                       |                   |                        
                       v                   v                   
