@@ -1,6 +1,16 @@
 <img src="https://i.imgur.com/TyjrCTS.jpg" align="right" width="220px" /><br>
 # [xECS](xecs.md) / [Component](xecs_component.md) / Entity
 
+<details>
+<summary><i><b><span style="font-size:24px">
+Related Topics 
+</span></b><span style="font-size:12px">(Click to open)</span>
+</i></summary>
+
+* [Scene entity references](ecs_scene_entity_references.md)
+* [Scene file format, details about entities](xecs_scene_serialization_entity.md)
+</details><span style="font-size:8px"><br></span>
+
 The Entity represents the concept of an object, and this objects are the atomic unit of xECS. Unlike C++ Object Oriented Objects which are identified by their type and instance pointer, and Entity does not have a type and stead of a pointer it contains a Unique Identifier. In the actual xECS the entity is represented in the following ways:
 
 | Representation | Description |

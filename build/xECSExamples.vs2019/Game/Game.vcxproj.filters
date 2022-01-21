@@ -165,9 +165,6 @@
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_textfile.h">
       <Filter>_Dependencies\xCore</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_textfile2.h">
-      <Filter>_Dependencies\xCore</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_types.h">
       <Filter>_Dependencies\xCore</Filter>
     </ClInclude>

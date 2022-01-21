@@ -137,7 +137,6 @@
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_system_reg.h" />
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_target.h" />
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_textfile.h" />
-    <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_textfile2.h" />
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_types.h" />
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_unique_span.h" />
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_units.h" />

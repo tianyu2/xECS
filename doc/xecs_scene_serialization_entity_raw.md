@@ -88,6 +88,30 @@ The component section does not include any distinct block, rather it starts with
      ...
 ~~~
 
+
+***Using a serialization full function:***
+
+Note that the user can have as many block section here as they want. The system will insert a final section to indicate when a full_function serialization is done.
+~~~cpp
+
+[ A : 330 ]
+{ Example:d }
+//--------
+    0   
+    3   
+    ...
+
+[ B : 330 ]
+{ Example:d }
+//--------
+    0   
+    3   
+    ...
+
+// This is the completed header, essential to make sure we have reach the end of a full serialize
+@[ FullSerialize ]
+~~~
+
 ***Using the properties:***
 ~~~cpp
 [ Props : 1 ]
