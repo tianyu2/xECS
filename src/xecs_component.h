@@ -12,6 +12,7 @@ namespace xecs::component
         using guid                  = xcore::guid::unit<64, struct component_type_tag>;
         using full_serialize_fn     = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept;
         using serialize_fn          = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData ) noexcept;
+        using report_references_fn  = void( std::vector<xecs::component::entity*>, std::byte* pData ) noexcept;
 
         // Tells the component type how we should serialize the component
         enum class serialize_mode : std::uint8_t
@@ -35,11 +36,12 @@ namespace xecs::component
             constexpr static auto   max_size_v          = xecs::settings::virtual_page_size_v;
             constexpr static auto   id_v                = id::DATA;
 
-            guid                    m_Guid              {};
-            const char*             m_pName             {"Unnamed data component"};
-            serialize_fn*           m_pSerilizeFn       { nullptr };
-            full_serialize_fn*      m_pFullSerializeFn  { nullptr };
-            serialize_mode          m_SerializeMode     { serialize_mode::AUTO };
+            guid                    m_Guid               {};
+            const char*             m_pName              {"Unnamed data component"};
+            report_references_fn*   m_pReportReferencesFn{ nullptr };
+            serialize_fn*           m_pSerilizeFn        { nullptr };
+            full_serialize_fn*      m_pFullSerializeFn   { nullptr };
+            serialize_mode          m_SerializeMode      { serialize_mode::AUTO };
         };
 
         struct tag
@@ -74,15 +76,16 @@ namespace xecs::component
             };
             using compute_key_fn = key(const std::byte*) noexcept;
 
-            guid                    m_Guid              {};
-            const char*             m_pName             { "Unnamed share component" };
-            bool                    m_bGlobalScoped     { true };                           // TODO: To be deleted! Global Scoped vs Archetype Scoped. If you want a per-family (Such every family has a bbox)? This is a TODO for the future.
-            //bool                  m_bDeleteOnZeroRef  { true };                           // TODO: Potentially add this feature.
-            bool                    m_bBuildFilter      { false };                          // Tells xECS to automatically create a reference to all its references "a filter". So if we want to find all entities that have a share of a particular value we can do it quickly.
-            compute_key_fn*         m_ComputeKeyFn      { nullptr };
-            serialize_fn*           m_pSerilizeFn       { nullptr };
-            full_serialize_fn*      m_pFullSerializeFn  { nullptr };
-            serialize_mode          m_SerializeMode     { serialize_mode::AUTO };
+            guid                    m_Guid               {};
+            const char*             m_pName              { "Unnamed share component" };
+            report_references_fn*   m_pReportReferencesFn{ nullptr };
+            bool                    m_bGlobalScoped      { true };                           // TODO: To be deleted! Global Scoped vs Archetype Scoped. If you want a per-family (Such every family has a bbox)? This is a TODO for the future.
+            //bool                  m_bDeleteOnZeroRef   { true };                           // TODO: Potentially add this feature.
+            bool                    m_bBuildFilter       { false };                          // Tells xECS to automatically create a reference to all its references "a filter". So if we want to find all entities that have a share of a particular value we can do it quickly.
+            compute_key_fn*         m_ComputeKeyFn       { nullptr };
+            serialize_fn*           m_pSerilizeFn        { nullptr };
+            full_serialize_fn*      m_pFullSerializeFn   { nullptr };
+            serialize_mode          m_SerializeMode      { serialize_mode::AUTO };
         };
 
         namespace details
@@ -133,6 +136,7 @@ namespace xecs::component
             copy_fn* const              m_pCopyFn;              // Copy function for the component
             compute_key_fn* const       m_pComputeKeyFn;        // Computes the key from a share component
             full_serialize_fn* const    m_pSerilizeFn;          // This is the serialize function
+            report_references_fn* const m_pReportReferencesFn;  // This is a callback to report references for components that have references to other entities
             const property::table*      m_pPropertyTable;       // Properties for the component
             mutable type::share::key    m_DefaultShareKey;      // Default value for this share component
             serialize_mode              m_SerializeMode;        // Tells the component how it should serialize itself

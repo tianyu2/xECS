@@ -194,6 +194,11 @@ namespace xecs::component
                                             };
                                       }()
             ,   .m_pSerilizeFn      = serialize_v<T_COMPONENT>
+            ,   .m_pReportReferencesFn = []() consteval noexcept
+                                        {
+                                            if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return nullptr;
+                                            else return T_COMPONENT::typedef_v.m_pReportReferencesFn;
+                                        }()
             ,   .m_pPropertyTable   = getPropertyTable<T_COMPONENT>()
             ,   .m_SerializeMode    = []() consteval noexcept -> serialize_mode
                                       {

@@ -23,6 +23,41 @@ xECS supports a few ways to save the components:
 2. By serialize function. This provides a much faster way to serialize your components and can be used for simple components.
 3. By a full serialize function. Also a very fast way to serialize components but this version allows to deal with complex components as well.
 
+
+## Scene entity-id remapping 
+
+When serializing entities in Scenes we need to remap any reference that they may have. **SO IS VERY IMPORTANT NOT TO FORGET TO ADD THE CALLBACK TO THE RIGHT COMPONENTS**. The right components are any component that have references to other entities. Such like the Hierarchy component.
+
+Here is an example on how to do this:
+~~~cpp
+
+namespace details
+{
+    void ReportEntites( std::vector<xecs::component::entity*>& , std::byte* ) noexcept;
+}
+
+struct hierarchy
+{
+    // Sets our function as the m_pReportReferencesFn method, this will let the system knows to call us when remapping is necessary
+    static constexpr auto typedef_v = xecs::component::type::data
+    {
+        .m_pReportReferencesFn  = details::ReportEntites
+    };
+
+    xecs::component::entity              m_Parent;          // Who is our parent entity?
+    std::vector<xecs::component::entity> m_Children;        // A vector with all our children entities 
+};
+
+void details::ReportEntites( std::vector<xecs::component::entity*>& Entities, std::byte* pComponent ) noexcept
+{
+    auto& Hierarchy = *reinterpret_cast<hierarchy*>(pComponent);
+    Entities.pusback( &Hierarchy.m_Parent );
+    for( auto& E : Hierarchy.m_Children ) Entities.pusback( &E );
+}
+~~~
+
+Ideally this should be done with the properties. So this is something that we could look into fixing in the future.
+
 ## Serializing via Properties (Default)
 
 Properties are a very important concept in game development, and it is used for different type of functionality:
@@ -97,7 +132,7 @@ xcore::err details::Serialize           // Note that the function returns an err
     // Each of the function will read/write the component data and if there is an error it will store it in the Error 
     // variable and immediately stop reading or writing
        (Error = TextFile.Field( "Position", Transform.m_Position.m_X, Transform.m_Position.m_Y. Transform.m_Position.m_Z ))
-    || (Error = TextFile.Field( "Rotation", Transform.m_Rotation.m_X, Transform.m_Rotation.m_Y. Transform.m_Rotation.m_Z, Transform.m_Rotation.m_Z ))
+    || (Error = TextFile.Field( "Rotation", Transform.m_Rotation.m_X, Transform.m_Rotation.m_Y. Transform.m_Rotation.m_Z, Transform.m_Rotation.m_W ))
     || (Error = TextFile.Field( "Scale",    Transform.m_Scale.m_X,    Transform.m_Scale.m_Y.    Transform.m_Scale.m_Z ))
 
     // Returns the error if any
@@ -135,19 +170,19 @@ struct hierarchy
 xcore::err details::FullSerialize       // Note that the function returns an error code
 ( xcore::textfile::stream&  TextFile    // [IN] xcore provides the serializer, so this is the instance to it
 , bool                      isRead      // [IN] Variable that tells you if we are reading or writing (This example does not use it)
-, std::byte*                pArrayData  // [IN/OUT] Pointer to the begging of the array of our components
+, std::byte*                pComponentArray // [IN/OUT] Pointer to the begging of the array of our components
 , int&                      Count       // [IN/OUT] When writing it tells us how many entities we must write, when reading we must return how many we read
 ) noexcept                              // Note that the function is marked as no throwing exceptions 
 {
-    auto&       pHierarchyArray = *reinterpret_cast<hierarchy*>(pComponent); // Converts the byte pointer to our array of components
-    xcore::err  Error;                                                       // Variable to store the error if any
+    auto&       pHierarchyArray = *reinterpret_cast<hierarchy*>(pComponentArray); // Converts the byte pointer to our array of components
+    xcore::err  Error;                                                            // Variable to store the error if any
 
     //
     // This first block of data we will serialize all the component information:
     // which for the moment is the parent and the number of children.
     // All the children will be serialize together as a separate table
     //
-    int TotalChildren=0;    // We are going to keep of the total number of children that we are going to write
+    int TotalChildren=0;    // We want to know the total number of children form all the components together
     if( TextFile.Record     // This record function will return true if it found an error
     ( Error                 // We pass the error variable to get the actual error this variable gets used in the callbacks too
     , "Hierarchy"           // Name of this record
@@ -160,7 +195,7 @@ xcore::err details::FullSerialize       // Note that the function returns an err
         if( isRead ) Count = static_cast<int>(Size);
         else         Size  = Count;      // If we are writing then we need to tell the text file how many entries we will write
     }
-    ,[&]                    // This callback deals with each entry
+    ,[&]                    // This callback deals with each entry (component)
     ( std::size_t I         // [In]  I is the current entry index
     , xcore::err& Err       // [Out] If we had an error we may need to report it
     ) noexcept 
@@ -200,7 +235,7 @@ xcore::err details::FullSerialize       // Note that the function returns an err
     ) noexcept
     {
 
-        // When reading The TotalChildren should be the same size and the amount of entries in this table
+        // When reading The TotalChildren should be the same size as the amount of entries in this table
         if( isRead ) assert( TotalChildren == static_cast<int>(Size) ); 
         else         Size  = static_cast<std::size_t>(TotalChildren);     // For writing we set the size to be the count of all the children
     }
@@ -226,7 +261,12 @@ xcore::err details::FullSerialize       // Note that the function returns an err
 </details>
 
 
-## Scene entity-id remapping 
+## Backwards compatibility with Properties
 
-When serializing local-entities in Scenes we need to remap any reference that they may have. To solve this we must provide a function to do so:
+TODO:
 
+## Baclwards compatibility with Serialization Functions
+
+TODO:
+
+---

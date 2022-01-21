@@ -2,6 +2,11 @@
 #define XECS_PREDEFINITIONS_H
 #pragma once
 
+namespace xecs::component
+{
+    union entity;
+}
+
 namespace xecs::game_mgr
 {
     struct instance;
