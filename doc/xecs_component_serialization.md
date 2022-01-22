@@ -51,8 +51,8 @@ struct hierarchy
 void details::ReportEntites( std::vector<xecs::component::entity*>& Entities, std::byte* pComponent ) noexcept
 {
     auto& Hierarchy = *reinterpret_cast<hierarchy*>(pComponent);
-    Entities.pusback( &Hierarchy.m_Parent );
-    for( auto& E : Hierarchy.m_Children ) Entities.pusback( &E );
+    Entities.push_back( &Hierarchy.m_Parent );
+    for( auto& E : Hierarchy.m_Children ) Entities.push_back( &E );
 }
 ~~~
 
@@ -81,7 +81,7 @@ struct transform
 };
 
 // Here are the properties for our transform component
-property_begin( position )
+property_begin( transform )
 {
       property_var( m_Position )
     , property_var( m_Rotation  )
