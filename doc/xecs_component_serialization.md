@@ -26,9 +26,15 @@ xECS supports a few ways to save the components:
 
 ## Scene entity-id remapping 
 
-When serializing entities in Scenes we need to remap any reference that they may have. **SO IS VERY IMPORTANT NOT TO FORGET TO ADD THE CALLBACK TO THE RIGHT COMPONENTS**. The right components are any component that have references to other entities. Such like the Hierarchy component.
+When serializing entities in Scenes we need to remap any reference to other entities that they the component may have. This remapping is not just a requirement for serialization but also when creating Scene-prefabs. So we encourage the users to be aware of the different ways to do this:
 
-Here is an example on how to do this:
+| User provides | Serialization Speed | Scene-Prefab Speed | Comments |
+|---------------|---------------------|--------------------|----------|
+|  Nothing      |        BAD          |        BAD         | Remapping will happen automatically via the properties. This option is OK but is the slowest method, and typically done when performance is not an issue yet.  |
+|  Serialization Function | GOOD      |        BAD         | Remapping will happen automatically via the the serialization function. For Serialization this is very fast but has the problem of decaying to the property version when creating Scene-Prefabs.
+| ReportReferenceFn |   GOOD   | GOOD | ReportReferenceFn is in the typedef_v. This is the fastest way across the board. This removes any worry on performance when creating Scene-Prefabs. |
+
+Here is an example on how to provide the ReportReferenceFn:
 ~~~cpp
 
 namespace details
@@ -55,8 +61,6 @@ void details::ReportEntites( std::vector<xecs::component::entity*>& Entities, st
     for( auto& E : Hierarchy.m_Children ) Entities.push_back( &E );
 }
 ~~~
-
-Ideally this should be done with the properties. So this is something that we could look into fixing in the future.
 
 ## Serializing via Properties (Default)
 
