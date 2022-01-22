@@ -12,3 +12,7 @@
 typedef_v is short for Type Definition Value, and what it means is that we are defining the particular type of component as well as all the details about how the component should behave in the system. It is a variable rather than been inherited or something else because it frees the components to have their own hierarchy if they choose to do so, and because it is a static variable and is constructed at compile time there is not wasted memory or performance for that matter. The system uses the typedef_v to build the **xecs::component::type::info** for each component. 
 
 
+
+---
+
+

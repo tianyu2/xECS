@@ -23,7 +23,7 @@ The first limitation that you will encounter is the types that the properties su
 | int32_t                 | signed integer number |
 | uint32_t                | unsigned integer number |
 | float                   | signed floating point number. |
-| double                  | signed floating point number. |
+| double                  | double precision floating point number. |
 | xecs::component::entity | This is to be use whenever there is a reference to another entity |
 | xcore::vector2          | vector2 provided by xcore |
 | xcore::vector3          | vector3 provided by xcore, (SIMD optimized with 4*sizeof(float)) |
@@ -100,3 +100,5 @@ property_begin( hierarchy )
 ## Supporting C++ Pointers
 
 TODO:
+
+---
