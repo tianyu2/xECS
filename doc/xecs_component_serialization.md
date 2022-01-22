@@ -30,7 +30,8 @@ When serializing entities in Scenes we need to remap any reference to other enti
 
 | User provides | Serialization Speed | Scene-Prefab Speed | Comments |
 |:-------------:|:-------------------:|:------------------:|----------|
-|  Nothing      |        BAD          |        BAD         | Remapping will happen automatically via the properties. This option is OK but is the slowest method, and typically done when performance is not an issue yet.  |
+|  Nothing      |         X           |         X          | It won't serialize anything or Instantiate any prefabs |
+|  Properties   |        BAD          |        BAD         | Remapping will happen automatically via the properties. This option is OK but is the slowest method, and typically done when performance is not an issue yet.  |
 |  Serialization Function | GOOD      |        BAD         | Remapping will happen automatically via the the serialization function. For Serialization this is very fast but has the problem of decaying to the property version when creating Scene-Prefabs.
 | ReportReferenceFn |   GOOD   | GOOD | ReportReferenceFn is in the typedef_v. This is the fastest way across the board. This removes any worry on performance when creating Scene-Prefabs. |
 
