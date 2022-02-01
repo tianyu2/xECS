@@ -5,5 +5,6 @@
 Cross platform **Event Component And Systems**, is a type of *Entity Component and System*.
 
 
+ALL THESE DOCUMENTATION IS VERY MUCH A WIP
 
 ---
