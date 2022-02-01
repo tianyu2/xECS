@@ -11,7 +11,7 @@
 * [Scene file format, details about entities](xecs_scene_serialization_entity.md)
 </details></h3>
 
-Please make sure that [Entity Prefabs](xecs_prefab_entity.md) make sense before understanding what this is. Scene Prefabs are similar in concept to an [Entity Prefab](xecs_prefab_entity.md) in concept except stead of having one Entity you can have Many. When you have many entities in a way you are creating a mini Scene. One of the key differences between a regular Entity Prefab is that here we need a pivot point.
+Please make sure that [Entity Prefabs](xecs_prefab_entity.md) make sense before understanding what this is. Scene Prefabs are similar in concept to an [Entity Prefab](xecs_prefab_entity.md) except stead of having one Entity you can have Many. When you have many entities in away you are creating a mini-Scene. If there is not a single entity as the parent, the Scene Prefab will automatically create an "virtual entity" to represent the pivot point of the collection. When the Scene-Prefab is instantiated the pivot will get remove. If the user wants to have a pivot instantiate then it can create an entity and put all other ones as children.
 
 Similar to what happens when you select multiple entities in a editor you need a point that can be consider the pivot/origin of the Scene. Where you can rotate/scale/position the scene base on this point.
 

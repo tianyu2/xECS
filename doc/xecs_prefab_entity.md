@@ -23,6 +23,16 @@ The Entity Prefab is an entity which is used to create the Entity Prefab Instanc
 
 Entity Prefab Instances are just like any other type of entity, in fact in the Game.DLL after it loads them or create them it won't know any difference at all. This allows entities to group together into larger Archetypes and be more efficient.
 
+## Prefab Instances 
+
+Cloning prefabs is call creating a prefab-instance. In the [editor context Prefab-instances](xecs_editor_entities.md) are linked with the original Prefabs, and carry an extra component.
+
+| State | Description |
+|-------|----------|
+| Added Component (X) | Added a new component to the prefab-instance. This component can be anything. This also  means that when the instance was created the component did not exited in the prefab. All properties for this component are assumed to be overriden. |
+| Deleted Component (X) | Deleted a component from the prefab-instance. This component can be anything. This also means that when the instance was created the component did exist in the prefab. |
+| Override Property (X,V) | Means that the component modified a value(V) of property (X). |
+
 ## Entity Prefab GUID vs Prefab EntityID
 
 The entity prefab GUID **(xecs::prefab::guid)** is the official Identifier of a Prefab. This global identifier will also be used as its filename. The Prefab EntityID **(xecs::component::entity)** is the current ID of a prefab. Please note that every time a prefab is loaded the EntityID will be different as it could be remap to different slots every time. With the GUID you can get the Prefab's EntityID if needed. 
