@@ -2,6 +2,7 @@
 #include "xecs_predefinitions.h"
 #include "xecs_settings.h"
 #include "xecs_component.h"
+#include "xecs_component_entity.h"
 
 #include "xcore_math.h"
 #include "xcore_math_vector2.h"

@@ -11,3 +11,5 @@
 * [Scene file format, details about entities](xecs_scene_serialization_entity.md)
 </details></h3>
 
+A variant also know as hierarchical Prefabs or Recursive Prefabs, is in simple terms an Prefab which contains prefab instances. So this means that in order to create an prefab instance it must go throw the entire process of creating prefab instances recursively. To speed up this process xECS have all prefabs including variants instantiated as entities but invisible thank to the xecs::prefab::tag. This allows for fast instance creation at runtime. In the editor side changing a child prefab will have recursive consequences. 
+

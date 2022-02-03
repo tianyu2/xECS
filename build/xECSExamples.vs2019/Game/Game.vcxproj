@@ -160,7 +160,9 @@
     <ClInclude Include="..\..\..\src\xecs_archetype.h" />
     <ClInclude Include="..\..\..\src\xecs_archetype_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_component.h" />
+    <ClInclude Include="..\..\..\src\xecs_component_entity.h" />
     <ClInclude Include="..\..\..\src\xecs_component_mgr.h" />
+    <ClInclude Include="..\..\..\src\xecs_component_others.h" />
     <ClInclude Include="..\..\..\src\xecs_event.h" />
     <ClInclude Include="..\..\..\src\xecs_event_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_game_mgr.h" />

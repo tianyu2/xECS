@@ -36,6 +36,8 @@
 #include "xecs_event.h"
 #include "xecs_event_mgr.h"
 #include "xecs_component.h"
+#include "xecs_component_entity.h"
+#include "xecs_component_others.h"
 #include "xecs_tools.h"
 #include "xecs_tools_bits.h"
 #include "xecs_scene.h"

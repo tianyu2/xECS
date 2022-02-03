@@ -344,6 +344,12 @@
     <ClInclude Include="..\..\..\src\xecs_scene.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\xecs_component_entity.h">
+      <Filter>_Dependencies\xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\xecs_component_others.h">
+      <Filter>_Dependencies\xECS</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\dependencies\xcore\src\xcore.cpp">
