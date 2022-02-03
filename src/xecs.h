@@ -35,7 +35,7 @@
 #include "xecs_settings.h"
 #include "xecs_event.h"
 #include "xecs_event_mgr.h"
-#include "xecs_component.h"
+#include "xecs_component_type.h"
 #include "xecs_component_entity.h"
 #include "xecs_component_others.h"
 #include "xecs_tools.h"
@@ -55,7 +55,7 @@
 //--------------------------------------------------------------
 // INLINE FILES
 //--------------------------------------------------------------
-#include "details/xecs_component_inline.h"
+#include "details/xecs_component_type_inline.h"
 #include "details/xecs_tools_inline.h"
 #include "details/xecs_tools_bits_inline.h"
 #include "details/xecs_component_mgr_inline.h"

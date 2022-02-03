@@ -1,7 +1,7 @@
 
 #include "xecs_predefinitions.h"
 #include "xecs_settings.h"
-#include "xecs_component.h"
+#include "xecs_component_type.h"
 #include "xecs_component_entity.h"
 
 #include "xcore_math.h"

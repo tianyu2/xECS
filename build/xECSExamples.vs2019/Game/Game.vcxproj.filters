@@ -186,7 +186,7 @@
     <ClInclude Include="..\..\..\src\xecs_archetype_mgr.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\xecs_component.h">
+    <ClInclude Include="..\..\..\src\xecs_component_type.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\xecs_component_mgr.h">
@@ -231,7 +231,7 @@
     <ClInclude Include="..\..\..\src\details\xecs_archetype_mgr_inline.h">
       <Filter>_Dependencies\xECS\Details</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\details\xecs_component_inline.h">
+    <ClInclude Include="..\..\..\src\details\xecs_component_type_inline.h">
       <Filter>_Dependencies\xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\details\xecs_component_mgr_inline.h">

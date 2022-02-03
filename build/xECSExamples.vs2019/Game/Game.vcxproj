@@ -143,7 +143,7 @@
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_vector.h" />
     <ClInclude Include="..\..\..\src\details\xecs_archetype_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_archetype_mgr_inline.h" />
-    <ClInclude Include="..\..\..\src\details\xecs_component_inline.h" />
+    <ClInclude Include="..\..\..\src\details\xecs_component_type_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_component_mgr_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_event_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_event_mgr_inline.h" />
@@ -159,7 +159,7 @@
     <ClInclude Include="..\..\..\src\xecs.h" />
     <ClInclude Include="..\..\..\src\xecs_archetype.h" />
     <ClInclude Include="..\..\..\src\xecs_archetype_mgr.h" />
-    <ClInclude Include="..\..\..\src\xecs_component.h" />
+    <ClInclude Include="..\..\..\src\xecs_component_type.h" />
     <ClInclude Include="..\..\..\src\xecs_component_entity.h" />
     <ClInclude Include="..\..\..\src\xecs_component_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_component_others.h" />
