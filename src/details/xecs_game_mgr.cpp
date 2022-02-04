@@ -983,6 +983,7 @@ namespace xecs::game_mgr
     
     xcore::err instance::SerializePrefabs( const char* pFolderName, bool isRead, bool isBinary ) noexcept
     {
+#if 0
         xcore::err                                          Error;
         std::vector< std::vector<xecs::component::entity> > ListOfPrefabs;
 
@@ -1341,6 +1342,9 @@ namespace xecs::game_mgr
         } // end of loop
 
         return Error;
+    #endif
+
+    return {};
     }
 
 

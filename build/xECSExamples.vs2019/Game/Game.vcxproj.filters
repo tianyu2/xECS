@@ -350,6 +350,18 @@
     <ClInclude Include="..\..\..\src\xecs_component_others.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\xecs_editor.h">
+      <Filter>_Dependencies\xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\xecs_serializer.h">
+      <Filter>_Dependencies\xECS</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\details\xecs_component_entity_inline.h">
+      <Filter>_Dependencies\xECS\Details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\details\xecs_component_others_inline.h">
+      <Filter>_Dependencies\xECS\Details</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\dependencies\xcore\src\xcore.cpp">

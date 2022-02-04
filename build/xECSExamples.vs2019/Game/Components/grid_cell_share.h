@@ -1,6 +1,6 @@
 struct grid_cell
 {
-    static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
+    static xcore::err Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pData) noexcept
     {
         auto& GridCell = *reinterpret_cast<grid_cell*>(pData);
         TextFile.Field( "X", GridCell.m_X ).clear();

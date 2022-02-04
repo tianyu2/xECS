@@ -38,6 +38,7 @@
 #include "xecs_component_type.h"
 #include "xecs_component_entity.h"
 #include "xecs_component_others.h"
+#include "xecs_serializer.h"
 #include "xecs_tools.h"
 #include "xecs_tools_bits.h"
 #include "xecs_scene.h"
@@ -51,11 +52,14 @@
 #include "xecs_system_mgr.h"
 #include "xecs_game_mgr.h"
 #include "xecs_prefabs.h"
+#include "xecs_editor.h"
 
 //--------------------------------------------------------------
 // INLINE FILES
 //--------------------------------------------------------------
 #include "details/xecs_component_type_inline.h"
+#include "details/xecs_component_entity_inline.h"
+#include "details/xecs_component_others_inline.h"
 #include "details/xecs_tools_inline.h"
 #include "details/xecs_tools_bits_inline.h"
 #include "details/xecs_component_mgr_inline.h"

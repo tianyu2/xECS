@@ -1,0 +1,42 @@
+namespace xecs::editor
+{
+    struct tag
+    {
+        constexpr static auto typedef_v = xecs::component::type::exclusive_tag
+        {
+            .m_pName = "EditorTag"
+        };
+    };
+
+    //-------------------------------------------------------------------------------
+
+    struct prefab_instance
+    {
+        constexpr static auto typedef_v = xecs::component::type::data
+        {
+            .m_pName            = "EditorPrafabInstance"
+        };
+
+        struct component
+        {
+            enum class type : std::uint8_t
+            { OVERRIDES         // This component was part of the original archetype and I am overriding some properties
+            , NEW               // New component so all properties are assumed to be overwritten 
+            , REMOVE            // I removed this component from the original archetype
+            };
+
+            struct override
+            {
+                std::string             m_PropertyName;
+                xcore::crc<32>          m_PropertyType;
+            };
+
+            xecs::component::type::guid m_ComponentTypeGuid;
+            std::vector<override>       m_PropertyOverrides;
+            type                        m_Type;
+        };
+
+        xecs::prefab::guid              m_PrefabInstance;
+        std::vector<component>          m_lComponents;
+    };
+}

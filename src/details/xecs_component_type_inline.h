@@ -84,7 +84,7 @@ namespace xecs::component::type::details
 
             if constexpr (T_COMPONENT::typedef_v.m_pSerilizeFn)
             {
-                return [](xcore::textfile::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept -> xcore::err
+                return [](xecs::serializer::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept -> xcore::err
                 {
                     xcore::err Error;
 

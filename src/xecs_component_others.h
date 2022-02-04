@@ -9,11 +9,7 @@ namespace xecs::component
     //
     struct ref_count
     {
-        static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
-        {
-            auto& RefCount = *reinterpret_cast<ref_count*>(pData);
-            return TextFile.Field("GlobalIndex", RefCount.m_Value);
-        }
+        inline static xcore::err Serialize(xecs::serializer::stream&, bool, std::byte* ) noexcept;
 
         constexpr static auto typedef_v = xecs::component::type::data
         {
@@ -42,7 +38,8 @@ namespace xecs::component
     {
         constexpr static auto typedef_v = xecs::component::type::data
         {
-            .m_pName = "ShareFilter"
+            .m_pName            = "ShareFilter"
+        ,   .m_SerializeMode    = xecs::component::type::serialize_mode::DONT_SERIALIZE
         };
 
         struct entry
@@ -59,12 +56,15 @@ namespace xecs::component
     //
     struct parent
     {
+        inline static xcore::err Serialize(xecs::serializer::stream&, bool, std::byte* ) noexcept;
+
         constexpr static auto typedef_v = xecs::component::type::data
         {
-            .m_pName = "Parent"
+            .m_pName        = "Parent"
+        ,   .m_pSerilizeFn  = Serialize
         };
 
-        xecs::component::entity m_Parent;
+        xecs::component::entity m_Value;
     };
 
     //
@@ -72,12 +72,15 @@ namespace xecs::component
     //
     struct children
     {
+        inline static xcore::err FullSerialize( xecs::serializer::stream&, bool, std::byte*, int& ) noexcept;
+
         constexpr static auto typedef_v = xecs::component::type::data
         {
-            .m_pName = "Children"
+            .m_pName            = "Children"
+        ,   .m_pFullSerializeFn = FullSerialize
         };
 
-        std::vector<xecs::component::entity> m_Children;
+        std::vector<xecs::component::entity> m_List;
     };
 }
 #endif

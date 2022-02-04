@@ -4,6 +4,9 @@
 
 namespace xecs::prefab
 {
+    constexpr static auto prefab_instance_rctype_v = xcore::guid::rctype<>{ xcore::guid::plugin<>("xECS/Prefab"), "PrefabInstance" };
+    using guid = xcore::guid::rcfull<prefab_instance_rctype_v>;
+
     struct tag
     {
         constexpr static auto typedef_v = xecs::component::type::exclusive_tag

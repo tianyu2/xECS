@@ -6,11 +6,7 @@ namespace xecs::component
 {
     union entity final
     {
-        static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
-        {
-            auto& Entity = *reinterpret_cast<entity*>(pData);
-            return TextFile.Field("Entity", Entity.m_Value);
-        }
+        inline static xcore::err Serialize(xecs::serializer::stream& TextFile, bool, std::byte* pData ) noexcept;
 
         constexpr static auto invalid_entity_v  = 0xffffffffffffffffu;
         constexpr static auto typedef_v         = xecs::component::type::data

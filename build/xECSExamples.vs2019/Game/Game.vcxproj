@@ -143,6 +143,8 @@
     <ClInclude Include="..\..\..\dependencies\xcore\src\xcore_vector.h" />
     <ClInclude Include="..\..\..\src\details\xecs_archetype_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_archetype_mgr_inline.h" />
+    <ClInclude Include="..\..\..\src\details\xecs_component_entity_inline.h" />
+    <ClInclude Include="..\..\..\src\details\xecs_component_others_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_component_type_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_component_mgr_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_event_inline.h" />
@@ -163,6 +165,7 @@
     <ClInclude Include="..\..\..\src\xecs_component_entity.h" />
     <ClInclude Include="..\..\..\src\xecs_component_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_component_others.h" />
+    <ClInclude Include="..\..\..\src\xecs_editor.h" />
     <ClInclude Include="..\..\..\src\xecs_event.h" />
     <ClInclude Include="..\..\..\src\xecs_event_mgr.h" />
     <ClInclude Include="..\..\..\src\xecs_game_mgr.h" />
@@ -172,6 +175,7 @@
     <ClInclude Include="..\..\..\src\xecs_query.h" />
     <ClInclude Include="..\..\..\src\xecs_query_iterator.h" />
     <ClInclude Include="..\..\..\src\xecs_scene.h" />
+    <ClInclude Include="..\..\..\src\xecs_serializer.h" />
     <ClInclude Include="..\..\..\src\xecs_settings.h" />
     <ClInclude Include="..\..\..\src\xecs_system.h" />
     <ClInclude Include="..\..\..\src\xecs_system_mgr.h" />

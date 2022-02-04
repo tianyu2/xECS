@@ -7,6 +7,11 @@ namespace xecs::component
     union entity;
 }
 
+namespace xecs::serializer
+{
+    struct stream;
+}
+
 namespace xecs::game_mgr
 {
     struct instance;

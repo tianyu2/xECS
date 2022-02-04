@@ -5,8 +5,8 @@
 namespace xecs::component::type
 {
     using guid                  = xcore::guid::unit<64, struct component_type_tag>;
-    using full_serialize_fn     = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept;
-    using serialize_fn          = xcore::err(xcore::textfile::stream& TextFile, bool isRead, std::byte* pData ) noexcept;
+    using full_serialize_fn     = xcore::err( xecs::serializer::stream& TextFile, bool isRead, std::byte* pData, int& Count ) noexcept;
+    using serialize_fn          = xcore::err( xecs::serializer::stream& TextFile, bool isRead, std::byte* pData ) noexcept;
     using report_references_fn  = void( std::vector<xecs::component::entity*>, std::byte* pData ) noexcept;
 
     // Tells the component type how we should serialize the component
