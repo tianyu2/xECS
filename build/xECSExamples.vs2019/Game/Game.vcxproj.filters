@@ -335,7 +335,7 @@
     <ClInclude Include="..\..\..\src\xecs_predefinitions.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\xecs_prefabs.h">
+    <ClInclude Include="..\..\..\src\xecs_prefab.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\details\xecs_prefabs_inline.h">
@@ -361,6 +361,12 @@
     </ClInclude>
     <ClInclude Include="..\..\..\src\details\xecs_component_others_inline.h">
       <Filter>_Dependencies\xECS\Details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\details\xecs_serializer_inline.h">
+      <Filter>_Dependencies\xECS\Details</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\xecs_prefab_mgr.h">
+      <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

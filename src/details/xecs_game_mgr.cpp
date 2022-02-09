@@ -795,6 +795,7 @@ namespace xecs::game_mgr
     , const bool                   isOverride
     ) noexcept
     {
+    #if 0
         const auto pTypeInfo = m_ComponentMgr.findComponentTypeInfo(TypeGuid);
         if( pTypeInfo == nullptr )
         {
@@ -977,6 +978,7 @@ namespace xecs::game_mgr
                 }
             });
         }
+        #endif
     }
 
     //---------------------------------------------------------------------------

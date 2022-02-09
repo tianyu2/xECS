@@ -5,9 +5,9 @@
 namespace xecs::component::type
 {
     using guid                  = xcore::guid::unit<64, struct component_type_tag>;
-    using full_serialize_fn     = xcore::err( xecs::serializer::stream& TextFile, bool isRead, std::byte* pData, int& Count ) noexcept;
-    using serialize_fn          = xcore::err( xecs::serializer::stream& TextFile, bool isRead, std::byte* pData ) noexcept;
-    using report_references_fn  = void( std::vector<xecs::component::entity*>, std::byte* pData ) noexcept;
+    using full_serialize_fn     = xcore::err( xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponentArray, int& Count ) noexcept;
+    using serialize_fn          = xcore::err( xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponent) noexcept;
+    using report_references_fn  = void( std::vector<xecs::component::entity*>&, std::byte* pComponent ) noexcept;
 
     // Tells the component type how we should serialize the component
     enum class serialize_mode : std::uint8_t
@@ -17,13 +17,20 @@ namespace xecs::component::type
     , DONT_SERIALIZE                            // It may not a serializer but may have properties but yet we do not want to serialize at all.
     };
 
+    // Tells the component type how we should serialize the component
+    enum class reference_mode : std::uint8_t
+    { AUTO                                      // (Default) Assumes that it has references and it will check the serialize_fn first if null then will try to use properties and check if it has
+    , BY_FUNCTION                               // Uses the function to resolve its dependencies
+    , BY_PROPERTIES                             // Uses the properties to resolve its dependencies
+    , NO_REFERENCES                             // Wont check for anything because it is assumed not to have references
+    };
+
     // The order of this enum is very important as the system relies in this order
     // This is the general shorting order of components Data, then Share components, then Tags
     enum class id : std::uint8_t
-    {
-        DATA
-    ,   SHARE
-    ,   TAG
+    { DATA
+    , SHARE
+    , TAG
     };
 
     struct data
@@ -37,6 +44,7 @@ namespace xecs::component::type
         serialize_fn*           m_pSerilizeFn        { nullptr };
         full_serialize_fn*      m_pFullSerializeFn   { nullptr };
         serialize_mode          m_SerializeMode      { serialize_mode::AUTO };
+        reference_mode          m_ReferenceMode      { reference_mode::AUTO };
     };
 
     struct tag
@@ -81,6 +89,7 @@ namespace xecs::component::type
         serialize_fn*           m_pSerilizeFn        { nullptr };
         full_serialize_fn*      m_pFullSerializeFn   { nullptr };
         serialize_mode          m_SerializeMode      { serialize_mode::AUTO };
+        reference_mode          m_ReferenceMode      { reference_mode::AUTO };
     };
 
     namespace details
@@ -135,6 +144,7 @@ namespace xecs::component::type
         const property::table*      m_pPropertyTable;       // Properties for the component
         mutable type::share::key    m_DefaultShareKey;      // Default value for this share component
         serialize_mode              m_SerializeMode;        // Tells the component how it should serialize itself
+        reference_mode              m_ReferenceMode;        // Tells if the component has references and if so how to resolve them
         const char* const           m_pName;                // Friendly Human readable string name for the component type
     };
 

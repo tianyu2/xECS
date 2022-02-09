@@ -202,6 +202,7 @@ namespace xecs::game_mgr
         xecs::event::mgr                                    m_EventMgr          {};
         xecs::component::mgr                                m_ComponentMgr      {};
         xecs::archetype::mgr                                m_ArchetypeMgr      {*this};
+        xecs::prefab::mgr                                   m_PrefabMgr         {*this};
         bool                                                m_isRunning         = false;
         xcore::log::channel                                 m_LogChannel        { "xecs" };
     };

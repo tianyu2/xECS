@@ -1306,4 +1306,70 @@ instance::_MoveInEntity
         return nullptr;
     }
 
+    //-------------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLBACK
+    > requires
+    ( xecs::tools::assert_standard_function_v<T_CALLBACK>
+        && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+    ) __inline
+    void instance::CreateEntities( xecs::pool::family&       PoolFamily
+                                 , int                       Count
+                                 , xecs::component::entity   FromEntity
+                                 , T_CALLBACK&&              Function
+                                 ) noexcept
+    {
+        xassert(m_nShareComponents == 0);
+
+        auto& ArchetypeMgr = m_Mgr.m_GameMgr.m_ArchetypeMgr;
+        auto& CompMgr      = m_Mgr.m_GameMgr.m_ComponentMgr;
+        auto& EntityInfo   = CompMgr.getEntityDetails(FromEntity);
+
+        PoolFamily.AppendEntities( Count, m_Mgr, [&](xecs::pool::instance& Pool, xecs::pool::index Index, int nAlloc ) noexcept
+        {
+            ArchetypeMgr.AddToStructuralPendingList(Pool);
+
+            for (int i = 0; i < nAlloc; ++i)
+            {
+                xecs::pool::index NewIndex{ Index.m_Value + i };
+
+                auto NewEntity = CompMgr.AllocNewEntity( NewIndex, *this, Pool );
+
+                // Copy the entity raw
+                Pool.CopyEntity( NewEntity, EntityInfo.m_PoolIndex, *EntityInfo.m_pPool );
+
+                if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
+                {
+                    using func_traits = xcore::function::traits<T_CALLBACK>;
+
+                    auto  CachedPointers = xecs::archetype::details::GetDataComponentPointerArray
+                    ( Pool
+                    , NewIndex
+                    , xcore::types::null_tuple_v<func_traits::args_tuple>
+                    );
+                    xecs::archetype::details::CallFunction(Function, CachedPointers);
+                }
+            }
+        });
+    }
+
+
+    //-------------------------------------------------------------------------------------
+
+    template
+    < typename T_CALLBACK
+    > requires
+    ( xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
+        && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+    ) __inline
+    void instance::CreateEntities( int                       Count
+                                 , xecs::component::entity   FromEntity
+                                 , T_CALLBACK&&              Function
+                                 ) noexcept
+    {
+        xassert(m_nShareComponents == 0);
+        CreateEntities( getOrCreatePoolFamily({}, {}), Count, FromEntity, std::forward<T_CALLBACK&&>(Function) );
+    }
+
 }

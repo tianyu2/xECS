@@ -74,6 +74,16 @@ namespace xecs::tools
 
     //------------------------------------------------------------------------------------
 
+    template< typename... T_COMPONENTS >
+    requires( assert_valid_tuple_components_v < std::tuple<T_COMPONENTS...> > )
+    constexpr
+    void bits::ClearFromComponents( void ) noexcept
+    {
+        ((ckearBit(xecs::component::type::info_v<T_COMPONENTS>.m_BitID)), ...);
+    }
+
+    //------------------------------------------------------------------------------------
+
     std::uint64_t bits::GenerateUniqueID( void ) const noexcept
     {
         std::hash<std::uint64_t> Hasher;

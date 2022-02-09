@@ -121,7 +121,7 @@ namespace xecs::component::type::details
     //---------------------------------------------------------------------------------
     
     template< typename T_COMPONENT >
-    constexpr const xcore::property::table* getPropertyTable( void ) noexcept
+    consteval const xcore::property::table* getPropertyTable( void ) noexcept
     {
         if constexpr ( property::isValidTable<T_COMPONENT>() )
         {
@@ -132,6 +132,54 @@ namespace xecs::component::type::details
             return nullptr;
         }
     }
+
+    //---------------------------------------------------------------------------------
+    template< typename T_COMPONENT >
+    constexpr auto references_v = []() consteval noexcept -> type::reference_mode
+    {
+        if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return type::reference_mode::NO_REFERENCES;
+        else if constexpr (T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::NO_REFERENCES) return type::reference_mode::NO_REFERENCES;
+        else 
+        {
+            if constexpr( T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::BY_FUNCTION )
+            {
+                static_assert( T_COMPONENT::typedef_v.m_pReportReferencesFn, "You forgot to set the m_pReportReferencesFn" );
+                return type::reference_mode::BY_FUNCTION;
+            }
+            else if constexpr( T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::BY_PROPERTIES )
+            {
+                static_assert(getPropertyTable<T_COMPONENT>(), "You must have properties");
+                return type::reference_mode::BY_PROPERTIES;
+            }
+            else
+            {
+                static_assert( T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::AUTO );
+
+                if constexpr ( T_COMPONENT::typedef_v.m_pReportReferencesFn ) return type::reference_mode::BY_FUNCTION;
+                else if constexpr( property::isValidTable<T_COMPONENT>() == false ) return type::reference_mode::NO_REFERENCES;
+                else
+                {
+                    auto& Table = xcore::property::getTableByType<T_COMPONENT>();
+
+                    for (int i = 0; i < Table.m_Count; ++i)
+                    {
+                        // is in one of the core properties?
+                        if (xcore::types::variant_t2i_v< xecs::component::entity, xcore::property::settings::data_variant> == Table.m_pActionEntries[i].m_FunctionTypeGetSet.index())
+                            return type::reference_mode::BY_PROPERTIES;
+
+                        if( Table.m_pActionEntries[i].m_FunctionLists || Table.m_pActionEntries[i].m_FunctionTypeGetSet.index() >= std::variant_size_v<xcore::property::settings::data_variant>)
+                        {
+                            // IF IT DID NOT COMPILED IS BECAUSE THIS ASSERT TRIGGER, PLEASE READ IT...
+                            assert( xcore::types::always_false_v<T_COMPONENT> && "Component must specify the typedef_v.m_ReferenceMode and can not be AUTO, since we can not determine if it has references or not");
+                            return type::reference_mode(0xff);
+                        }
+                    }
+
+                    return type::reference_mode::NO_REFERENCES;
+                }
+            }
+        }
+    }();
 
     //---------------------------------------------------------------------------------
 
@@ -195,7 +243,13 @@ namespace xecs::component::type::details
         ,   .m_pReportReferencesFn = []() consteval noexcept
                                     {
                                         if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return nullptr;
-                                        else return T_COMPONENT::typedef_v.m_pReportReferencesFn;
+                                        else if constexpr (references_v<T_COMPONENT> == reference_mode::NO_REFERENCES ) return nullptr;
+                                        else if constexpr (references_v<T_COMPONENT> == reference_mode::BY_PROPERTIES ) return nullptr;
+                                        else
+                                        {
+                                            static_assert(T_COMPONENT::typedef_v.m_pReportReferencesFn, "You must provide a m_pReportReferenceFn" );
+                                            return T_COMPONENT::typedef_v.m_pReportReferencesFn;
+                                        }
                                     }()
         ,   .m_pPropertyTable   = getPropertyTable<T_COMPONENT>()
         ,   .m_SerializeMode    = []() consteval noexcept -> serialize_mode
@@ -227,6 +281,7 @@ namespace xecs::component::type::details
                                         }
                                     }
                                   }()
+        ,   .m_ReferenceMode    = references_v<T_COMPONENT>
         ,   .m_pName            = T_COMPONENT::typedef_v.m_pName
                                     ? T_COMPONENT::typedef_v.m_pName
                                     : __FUNCSIG__
@@ -276,7 +331,7 @@ namespace xecs::component::type::details
 
     template< typename T_TUPLE >
     requires(xcore::types::is_specialized_v<std::tuple, T_TUPLE>)
-    using sort_tuple_t = xcore::types::tuple_sort_t<details::smaller_component, T_TUPLE>;
+    using sort_tuple_t = xcore::types::tuple_sort_t<smaller_component, T_TUPLE>;
 
     template< typename T_TUPLE >
     static constexpr auto sorted_info_array_v = []<typename...T>(std::tuple<T...>*) constexpr

@@ -583,6 +583,7 @@ instance::AddOrRemoveComponents
     ) [[nodiscard]] xecs::component::entity             
     instance::CreatePrefabInstance( xecs::component::entity PrefabEntity, T_FUNCTION&& Function ) noexcept
     {
+    #if 0
         using   info_t = details::create_prefab_instance::filter< xcore::function::traits<T_FUNCTION>::args_tuple >;
 
         typename info_t::func_copy_tuple_t   FuncCopyTuple        {};
@@ -869,6 +870,9 @@ instance::AddOrRemoveComponents
         });
 
         return InstanceEntity;
+#endif
+
+        return{};
     }
 
     //---------------------------------------------------------------------------
@@ -880,6 +884,7 @@ instance::AddOrRemoveComponents
                                     , T_FUNCTION&&              Function
                                     ) noexcept
     {
+    #if 0
         if constexpr ( std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda> ) return CreatePrefabInstance<true>( PrefabEntity, std::forward<T_FUNCTION&&>(Function) );
         else
         {
@@ -904,5 +909,7 @@ instance::AddOrRemoveComponents
 
             return Entity;
         }
+    #endif
+    return {};
     }
 }

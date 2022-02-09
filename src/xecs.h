@@ -48,10 +48,12 @@
 #include "xecs_archetype_mgr.h"
 #include "xecs_query.h"
 #include "xecs_query_iterator.h"
+#include "xecs_prefab.h"
+#include "xecs_prefab_mgr.h"
 #include "xecs_system.h"
 #include "xecs_system_mgr.h"
 #include "xecs_game_mgr.h"
-#include "xecs_prefabs.h"
+#include "xecs_prefab.h"
 #include "xecs_editor.h"
 
 //--------------------------------------------------------------
@@ -74,5 +76,6 @@
 #include "details/xecs_event_inline.h"
 #include "details/xecs_event_mgr_inline.h"
 #include "details/xecs_prefabs_inline.h"
+#include "details/xecs_serializer_inline.h"
 
 #endif

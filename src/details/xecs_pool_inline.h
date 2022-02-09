@@ -581,4 +581,69 @@ namespace xecs::pool
 
         return ToNewIndex;
     }
+
+    //--------------------------------------------------------------------------------------------
+    inline
+    void instance::CopyEntity 
+    ( index             ToNewIndex
+    , index             FromIndex
+    , pool::instance&   FromPool            // Pull must be 100% compatible
+    ) noexcept
+    {
+    /*
+        for( int i=1; i<m_ComponentInfos.size(); ++i )
+        {
+            auto& Info = *m_ComponentInfos[i];
+            xassert(Info.m_BitID == FromPool.m_ComponentInfos[i]->m_BitID );
+
+            if(Info.m_pCopyFn ) Info.m_pCopyFn( m_pComponent[i] + Info.m_Size * ToNewIndex.m_Value, FromPool.m_pComponent[i] + Info.m_Size * FromIndex.m_Value );
+            else                memcpy(m_pComponent[i] + Info.m_Size * ToNewIndex.m_Value, FromPool.m_pComponent[i] + Info.m_Size * FromIndex.m_Value, Info.m_Size );
+        }
+        */
+        int         iPoolFrom     = 0;
+        int         iPoolTo       = 0;
+        const int   PoolFromCount = static_cast<int>(FromPool.m_ComponentInfos.size());
+        const int   PoolToCount   = static_cast<int>(m_ComponentInfos.size());
+        while (true)
+        {
+            if (FromPool.m_ComponentInfos[iPoolFrom] == m_ComponentInfos[iPoolTo])
+            {
+                auto& Info = *FromPool.m_ComponentInfos[iPoolFrom];
+                if (Info.m_pCopyFn)
+                {
+                    Info.m_pCopyFn
+                    (
+                        &m_pComponent[iPoolTo][Info.m_Size * ToNewIndex.m_Value]
+                        , &FromPool.m_pComponent[iPoolFrom][Info.m_Size * FromIndex.m_Value]
+                    );
+                }
+                else
+                {
+                    std::memcpy
+                    (
+                          &m_pComponent[iPoolTo][Info.m_Size * ToNewIndex.m_Value]
+                        , &FromPool.m_pComponent[iPoolFrom][Info.m_Size * FromIndex.m_Value]
+                        , Info.m_Size
+                    );
+                }
+                iPoolFrom++;
+                iPoolTo++;
+                if (iPoolFrom >= PoolFromCount || iPoolTo >= PoolToCount)
+                    break;
+            }
+            else if (FromPool.m_ComponentInfos[iPoolFrom]->m_Guid.m_Value < m_ComponentInfos[iPoolTo]->m_Guid.m_Value)
+            {
+                iPoolFrom++;
+                if (iPoolFrom >= PoolFromCount)
+                    break;
+            }
+            else
+            {
+                // This is already constructed so there is nothing for me to do
+                iPoolTo++;
+                if (iPoolTo >= PoolToCount)
+                    break;
+            }
+        }
+    }
 }

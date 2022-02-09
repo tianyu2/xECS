@@ -1,5 +1,75 @@
 namespace xecs::prefab
 {
+    template
+    < typename T_ADD_TUPLE
+    , typename T_SUB_TUPLE
+    , typename T_CALLBACK
+    > requires
+    (    ( std::is_same_v< std::tuple<>, T_ADD_TUPLE> || xecs::tools::assert_valid_tuple_components_v<T_ADD_TUPLE> )
+      && ( std::is_same_v< std::tuple<>, T_SUB_TUPLE> || xecs::tools::assert_valid_tuple_components_v<T_SUB_TUPLE> )
+      && xecs::tools::assert_standard_function_v<T_CALLBACK>
+      && xecs::tools::assert_function_return_v<T_CALLBACK, void>
+    ) __inline
+    bool mgr::CreatePrefabInstance( int Count, xecs::prefab::guid PrefabGuid, T_CALLBACK&& Callback ) noexcept
+    {
+        xecs::component::entity Entity;
+
+        if( auto Tuple = m_PrefabList.find(PrefabGuid.m_Instance.m_Value); Tuple == m_PrefabList.end() ) return false;
+        else Entity = Tuple->second;
+    
+        //
+        // Get the right set of bits
+        //
+        auto& PrefabDetails   = m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
+        auto& PrefabArchetype = *PrefabDetails.m_pPool->m_pArchetype;
+
+        xecs::tools::bits InstanceBits = PrefabArchetype.getComponentBits();
+
+        InstanceBits.clearBit( xecs::prefab::tag );
+        InstanceBits.clearBit( xecs::prefab::master );
+        InstanceBits.AddFromComponents<T_ADD_TUPLE>();
+        InstanceBits.ClearFromComponents<T_SUB_TUPLE>();
+
+        //
+        // Get the instance archetype
+        //
+        auto& InstanceArchetype = m_GameMgr.m_ArchetypeMgr.getOrCreateArchetype(InstanceBits);
+
+        //
+        // If we have to deal with share components...
+        //
+        using fn_traits = xcore::function::traits<T_CALLBACK>;
+        if( InstanceArchetype.m_nShareComponents )
+        {
+            // Can we choose the fast path here?
+            //  - We don't have a function or if we have a function but not share components then not changes in share components will happen which means we can speed up things.
+            if constexpr( std::is_same_v< T_CALLBACK, xecs::tools::empty_lambda > || std::tuple_size_v<xecs::component::type::details::share_only_tuple_t<fn_traits::args_tuple>> == 0 )
+            {
+                auto& Family = PrefabArchetype.m_nShareComponents ? InstanceArchetype.getOrCreatePoolFamily( *PrefabDetails.m_pPool->m_pMyFamily ) : InstanceArchetype.getOrCreatePoolFamily({},{});
+
+                InstanceArchetype.CreateEntities( Family, Count, Entity, std::forward<T_CALLBACK&&>(Callback) );
+            }
+            else
+            {
+                // complex case
+                xassert(false);
+            }
+        }
+        else
+        {
+            assert( std::tuple_size_v<xecs::component::type::details::share_only_tuple_t<fn_traits::args_tuple>> == 0 );
+            InstanceArchetype.CreateEntities( Count, Entity, std::forward<T_CALLBACK&&>(Callback) );
+        }
+
+        //
+        // Resolve references
+        //
+        {
+            //...
+        }
+        
+        return false;
+    }
 
 /*
     //-------------------------------------------------------------------------------

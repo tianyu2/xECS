@@ -1,17 +1,25 @@
 namespace xecs::component
 {
-    xcore::err ref_count::Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pData ) noexcept
+    xcore::err ref_count::Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pComponent) noexcept
     { 
-        auto& RefCount = *reinterpret_cast<ref_count*>(pData);
+        auto& RefCount = *reinterpret_cast<ref_count*>(pComponent);
         return TextFile.Field("GlobalIndex", RefCount.m_Value);
     }
 
     //----------------------------------------------------------------------------------------------------
 
-    xcore::err parent::Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pData ) noexcept
+    xcore::err parent::Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pComponent) noexcept
     {
-        auto& Parent = *reinterpret_cast<parent*>(pData);
+        auto& Parent = *reinterpret_cast<parent*>(pComponent);
         return TextFile.Field("Parent", Parent.m_Value );
+    }
+
+    //----------------------------------------------------------------------------------------------------
+
+    void parent::ReportReferences(std::vector<xecs::component::entity*>& List, std::byte* pComponent) noexcept
+    {
+        auto& Parent = *reinterpret_cast<parent*>(pComponent);
+        List.push_back(&Parent.m_Value);
     }
 
     //----------------------------------------------------------------------------------------------------
@@ -66,6 +74,14 @@ namespace xecs::component
         })) return Error;
 
         return Error;
+    }
+
+    //----------------------------------------------------------------------------------------------------
+
+    void children::ReportReferences(std::vector<xecs::component::entity*>& List, std::byte* pComponent) noexcept
+    {
+        auto& Children = *reinterpret_cast<children*>(pComponent);
+        for( auto& E : Children.m_List ) List.push_back(&E);
     }
 
 }

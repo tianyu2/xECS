@@ -39,6 +39,11 @@ namespace xecs::pool
                                                             , index             FromIndexToMove
                                                             , pool::instance&   FromPool
                                                             ) noexcept;
+        inline 
+        void            CopyEntity                          ( index             ToNewIndex
+                                                            , index             FromIndex
+                                                            , pool::instance&   FromPool            // Pull must be 100% compatible
+                                                            ) noexcept;
         constexpr
         int             Size                                ( void 
                                                             ) const noexcept;

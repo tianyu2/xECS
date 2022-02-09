@@ -33,6 +33,13 @@ namespace xecs::tools
         ) constexpr __inline
         void                    AddFromComponents       ( void 
                                                         ) noexcept;
+        template
+        < typename... T_COMPONENTS
+        > requires
+        ( assert_valid_tuple_components_v< std::tuple<T_COMPONENTS...> >
+        ) constexpr __inline
+        void                    ClearFromComponents     ( void 
+                                                        ) noexcept;
         inline
         std::uint64_t           GenerateUniqueID        ( void
                                                         ) const noexcept;

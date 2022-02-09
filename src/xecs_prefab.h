@@ -16,12 +16,15 @@ namespace xecs::prefab
     };
 
     //-------------------------------------------------------------------------------
-
+/*
     struct instance
     {
+        inline static xcore::err FullSerialize(xecs::serializer::stream&, bool, std::byte*, int&) noexcept;
+
         constexpr static auto typedef_v = xecs::component::type::data
         {
             .m_pName            = "PrafabInstance"
+        ,   .m_pFullSerializeFn = FullSerialize
         };
 
         struct component
@@ -45,6 +48,20 @@ namespace xecs::prefab
 
         xecs::component::entity         m_PrefabEntity;
         std::vector<component>          m_lComponents;
+    };
+*/
+    //-------------------------------------------------------------------------------
+    
+    struct master
+    {
+        constexpr static auto typedef_v = xecs::component::type::data
+        {
+            .m_pName            = "PrafabMaster"
+        ,   .m_SerializeMode    = xecs::component::type::serialize_mode::DONT_SERIALIZE
+        };
+
+        guid                                                m_Guid;
+        std::unordered_map< std::uint64_t, std::uint64_t >  m_EntityRemap;
     };
 
     //-------------------------------------------------------------------------------

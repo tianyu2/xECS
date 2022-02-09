@@ -12,9 +12,12 @@ namespace xecs::editor
 
     struct prefab_instance
     {
+  //      inline static xcore::err FullSerialize(xecs::serializer::stream&, bool, std::byte*, int&) noexcept;
+
         constexpr static auto typedef_v = xecs::component::type::data
         {
             .m_pName            = "EditorPrafabInstance"
+  //      ,   .m_pFullSerializeFn = FullSerialize
         };
 
         struct component

@@ -146,8 +146,10 @@ namespace xecs::component
         RegisterComponent<xecs::component::share_as_data_exclusive_tag>();
         RegisterComponent<xecs::component::ref_count>();
         RegisterComponent<xecs::component::share_filter>();
+        RegisterComponent<xecs::component::parent>();
+        RegisterComponent<xecs::component::children>();
         RegisterComponent<xecs::prefab::tag>();
-        RegisterComponent<xecs::prefab::instance>();
+        RegisterComponent<xecs::prefab::master>();
     }
 
     //------------------------------------------------------------------------------
