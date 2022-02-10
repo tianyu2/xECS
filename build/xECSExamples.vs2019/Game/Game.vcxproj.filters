@@ -338,7 +338,7 @@
     <ClInclude Include="..\..\..\src\xecs_prefab.h">
       <Filter>_Dependencies\xECS</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\src\details\xecs_prefabs_inline.h">
+    <ClInclude Include="..\..\..\src\details\xecs_prefab_mgr_inline.h">
       <Filter>_Dependencies\xECS\Details</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\xecs_scene.h">

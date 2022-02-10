@@ -52,6 +52,7 @@ namespace xecs::prefab
 */
     //-------------------------------------------------------------------------------
     
+    /*
     struct master
     {
         constexpr static auto typedef_v = xecs::component::type::data
@@ -61,8 +62,10 @@ namespace xecs::prefab
         };
 
         guid                                                m_Guid;
-        std::unordered_map< std::uint64_t, std::uint64_t >  m_EntityRemap;
+        //std::unordered_map< std::uint64_t, std::uint64_t >  m_EntityRemap;
+        bool                                                m_bDeleteMaster = false;
     };
+    */
 
     //-------------------------------------------------------------------------------
 /*

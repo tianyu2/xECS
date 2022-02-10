@@ -17,13 +17,15 @@ In the context of the game, Entity Prefab Instances have not additional informat
 
 In the context of the Editor, Entity Prefab Instances like any other entity from a Scene will have an additional component that will link back the to the Editor.DLL Entities. From there it will know if it is a prefab instance or not so it will know how to serialize properly.
 
+Note that Entity Prefabs are not allowed to have children. If you add a child into a Entity Prefab you have convert it into a [Scene Prefab](xecs_prefab_scene.md)
+
 ## Entity Prefab vs Entity Prefab Instance
 
 The Entity Prefab is an entity which is used to create the Entity Prefab Instances. Entity Prefabs are actual a kind of resource that must be loaded by the system. Like all resource they are assumed to be global entities so they don't belong to any Scene. 
 
 Entity Prefab Instances are just like any other type of entity, in fact in the Game.DLL after it loads them or create them it won't know any difference at all. This allows entities to group together into larger Archetypes and be more efficient.
 
-## Prefab Instances 
+## Editor wise Prefab Instances 
 
 Cloning prefabs is call creating a prefab-instance. In the [editor context Prefab-instances](xecs_editor_entities.md) are linked with the original Prefabs, and carry an extra component.
 
@@ -50,6 +52,12 @@ struct xecs::prefab::guid
 ~~~
 
 The runtime will have a hash-map that will map between the xecs::prefab::guid to the actual EntityID.
+
+## Creating an instance
+
+Creation of Entity Prefab Instances are much faster than [Scene Prefabs](xecs_prefab_scene.md) because of the lower complexity that they deal with. The creation of a instance is done with the following steps:
+1. Clones the entity (with add or removed component as requested by the user)
+2. Calls the Callback 
 
 ## Editor.DLL Prefab
 

@@ -149,7 +149,6 @@ namespace xecs::component
         RegisterComponent<xecs::component::parent>();
         RegisterComponent<xecs::component::children>();
         RegisterComponent<xecs::prefab::tag>();
-        RegisterComponent<xecs::prefab::master>();
     }
 
     //------------------------------------------------------------------------------

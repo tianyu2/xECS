@@ -79,6 +79,11 @@ namespace xecs::pool
         T_COMPONENT&    getComponentInSequence              ( index         EntityIndex
                                                             , int&          Sequence
                                                             ) const noexcept;
+        inline
+        std::byte*      getComponentInSequenceByInfo        ( xecs::component::type::info&  Info
+                                                            , index                         EntityIndex
+                                                            , int&                          Sequence
+                                                            ) noexcept;    
     private:
         inline
         bool            Free                                ( index Index

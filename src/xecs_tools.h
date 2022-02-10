@@ -79,9 +79,13 @@ namespace xecs::tools
     = assert_standard_function_v<T_CALLABLE>
     && []<typename...T_ARGS>(std::tuple<T_ARGS...>*) constexpr noexcept
     {
+
         static_assert(((std::is_same_v< T_ARGS, std::remove_const_t<T_ARGS>>) && ...), "You can not have const in the parameters");
         static_assert( (( std::is_reference_v<T_ARGS>) && ...), "All the parameters of a setter should be references, we found at least one that it was not");
-        static_assert((( false == std::is_same_v< xcore::types::decay_full_t<T_ARGS>, xecs::component::entity>) && ...), "You can not have the entity component as part of the parameters of the function");
+        static_assert((( false == std::is_same_v< T_ARGS, xecs::component::entity&>) && ...), "You can not have a writable entity component as part of the parameters of the function");
+        static_assert((( false == std::is_same_v< T_ARGS, xecs::component::entity*>) && ...), "You can not have a pointer entity component as part of the parameters of the function. Because all entities have an entity component, and you are not allow to change the entity at this point");
+        static_assert(((false == std::is_same_v<  T_ARGS, const xecs::component::entity*>) && ...), "You can not have a pointer entity component even if it is a const as part of the parameters of the function. Because all entities have an entity component, use a reference stead.");
+
         return true;
     }( xcore::types::null_tuple_v< typename xcore::function::template traits<T_CALLABLE>::args_tuple> );
 

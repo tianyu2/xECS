@@ -11,17 +11,22 @@
 * [Scene file format, details about entities](xecs_scene_serialization_entity.md)
 </details></h3>
 
-Please make sure that [Entity Prefabs](xecs_prefab_entity.md) make sense before understanding what this is. Scene Prefabs are similar in concept to an [Entity Prefab](xecs_prefab_entity.md) except stead of having one Entity you can have Many. When you have many entities in away you are creating a mini-Scene. If there is not a single entity as the parent, the Scene Prefab will automatically create an "virtual entity" to represent the pivot point of the collection. When the Scene-Prefab is instantiated the pivot will get remove. If the user wants to have a pivot instantiate then it can create an entity and put all other ones as children.
+Please make sure that [Entity Prefabs](xecs_prefab_entity.md) make sense before understanding what this is. Scene Prefabs are similar in concept to an [Entity Prefab](xecs_prefab_entity.md) except the entity has children. When you are dealing with many entities in away you are creating a mini-Scene. All Scene Prefabs must have a single root entity, this entity will be the pivot point for their children as expected. This Root Entity has the option to be automatically delete it when you create instances of the ScenePrefab.
 
-Similar to what happens when you select multiple entities in a editor you need a point that can be consider the pivot/origin of the Scene. Where you can rotate/scale/position the scene base on this point.
+The Scene Prefab can have both regular entities and Prefab Instances (which include both Scene Prefab Instances and Entity Prefab Instances). Unlike real scenes they must have the pivot point entity and they can not have global entities. 
 
-This Scene can have both regular entities and Prefab Instances (which include both Scene Prefab Instances and Entity Prefab Instances). Unlike real scenes they must have the pivot point and they can not have global entities. 
+## The Root Entity
 
-## Pivot point
-
-The pivot point is an Entity which has a transform component. The user can choose if ones it creates the instance the pivot point is retained as a parent entity or not. The default is that is not kept as having hierarchies creates complexities and slows down performance. 
+The Root Entity serves as the pivot point so it must have a transform component. The user can choose if ones it creates the instance the pivot point is retained as a parent entity or not. The default is that is won't because having hierarchies creates complexities and slows down performance. 
 
 ## Creating an instance
 
+So creation of a ScenePrefab instance is done with the following steps:
+1. Clones the Root Entity (with add or removed component as requested by the user)
+2. Clones the rest of the hierarchy 
+3. Resolves entity references inside the prefab instances, such parent with children etc
+4. Calls the Root Entity Callback 
+5. Computes all the L2W information for the entire hierarchy 
+6. Removes the RootEntity (if the user requested) also updated all the direct children by removing the parent component.
 
 

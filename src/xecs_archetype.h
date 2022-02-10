@@ -31,12 +31,19 @@ namespace xecs::archetype
         template< typename T >
         const T&                getShareComponent       ( const xecs::pool::family& Family 
                                                         ) const noexcept;
+        bool                    hasShareComponents      ( void 
+                                                        ) const noexcept { return !!m_nShareComponents; }
         constexpr __inline
         const xecs::tools::bits& getExclusiveTagBits    ( void 
                                                         ) const noexcept;
         constexpr __inline
         const xecs::tools::bits& getComponentBits       ( void 
                                                         ) const noexcept;
+        constexpr __inline
+        std::span<const xecs::component::type::info* const>   
+                                getDataComponentInfos   ( void
+                                                        ) const noexcept { return { m_InfoData.data(), static_cast<std::size_t>(m_nDataComponents) }; }
+
         constexpr __inline
         guid                     getGuid                ( void 
                                                         ) const noexcept;

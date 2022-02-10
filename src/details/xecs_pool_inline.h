@@ -422,6 +422,18 @@ namespace xecs::pool
 
     //-------------------------------------------------------------------------------------
 
+    std::byte* instance::getComponentInSequenceByInfo
+    ( xecs::component::type::info&  Info
+    , index                         EntityIndex
+    , int&                          Sequence
+    ) noexcept
+    {
+        const auto iComponent = findIndexComponentFromInfoInSequence(Info, Sequence );
+        return &m_pComponent[iComponent][EntityIndex.m_Value * Info.m_Size ];
+    }
+
+    //-------------------------------------------------------------------------------------
+
     void instance::UpdateStructuralChanges( xecs::component::mgr& ComponentMgr ) noexcept
     {
         const auto OldSize = m_Size;

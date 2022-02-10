@@ -1337,7 +1337,7 @@ instance::_MoveInEntity
                 auto NewEntity = CompMgr.AllocNewEntity( NewIndex, *this, Pool );
 
                 // Copy the entity raw
-                Pool.CopyEntity( NewEntity, EntityInfo.m_PoolIndex, *EntityInfo.m_pPool );
+                Pool.CopyEntity( NewIndex, EntityInfo.m_PoolIndex, *EntityInfo.m_pPool );
 
                 if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
                 {
