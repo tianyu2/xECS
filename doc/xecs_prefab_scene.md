@@ -29,4 +29,4 @@ So creation of a ScenePrefab instance is done with the following steps:
 5. Computes all the L2W information for the entire hierarchy 
 6. Removes the RootEntity (if the user requested) also updated all the direct children by removing the parent component.
 
-
+Scene Prefabs are allowed to have references to other entities inside the Scene Prefab as well as global references. One thing to note is that share components are not allowed to have references to Scene Prefabs only to global references. This was decided as an optimization, since it is a very rare case and adds more complexity. 

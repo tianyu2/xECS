@@ -4,8 +4,8 @@
 
 namespace xecs::prefab
 {
-    constexpr static auto prefab_instance_rctype_v = xcore::guid::rctype<>{ xcore::guid::plugin<>("xECS/Prefab"), "PrefabInstance" };
-    using guid = xcore::guid::rcfull<prefab_instance_rctype_v>;
+    constexpr static auto   prefab_rctype_v = xcore::guid::rctype<>{ xcore::guid::plugin<>("xECS/Prefab"), "Prefab" };
+    using                   guid            = xcore::guid::rcfull_singletype<prefab_rctype_v>;
 
     struct tag
     {
@@ -50,24 +50,10 @@ namespace xecs::prefab
         std::vector<component>          m_lComponents;
     };
 */
-    //-------------------------------------------------------------------------------
-    
-    /*
-    struct master
-    {
-        constexpr static auto typedef_v = xecs::component::type::data
-        {
-            .m_pName            = "PrafabMaster"
-        ,   .m_SerializeMode    = xecs::component::type::serialize_mode::DONT_SERIALIZE
-        };
 
-        guid                                                m_Guid;
-        //std::unordered_map< std::uint64_t, std::uint64_t >  m_EntityRemap;
-        bool                                                m_bDeleteMaster = false;
-    };
-    */
 
     //-------------------------------------------------------------------------------
+
 /*
     namespace details
     {

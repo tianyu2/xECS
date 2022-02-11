@@ -24,9 +24,21 @@ There are two Context in which prefabs operate:
 1. **Runtime** - The function calls will be made by systems. 
 2. **Editor** - The user will be able to create prefabs and prefabs instance using the editor. This context provides extra functionality over the Runtime such property overrides and component overrides. 
 
-## Are prefabs resources?
+Check more details on [Prefab Editor](xecs_editor_prefab.md)
 
-TODO:....
+## Prefab GUID vs EntityID
+
+The prefab GUID **(xecs::prefab::guid)** is the official Identifier of a Prefab (not matter if it is an entity prefab or a scene prefab). This global identifier will also be used as its resource GUID. The Prefab EntityID **(xecs::component::entity)** is the temporary ID of a prefab. Please note that every time a prefab is loaded the EntityID will be different, the GUID in the other hand is persistent. This is why it is discourage to use the entity id for prefabs.
+
+~~~cpp
+constexpr static auto prefab_rctype_v = xcore::guid::rctype<>{ xcore::guid::plugin<>("xECS/Prefab"), "Prefab" };
+using                 guid            = xcore::guid::rcfull_singletype<prefab_rctype_v>;
+~~~
+
+The runtime will have a hash-map that will map between the xecs::prefab::guid to the actual EntityID. 
+
+Prefabs are consider assets and when you save them they will have assets names. However all assets must be converted to resources. It is the job of the Game Editor to serialize a prefab asset into a resource. Ones it has become a resource it will follow the resource naming convention: **(resource_instance_GUID.resource_type_GUID)**. This means that the file name will be hard to read.
+
 
 ## Serializing Prefabs
 
@@ -34,5 +46,8 @@ Serializing prefabs is very similar to how a [scene serializes](xecs_scene_seria
 
 ## Creating a Prefab Instance
 
-When creating a prefab instance you must have the **xecs::prefab::guid** for the prefab where the instance will be based on. If the prefab has children all the children will also be instantiated. Note that in the function when creating the instance you can add/remove and initialize any component you like. Please note that any reference to any other entity won't be updated right away.
+When creating a prefab instance you must have the **xecs::prefab::guid** for the prefab where the instance will be based on. If the prefab has children all the children will also be instantiated. Note that in the function when creating the instance you can add/remove and initialize any component you like. Please note that any reference to any other entity won't be updated right away. 
 
+For more info check out [Entity Prefabs](xecs_prefab_entity.md) and [Scene Prefabs](xecs_prefab_scene.md) as they talked about the specifics for each case.
+
+---

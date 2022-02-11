@@ -143,6 +143,8 @@ namespace xecs::prefab
 
         xecs::tools::bits InstanceBits = PrefabArchetype.getComponentBits();
 
+        xassert( InstanceBits.getBit(xecs::component::type::info_v<xecs::prefab::tag>.m_BitID) );
+
         InstanceBits.clearBit( xecs::prefab::tag );
         InstanceBits.AddFromComponents<T_ADD_TUPLE>();
         InstanceBits.ClearFromComponents<T_SUB_TUPLE>();
