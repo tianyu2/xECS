@@ -73,11 +73,30 @@ namespace xecs::tools
     }
 
     //------------------------------------------------------------------------------------
+    template< typename... T_COMPONENTS >
+    requires( assert_valid_tuple_components_v < std::tuple<T_COMPONENTS...> > )
+    constexpr
+    void bits::AddFromComponents( std::tuple<T_COMPONENTS...>* ) noexcept
+    {
+        ((setBit(xecs::component::type::info_v<T_COMPONENTS>.m_BitID)), ...);
+    }
+
+    //------------------------------------------------------------------------------------
 
     template< typename... T_COMPONENTS >
     requires( assert_valid_tuple_components_v < std::tuple<T_COMPONENTS...> > )
     constexpr
     void bits::ClearFromComponents( void ) noexcept
+    {
+        ((ckearBit(xecs::component::type::info_v<T_COMPONENTS>.m_BitID)), ...);
+    }
+
+    //------------------------------------------------------------------------------------
+
+    template< typename... T_COMPONENTS >
+    requires( assert_valid_tuple_components_v < std::tuple<T_COMPONENTS...> > )
+    constexpr
+    void bits::ClearFromComponents( std::tuple<T_COMPONENTS...>* ) noexcept
     {
         ((ckearBit(xecs::component::type::info_v<T_COMPONENTS>.m_BitID)), ...);
     }

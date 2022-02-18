@@ -2,15 +2,15 @@ namespace xecs::prefab
 {
     //--------------------------------------------------------------------------------------------------------------
 
-    xecs::component::entity mgr::CreatePrefabInstance( xecs::component::entity Entity, std::unordered_map< std::uint64_t, xecs::component::entity >& Remap, xecs::component::entity ParentEntity ) noexcept
+    xecs::component::entity mgr::CreatePrefabInstance( xecs::component::entity Entity, std::unordered_map< std::uint64_t, xecs::component::entity >& Remap, xecs::component::entity ParentEntity, bool isVariant ) noexcept
     {
         auto& PrefabDetails = m_GameMgr.m_ComponentMgr.getEntityDetails(Entity);
         auto& PrefabArchetype = *PrefabDetails.m_pPool->m_pArchetype;
 
         xecs::tools::bits InstanceBits = PrefabArchetype.getComponentBits();
 
-        InstanceBits.clearBit( xecs::component::type::info_v<xecs::prefab::tag>.m_BitID );
-        if( ParentEntity.isValid() == false ) InstanceBits.clearBit(xecs::component::type::info_v<xecs::component::parent>.m_BitID);
+        if( false == isVariant ) InstanceBits.clearBit( xecs::component::type::info_v<xecs::prefab::tag>.m_BitID );
+        if( false == ParentEntity.isValid() ) InstanceBits.clearBit(xecs::component::type::info_v<xecs::component::parent>.m_BitID);
 
         //
         // Get the instance archetype
@@ -34,7 +34,7 @@ namespace xecs::prefab
                     {
                         PrefabInstance = Instance;
                         Remap.insert( { Entity.m_Value, Instance } );
-                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance );
+                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance, isVariant);
                         Parent.m_Value = ParentEntity;
                     });
                 }
@@ -43,7 +43,7 @@ namespace xecs::prefab
                     InstanceArchetype.CreateEntities(Family, 1, Entity, [&](const xecs::component::entity& Instance, xecs::component::children& Children ) noexcept
                     {
                         Remap.insert( { Entity.m_Value, Instance } );
-                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance );
+                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance, isVariant);
                         PrefabInstance = Instance;
                     });
                 }
@@ -82,7 +82,7 @@ namespace xecs::prefab
                     {
                         PrefabInstance = Instance;
                         Remap.insert( { Entity.m_Value, Instance } );
-                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance );
+                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance, isVariant);
                         Parent.m_Value = ParentEntity;
                     });
                 }
@@ -92,7 +92,7 @@ namespace xecs::prefab
                     {
                         PrefabInstance = Instance;
                         Remap.insert( { Entity.m_Value, Instance } );
-                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance );
+                        for( auto& E : Children.m_List ) E = CreatePrefabInstance( E, Remap, Instance, isVariant);
                     });
                 }
             }
@@ -133,7 +133,7 @@ namespace xecs::prefab
       && xecs::tools::assert_standard_function_v<T_CALLBACK>
       && xecs::tools::assert_function_return_v<T_CALLBACK, void>
     ) __inline
-    void mgr::CreatePrefabInstance( int Count, xecs::component::entity Entity, T_CALLBACK&& Callback, bool bRemoveRoot ) noexcept
+    void mgr::CreatePrefabInstance( int Count, xecs::component::entity Entity, T_CALLBACK&& Callback, bool bRemoveRoot, bool isVariant ) noexcept
     {
         //
         // Get the right set of bits
@@ -145,9 +145,9 @@ namespace xecs::prefab
 
         xassert( InstanceBits.getBit(xecs::component::type::info_v<xecs::prefab::tag>.m_BitID) );
 
-        InstanceBits.clearBit( xecs::prefab::tag );
-        InstanceBits.AddFromComponents<T_ADD_TUPLE>();
-        InstanceBits.ClearFromComponents<T_SUB_TUPLE>();
+        if( false == isVariant ) InstanceBits.clearBit( xecs::component::type::info_v<xecs::prefab::tag>.m_BitID );
+        InstanceBits.AddFromComponents( xcore::types::null_tuple_v<T_ADD_TUPLE> );
+        InstanceBits.ClearFromComponents( xcore::types::null_tuple_v<T_SUB_TUPLE> );
 
         //
         // Are we dealing with a scene prefab or a regular prefab?
@@ -187,7 +187,7 @@ namespace xecs::prefab
                         });
 
                         // Now that everything has been copied over including the share components then we are going to let the user move it to the final family
-                        m_GameMgr.getEntity( InstanceEntity, std::forward<T_CALLBACK&&>(Callback) );
+                        (void)m_GameMgr.getEntity( InstanceEntity, std::forward<T_CALLBACK&&>(Callback) );
                     }
                 }
             }
@@ -204,7 +204,7 @@ namespace xecs::prefab
         //
         // If we are dealing with a Scene-Prefab...
         //
-        auto pInstanceArchetype = bRemoveRoot ? nullptr : m_GameMgr.m_ArchetypeMgr.getOrCreateArchetype(InstanceBits);
+        auto pInstanceArchetype = bRemoveRoot ? nullptr : &m_GameMgr.m_ArchetypeMgr.getOrCreateArchetype(InstanceBits);
 
         std::vector<xecs::component::entity*> References;       // Minimize allocation by factoring it out here
         for( int i=0; i<Count; ++i )
@@ -220,11 +220,11 @@ namespace xecs::prefab
                 //
                 // Create all the children
                 //
-                m_GameMgr.getEntity( Entity, [&]( xecs::component::children& Children )
+                (void)m_GameMgr.getEntity( Entity, [&]( xecs::component::children& Children ) constexpr noexcept
                 {
-                    for( auto& E : Children )
+                    for( auto& E : Children.m_List )
                     {
-                        CreatePrefabInstance( E, EntityRemap, EntityInstance );
+                        CreatePrefabInstance( E, EntityRemap, EntityInstance, isVariant );
                     }
                 });
             }
@@ -236,10 +236,10 @@ namespace xecs::prefab
                     pInstanceArchetype->CreateEntities( Family, 1, Entity, [&]( const xecs::component::entity& EntityI, xecs::component::children& Children ) constexpr noexcept
                     {
                         EntityInstance = EntityI;
-                        EntityRemap.insert(Entity.m_Value, EntityI);
-                        for( auto& E : Children )
+                        EntityRemap.insert( {Entity.m_Value, EntityI} );
+                        for( auto& E : Children.m_List )
                         {
-                            E = CreatePrefabInstance( E, EntityRemap, EntityInstance );
+                            E = CreatePrefabInstance( E, EntityRemap, EntityInstance, isVariant );
                         }
                     });
                 }
@@ -248,10 +248,10 @@ namespace xecs::prefab
                     pInstanceArchetype->CreateEntities( 1, Entity, [&]( const xecs::component::entity& EntityI, xecs::component::children& Children ) constexpr noexcept
                     {
                         EntityInstance = EntityI;
-                        EntityRemap.insert(Entity.m_Value, EntityI);
-                        for( auto& E : Children )
+                        EntityRemap.insert( {Entity.m_Value, EntityI} );
+                        for( auto& E : Children.m_List )
                         {
-                            E = CreatePrefabInstance( E, EntityRemap, EntityInstance );
+                            E = CreatePrefabInstance( E, EntityRemap, EntityInstance, isVariant);
                         }
                     });
                 }
@@ -270,7 +270,7 @@ namespace xecs::prefab
                 for( auto pInfo : DataSpan )
                 {
                     // If we don't need to deal with remapping things then lets move on
-                    if( pInfo->reference_mode == xecs::component::type::reference_mode::NO_REFERENCES 
+                    if( pInfo->m_ReferenceMode == xecs::component::type::reference_mode::NO_REFERENCES 
                        || pInfo == &xecs::component::type::info_v<xecs::component::children>
                        || pInfo == &xecs::component::type::info_v<xecs::component::parent>)
                         continue;
@@ -281,7 +281,7 @@ namespace xecs::prefab
                     const int local_resever_index_v = 1000000;
 
                     // Remapping by function?
-                    if( pInfo->reference_mode == xecs::component::type::reference_mode::BY_FUNCTION )
+                    if( pInfo->m_ReferenceMode == xecs::component::type::reference_mode::BY_FUNCTION )
                     {
                         pInfo->m_pReportReferencesFn( References, pData );
                         for( auto pRefs : References )
@@ -296,7 +296,7 @@ namespace xecs::prefab
                                 }
                                 else
                                 {
-                                    *pRefs = It.second;
+                                    *pRefs = It->second;
                                 }
                             }
                         }
@@ -313,7 +313,7 @@ namespace xecs::prefab
                                 auto RefEntity = std::get<xecs::component::entity>(Data);
 
                                 // Make sure that we are not dealing with a global entity... those are safe references.
-                                if( RefEntity.m_GlobalInfoIndex < local_resever_index_v )
+                                if( RefEntity.m_GlobalInfoIndex < static_cast<std::size_t>(local_resever_index_v) )
                                 {
                                     if( auto It = EntityRemap.find( RefEntity.m_Value ); It == EntityRemap.end() )
                                     {
@@ -324,7 +324,7 @@ namespace xecs::prefab
                                     {
                                         // set the new value
                                         std::get<xecs::component::entity>(Data) = It->second;
-                                        property::set( *pInfo->m_pPropertyTable, pData, PropertyName, Data );
+                                        property::set( *pInfo->m_pPropertyTable, pData, PropertyName.data(), Data );
                                     }
                                 }
                             }
@@ -345,7 +345,7 @@ namespace xecs::prefab
             {
                 if( bRemoveRoot == false )
                 {
-                    getEntity(EntityInstance, std::forward<T_CALLBACK&&>(Callback) );
+                    (void)m_GameMgr.getEntity(EntityInstance, std::forward<T_CALLBACK&&>(Callback) );
                 }
                 else
                 {
@@ -367,10 +367,10 @@ namespace xecs::prefab
       && xecs::tools::assert_standard_function_v<T_CALLBACK>
       && xecs::tools::assert_function_return_v<T_CALLBACK, void>
     ) __inline
-    bool mgr::CreatePrefabInstance( int Count, xecs::prefab::guid PrefabGuid, T_CALLBACK&& Callback, bool bRemoveRoot ) noexcept
+    bool mgr::CreatePrefabInstance( int Count, xecs::prefab::guid PrefabGuid, T_CALLBACK&& Callback, bool bRemoveRoot, bool isVariant) noexcept
     {
         if( auto Tuple = m_PrefabList.find(PrefabGuid.m_Instance.m_Value); Tuple == m_PrefabList.end() ) return false;
-        else CreatePrefabInstance( Count, Tuple->second, std::forward<T_CALLBACK&&>(Callback), bRemoveRoot );
+        else CreatePrefabInstance( Count, Tuple->second, std::forward<T_CALLBACK&&>(Callback), bRemoveRoot, isVariant);
         return true;
     }
 

@@ -13,9 +13,6 @@ struct bullet
     xecs::component::entity m_ShipOwner;
 };
 
-static_assert( nullptr != &bullet::Serialize );
-
-
 property_begin(bullet)
 {
     property_var(m_ShipOwner)

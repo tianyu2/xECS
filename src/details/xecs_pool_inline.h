@@ -423,9 +423,9 @@ namespace xecs::pool
     //-------------------------------------------------------------------------------------
 
     std::byte* instance::getComponentInSequenceByInfo
-    ( xecs::component::type::info&  Info
-    , index                         EntityIndex
-    , int&                          Sequence
+    ( const xecs::component::type::info&  Info
+    , index                               EntityIndex
+    , int&                                Sequence
     ) noexcept
     {
         const auto iComponent = findIndexComponentFromInfoInSequence(Info, Sequence );

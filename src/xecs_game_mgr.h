@@ -111,23 +111,26 @@ namespace xecs::game_mgr
         )
         archetype::instance&                getOrCreateArchetype    ( void 
                                                                     ) noexcept;
-
         template
-        < bool     T_IS_VARIANT = false
+        < typename T_ADD_TUPLE = std::tuple<>
+        , typename T_SUB_TUPLE = std::tuple<>
         , typename T_FUNCTION   = xecs::tools::empty_lambda
         > requires
         ( xecs::tools::assert_standard_function_v<T_FUNCTION>
-        ) [[nodiscard]] xecs::component::entity             
-                                            CreatePrefabInstance    ( xecs::component::entity PrefabEntity
-                                                                    , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
+        ) void                              CreatePrefabInstance    ( int                       Count
+                                                                    , xecs::component::entity   PrefabEntity
+                                                                    , T_FUNCTION&&              Function        = xecs::tools::empty_lambda{}
+                                                                    , bool                      bRemoveRoot     = true
                                                                     ) noexcept;
         template
-        < typename T_FUNCTION   = xecs::tools::empty_lambda
+        < typename T_ADD_TUPLE = std::tuple<>
+        , typename T_SUB_TUPLE = std::tuple<>
+        , typename T_FUNCTION  = xecs::tools::empty_lambda
         > requires
         ( xecs::tools::assert_standard_function_v<T_FUNCTION>
-        ) xforceinline [[nodiscard]] xecs::component::entity             
-                                            CreatePrefabVariant     ( xecs::component::entity PrefabEntity
-                                                                    , T_FUNCTION&&      Function = xecs::tools::empty_lambda{}
+        ) xforceinline [[nodiscard]] void   CreatePrefabVariant     ( int                       Count
+                                                                    , xecs::component::entity   PrefabEntity
+                                                                    , T_FUNCTION&&              Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         inline
         void                                EditorSetEntityComponentProperty

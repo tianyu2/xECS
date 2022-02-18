@@ -49,40 +49,39 @@ struct my_game final : live::game
             Timer.m_Value = 0;
         });
 
-        auto PrefabVarient = m_GameMgr->CreatePrefabVariant( PrefabEntity, [&]( timer& Timer ) noexcept
+        //
+        // Create a Variant
+        //
+        xecs::component::entity PrefabVariant;
+        m_GameMgr->CreatePrefabVariant( 1, PrefabEntity, [&]( const xecs::component::entity& Enttiy, timer& Timer ) noexcept
         {
+            PrefabVariant = Enttiy;
             Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
         });
 
         //
         // Create a prefab instance
         //
-        for( int i=0; i<2000; ++i )
+        m_GameMgr->CreatePrefabInstance( 2000, PrefabVariant, [&]( position& Position, velocity & Velocity, timer& Timer, grid_cell& Cell) noexcept
         {
-            auto PrefabInstance = m_GameMgr->CreatePrefabInstance( PrefabVarient, [&]( position& Position, velocity & Velocity, timer& Timer, grid_cell& Cell) noexcept
-            {
-                Position.m_Value = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
-                                                 , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
-                };
+            Position.m_Value = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
+                                             , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())
+            };
 
-                Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
+            Cell = grid::ComputeGridCellFromWorldPosition(Position.m_Value);
 
-                Velocity.m_Value.m_X = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
-                Velocity.m_Value.m_Y = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
-                Velocity.m_Value.Normalize();
+            Velocity.m_Value.m_X = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
+            Velocity.m_Value.m_Y = std::rand() / static_cast<float>(RAND_MAX) - 0.5f;
+            Velocity.m_Value.Normalize();
 
-                Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
-            });
-        }
+            Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
+        });
     }
 
     //-----------------------------------------------------------------------------
 
     void RegisterElements( void ) noexcept
     {
-
-        static_assert( xecs::component::type::info_v<bullet>.m_pSerilizeFn );
-
         //
         // Register Components (They should always be first)
         //

@@ -14,7 +14,7 @@ namespace xecs::prefab
           && xecs::tools::assert_standard_function_v<T_CALLBACK>
           && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
-        bool CreatePrefabInstance( int Count, xecs::prefab::guid PrefabGuid, T_CALLBACK&& Callback, bool bRemoveRoot = true ) noexcept;
+        bool CreatePrefabInstance( int Count, xecs::prefab::guid PrefabGuid, T_CALLBACK&& Callback, bool bRemoveRoot = true, bool isVariant = false ) noexcept;
 
         template
         < typename T_ADD_TUPLE = std::tuple<>
@@ -26,10 +26,10 @@ namespace xecs::prefab
           && xecs::tools::assert_standard_function_v<T_CALLBACK>
           && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
-        void CreatePrefabInstance( int Count, xecs::component::entity PrefabEntity, T_CALLBACK&& Callback, bool bRemoveRoot = true ) noexcept;
+        void CreatePrefabInstance( int Count, xecs::component::entity PrefabEntity, T_CALLBACK&& Callback, bool bRemoveRoot = true, bool isVariant = false ) noexcept;
 
         __inline
-        xecs::component::entity CreatePrefabInstance( xecs::component::entity PrefabEntity, std::unordered_map< std::uint64_t, xecs::component::entity >& Remap, xecs::component::entity ParentEntity) noexcept;
+        xecs::component::entity CreatePrefabInstance( xecs::component::entity PrefabEntity, std::unordered_map< std::uint64_t, xecs::component::entity >& Remap, xecs::component::entity ParentEntity, bool isVariant ) noexcept;
 
         xecs::game_mgr::instance&                                   m_GameMgr;
         std::unordered_map<std::uint64_t,xecs::component::entity>   m_PrefabList;
