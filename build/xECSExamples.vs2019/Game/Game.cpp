@@ -80,6 +80,9 @@ struct my_game final : live::game
 
     void RegisterElements( void ) noexcept
     {
+
+        static_assert( xecs::component::type::info_v<bullet>.m_pSerilizeFn );
+
         //
         // Register Components (They should always be first)
         //

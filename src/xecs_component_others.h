@@ -9,13 +9,12 @@ namespace xecs::component
     //
     struct ref_count
     {
-        inline static xcore::err Serialize(xecs::serializer::stream&, bool, std::byte* ) noexcept;
-
         constexpr static auto typedef_v = xecs::component::type::data
         {
             .m_pName       = "ReferenceCount"
-        ,   .m_pSerilizeFn = Serialize
         };
+
+        inline xcore::err Serialize( xecs::serializer::stream&, bool ) noexcept;
 
         int m_Value{ 1 };
     };
@@ -56,15 +55,13 @@ namespace xecs::component
     //
     struct parent
     {
-        inline static xcore::err Serialize          ( xecs::serializer::stream&, bool, std::byte* ) noexcept;
-        inline static void       ReportReferences   ( std::vector<xecs::component::entity*>&, std::byte* ) noexcept;
-
         constexpr static auto typedef_v = xecs::component::type::data
         {
             .m_pName                = "Parent"
-        ,   .m_pReportReferencesFn  = ReportReferences
-        ,   .m_pSerilizeFn          = Serialize
         };
+
+        inline xcore::err Serialize( xecs::serializer::stream&, bool ) noexcept;
+        inline void       ReportReferences(std::vector<xecs::component::entity*>& ) noexcept;
 
         xecs::component::entity m_Value;
     };
@@ -74,15 +71,13 @@ namespace xecs::component
     //
     struct children
     {
-        inline static xcore::err FullSerialize      ( xecs::serializer::stream&, bool, std::byte*, int&  ) noexcept;
-        inline static void       ReportReferences   ( std::vector<xecs::component::entity*>&, std::byte* ) noexcept;
-
         constexpr static auto typedef_v = xecs::component::type::data
         {
             .m_pName                = "Children"
-        ,   .m_pReportReferencesFn  = ReportReferences
-        ,   .m_pFullSerializeFn     = FullSerialize
         };
+
+        inline static xcore::err FullSerialize( xecs::serializer::stream&, bool, children*, int& ) noexcept;
+        inline void              ReportReferences(std::vector<xecs::component::entity*>& ) noexcept;
 
         std::vector<xecs::component::entity> m_List;
     };

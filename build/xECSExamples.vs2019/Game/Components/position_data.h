@@ -1,17 +1,15 @@
 struct position
 {
-    static xcore::err Serialize(xcore::textfile::stream& TextFile, bool, std::byte* pData) noexcept
-    {
-        auto& Position = *reinterpret_cast<position*>(pData);
-        TextFile.Field("Value", Position.m_Value.m_X, Position.m_Value.m_Y).clear();
-        return{};
-    }
-
     constexpr static auto typedef_v = xecs::component::type::data
     {
         .m_pName = "Position"
-//    ,   .m_pSerilizeFn = Serialize
     };
+
+    xcore::err Serialize( xecs::serializer::stream& TextFile, bool ) noexcept
+    {
+        TextFile.Field("Value", m_Value.m_X, m_Value.m_Y).clear();
+        return{};
+    }
 
     xcore::vector2 m_Value;
 };

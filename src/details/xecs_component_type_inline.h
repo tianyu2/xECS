@@ -70,6 +70,65 @@ namespace xecs::component::type::details
         return Name;
     }();
 
+    namespace details
+    {
+        template< typename T_COMPONENT, typename = void >  struct has_full_serialize : std::false_type {};
+        template< typename T_COMPONENT >                   struct has_full_serialize< T_COMPONENT, std::void_t<decltype(&T_COMPONENT::FullSerialize)> > : std::true_type
+        {
+            using fn_traits = xcore::function::traits<decltype(&T_COMPONENT::FullSerialize)>;
+
+            static_assert(std::is_same_v<fn_traits::class_type, void>, "The FullSerialize function should be a STATIC member function");
+            static_assert(fn_traits::arg_count_v == 4, "Function must have the same number of arguments, should be 4 --> (xecs::serializer::stream& TextFile, bool isRead, T_COMPONENT_ARRAY*, int& Count ) noexcept");
+            static_assert(std::is_same< typename fn_traits::return_type, xcore::err >::value, "The return type should be --> xcore::err ");
+            static_assert(xcore::function::details::traits_compare_args<fn_traits, xcore::function::traits<void(*)(xecs::serializer::stream&, bool, T_COMPONENT*, int& Count)>, static_cast<int>(fn_traits::arg_count_v) - 1>::value, "Arguments types don't match they should be (xecs::serializer::stream& TextFile, bool isRead, T_COMPONENT_ARRAY*, int& Count )");
+
+            constexpr static xcore::err FullGenericSerialize(xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponentArray, int& Count) noexcept
+            {
+                // TODO: Skip records that are not meant to be loaded
+                return T_COMPONENT::FullSerialize(TextFile, isRead, reinterpret_cast<T_COMPONENT*>(pComponentArray), Count);
+            };
+
+        };
+
+        template< typename T_COMPONENT, typename = void >  struct has_serialize : std::false_type {};
+        template< typename T_COMPONENT >                   struct has_serialize< T_COMPONENT, std::void_t<decltype(&T_COMPONENT::Serialize)> > : std::true_type
+        {
+            using fn_traits = xcore::function::traits<decltype(&T_COMPONENT::Serialize)>;
+
+            static_assert( std::is_same_v<fn_traits::class_type, T_COMPONENT>, "The Serialize function should be a member function" );
+            static_assert( fn_traits::arg_count_v == 2, "Function must have the same number of arguments, should be 2 --> (xecs::serializer::stream& TextFile, bool isRead ) noexcept");
+            static_assert( std::is_same< typename fn_traits::return_type, xcore::err >::value, "The return type should be --> xcore::err ");
+            static_assert( xcore::function::details::traits_compare_args<fn_traits, xcore::function::traits<void(*)(xecs::serializer::stream&, bool)>, static_cast<int>(fn_traits::arg_count_v) - 1>::value, "Arguments types don't match they should be (xecs::serializer::stream& TextFile, bool isRead )");
+
+            constexpr static xcore::err FullGenericSerialize(xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponentArray, int& Count) noexcept
+            {
+                xcore::err Error;
+
+                // Write a nice comment for the user so he knows what type of component we are writing 
+                if constexpr (T_COMPONENT::typedef_v.m_pName) if (isRead == false)
+                {
+                    Error = TextFile.WriteComment({ T_COMPONENT::typedef_v.m_pName, 1 + std::strlen(T_COMPONENT::typedef_v.m_pName) });
+                    if (Error) return Error;
+                }
+
+                TextFile.Record
+                ( Error
+                , serialize_name_v<T_COMPONENT>.s
+                , [&](std::size_t& C, xcore::err&) noexcept
+                {
+                    if (isRead) Count = static_cast<int>(C);
+                    else        C = Count;
+                }
+                , [&](std::size_t c, xcore::err& Error) noexcept
+                {
+                    Error = std::invoke(&T_COMPONENT::Serialize, reinterpret_cast<T_COMPONENT*>(pComponentArray) + c, TextFile, isRead);
+                });
+
+                return Error;
+            };
+        };
+    }
+
     //---------------------------------------------------------------------------------
     template< typename T_COMPONENT >
     constexpr auto serialize_v = []() consteval noexcept -> type::full_serialize_fn*
@@ -77,53 +136,18 @@ namespace xecs::component::type::details
         if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return nullptr;
         else
         {
-            if (T_COMPONENT::typedef_v.m_pSerilizeFn == nullptr
-                && T_COMPONENT::typedef_v.m_pFullSerializeFn == nullptr)
-                return nullptr;
-            static_assert(!(T_COMPONENT::typedef_v.m_pSerilizeFn && T_COMPONENT::typedef_v.m_pFullSerializeFn), "You can not specify both types of functions");
-
-            if constexpr (T_COMPONENT::typedef_v.m_pSerilizeFn)
-            {
-                return [](xecs::serializer::stream& TextFile, bool isRead, std::byte* pData, int& Count) noexcept -> xcore::err
-                {
-                    xcore::err Error;
-
-                    // Write a nice comment for the user so he knows what type of component we are writing 
-                    if constexpr (T_COMPONENT::typedef_v.m_pName) if (isRead == false)
-                    {
-                        Error = TextFile.WriteComment({ T_COMPONENT::typedef_v.m_pName, 1 + std::strlen(T_COMPONENT::typedef_v.m_pName) });
-                        if (Error) return Error;
-                    }
-
-                    TextFile.Record
-                    (   Error
-                        , serialize_name_v<T_COMPONENT>.s
-                        , [&](std::size_t& C, xcore::err&) noexcept
-                        {
-                            if (isRead) Count = static_cast<int>(C);
-                            else        C     = Count;
-                        }
-                        , [&](std::size_t c, xcore::err& Error) noexcept
-                        {
-                            Error = T_COMPONENT::typedef_v.m_pSerilizeFn(TextFile, isRead, reinterpret_cast<std::byte*>(pData + sizeof(T_COMPONENT) * c));
-                        }
-                    );
-                    return Error;
-                };
-            }
-            else
-            {
-                return T_COMPONENT::typedef_v.m_pFullSerializeFn;
-            }
+                 if constexpr ( details::has_serialize<T_COMPONENT>::value      ) return details::has_serialize<T_COMPONENT>::FullGenericSerialize;
+            else if constexpr ( details::has_full_serialize<T_COMPONENT>::value ) return details::has_full_serialize<T_COMPONENT>::FullGenericSerialize;
+            else return nullptr;
         }
     }();
 
     //---------------------------------------------------------------------------------
-    
+
     template< typename T_COMPONENT >
-    consteval const xcore::property::table* getPropertyTable( void ) noexcept
+    consteval const xcore::property::table* getPropertyTable(void) noexcept
     {
-        if constexpr ( property::isValidTable<T_COMPONENT>() )
+        if constexpr (property::isValidTable<T_COMPONENT>())
         {
             return &xcore::property::getTableByType<T_COMPONENT>();
         }
@@ -134,29 +158,82 @@ namespace xecs::component::type::details
     }
 
     //---------------------------------------------------------------------------------
+
     template< typename T_COMPONENT >
-    constexpr auto references_v = []() consteval noexcept -> type::reference_mode
+    constexpr auto serialize_mode_v = []() constexpr noexcept ->serialize_mode
+    {
+        if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG)
+        {
+            return serialize_mode::DONT_SERIALIZE;
+        }
+        else
+        {
+            if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::AUTO)
+            {
+                if constexpr ( serialize_v<T_COMPONENT> != nullptr ) return serialize_mode::BY_SERIALIZER;
+                else if constexpr (getPropertyTable<T_COMPONENT>()) return serialize_mode::BY_PROPERTIES;
+                else return serialize_mode::DONT_SERIALIZE;
+            }
+            else
+            {
+                if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES)
+                {
+                    static_assert( serialize_v<T_COMPONENT> == nullptr );
+                }
+                else if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES)
+                {
+                    static_assert(getPropertyTable<T_COMPONENT>());
+                }
+
+                return T_COMPONENT::typedef_v.m_SerializeMode;
+            }
+        }
+    }();
+    
+    namespace details
+    {
+        template< typename T_COMPONENT, typename = void >  struct has_report_references : std::false_type {};
+        template< typename T_COMPONENT >                   struct has_report_references< T_COMPONENT, std::void_t<decltype(&T_COMPONENT::ReportReferences)> > : std::true_type
+        {
+            using fn_traits = xcore::function::traits<decltype(&T_COMPONENT::ReportReferences)>;
+
+            static_assert(std::is_same_v<fn_traits::class_type, T_COMPONENT>, "The ReportReferences should be a member function and NOT a STATIC member function");
+            static_assert(fn_traits::arg_count_v == 1, "Function must have the same number of arguments, should be 1 --> ( std::vector<xecs::component::entity*>& ) noexcept");
+            static_assert(std::is_same< typename fn_traits::return_type, void >::value, "The return type should be --> void");
+            static_assert(xcore::function::details::traits_compare_args<fn_traits, xcore::function::traits<void(*)(std::vector<xecs::component::entity*>&)>, static_cast<int>(fn_traits::arg_count_v) - 1>::value, "Arguments types don't match they should be (std::vector<xecs::component::entity*>& )");
+
+            constexpr static void FullGenericReportReferences( std::vector<xecs::component::entity*>& List, std::byte* pComponent ) noexcept
+            {
+                std::invoke(&T_COMPONENT::ReportReferences, reinterpret_cast<T_COMPONENT*>(pComponent), List);
+            };
+        };
+    }
+
+    //---------------------------------------------------------------------------------
+
+    template< typename T_COMPONENT >
+    constexpr auto references_mode_v = []() consteval noexcept -> type::reference_mode
     {
         if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return type::reference_mode::NO_REFERENCES;
         else if constexpr (T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::NO_REFERENCES) return type::reference_mode::NO_REFERENCES;
-        else 
+        else
         {
-            if constexpr( T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::BY_FUNCTION )
+            if constexpr (T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::BY_FUNCTION)
             {
-                static_assert( T_COMPONENT::typedef_v.m_pReportReferencesFn, "You forgot to set the m_pReportReferencesFn" );
+                static_assert(details::has_report_references<T_COMPONENT>::value, "You forgot to add a ReportReference Member Function");
                 return type::reference_mode::BY_FUNCTION;
             }
-            else if constexpr( T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::BY_PROPERTIES )
+            else if constexpr (T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::BY_PROPERTIES)
             {
                 static_assert(getPropertyTable<T_COMPONENT>(), "You must have properties");
                 return type::reference_mode::BY_PROPERTIES;
             }
             else
             {
-                static_assert( T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::AUTO );
+                static_assert(T_COMPONENT::typedef_v.m_ReferenceMode == type::reference_mode::AUTO);
 
-                if constexpr ( T_COMPONENT::typedef_v.m_pReportReferencesFn ) return type::reference_mode::BY_FUNCTION;
-                else if constexpr( property::isValidTable<T_COMPONENT>() == false ) return type::reference_mode::NO_REFERENCES;
+                if constexpr (details::has_report_references<T_COMPONENT>::value) return type::reference_mode::BY_FUNCTION;
+                else if constexpr (property::isValidTable<T_COMPONENT>() == false) return type::reference_mode::NO_REFERENCES;
                 else
                 {
                     auto& Table = xcore::property::getTableByType<T_COMPONENT>();
@@ -167,10 +244,10 @@ namespace xecs::component::type::details
                         if (xcore::types::variant_t2i_v< xecs::component::entity, xcore::property::settings::data_variant> == Table.m_pActionEntries[i].m_FunctionTypeGetSet.index())
                             return type::reference_mode::BY_PROPERTIES;
 
-                        if( Table.m_pActionEntries[i].m_FunctionLists || Table.m_pActionEntries[i].m_FunctionTypeGetSet.index() >= std::variant_size_v<xcore::property::settings::data_variant>)
+                        if (Table.m_pActionEntries[i].m_FunctionLists || Table.m_pActionEntries[i].m_FunctionTypeGetSet.index() >= std::variant_size_v<xcore::property::settings::data_variant>)
                         {
                             // IF IT DID NOT COMPILED IS BECAUSE THIS ASSERT TRIGGER, PLEASE READ IT...
-                            assert( xcore::types::always_false_v<T_COMPONENT> && "Component must specify the typedef_v.m_ReferenceMode and can not be AUTO, since we can not determine if it has references or not");
+                            assert(xcore::types::always_false_v<T_COMPONENT> && "Component must specify the typedef_v.m_ReferenceMode and can not be AUTO, since we can not determine if it has references or not");
                             return type::reference_mode(0xff);
                         }
                     }
@@ -181,6 +258,21 @@ namespace xecs::component::type::details
         }
     }();
 
+    //---------------------------------------------------------------------------------
+
+    template< typename T_COMPONENT >
+    constexpr auto references_v = []() consteval noexcept -> report_references_fn*
+    {
+             if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return nullptr;
+        else if constexpr (references_mode_v<T_COMPONENT> == reference_mode::NO_REFERENCES) return nullptr;
+        else if constexpr (references_mode_v<T_COMPONENT> == reference_mode::BY_PROPERTIES) return nullptr;
+        else
+        {
+            static_assert(details::has_report_references<T_COMPONENT>::value, "You must provide a m_pReportReferenceFn");
+            return &details::has_report_references<T_COMPONENT>::FullGenericReportReferences;
+        }
+    }();
+    
     //---------------------------------------------------------------------------------
 
     template< typename T_COMPONENT >
@@ -239,50 +331,12 @@ namespace xecs::component::type::details
                                             return { xcore::crc<64>{}.FromBytes( {p,sizeof(T_COMPONENT)}, Guid.m_Value ).m_Value };
                                         };
                                   }()
-        ,   .m_pSerilizeFn      = serialize_v<T_COMPONENT>
-        ,   .m_pReportReferencesFn = []() consteval noexcept
-                                    {
-                                        if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return nullptr;
-                                        else if constexpr (references_v<T_COMPONENT> == reference_mode::NO_REFERENCES ) return nullptr;
-                                        else if constexpr (references_v<T_COMPONENT> == reference_mode::BY_PROPERTIES ) return nullptr;
-                                        else
-                                        {
-                                            static_assert(T_COMPONENT::typedef_v.m_pReportReferencesFn, "You must provide a m_pReportReferenceFn" );
-                                            return T_COMPONENT::typedef_v.m_pReportReferencesFn;
-                                        }
-                                    }()
-        ,   .m_pPropertyTable   = getPropertyTable<T_COMPONENT>()
-        ,   .m_SerializeMode    = []() consteval noexcept -> serialize_mode
-                                  {
-                                    if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) 
-                                    {
-                                        return serialize_mode::DONT_SERIALIZE;
-                                    }
-                                    else
-                                    {
-                                        if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::AUTO )
-                                        {
-                                            if constexpr ( T_COMPONENT::typedef_v.m_pSerilizeFn || T_COMPONENT::typedef_v.m_pFullSerializeFn ) return serialize_mode::BY_SERIALIZER;
-                                            else if constexpr ( getPropertyTable<T_COMPONENT>() ) return serialize_mode::BY_PROPERTIES;
-                                            else return serialize_mode::DONT_SERIALIZE;
-                                        }
-                                        else
-                                        {
-                                            if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES )
-                                            {
-                                                static_assert( T_COMPONENT::typedef_v.m_pSerilizeFn || T_COMPONENT::typedef_v.m_pFullSerializeFn );
-                                            }
-                                            else if constexpr ( T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES )
-                                            {
-                                                static_assert(getPropertyTable<T_COMPONENT>());
-                                            }
-
-                                            return T_COMPONENT::typedef_v.m_SerializeMode;
-                                        }
-                                    }
-                                  }()
-        ,   .m_ReferenceMode    = references_v<T_COMPONENT>
-        ,   .m_pName            = T_COMPONENT::typedef_v.m_pName
+        ,   .m_pSerilizeFn          = serialize_v<T_COMPONENT>
+        ,   .m_pReportReferencesFn  = references_v<T_COMPONENT>
+        ,   .m_pPropertyTable       = getPropertyTable<T_COMPONENT>()
+        ,   .m_SerializeMode        = serialize_mode_v<T_COMPONENT> 
+        ,   .m_ReferenceMode        = references_mode_v<T_COMPONENT>
+        ,   .m_pName                = T_COMPONENT::typedef_v.m_pName
                                     ? T_COMPONENT::typedef_v.m_pName
                                     : __FUNCSIG__
         };

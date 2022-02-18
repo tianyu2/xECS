@@ -6,14 +6,13 @@ namespace xecs::component
 {
     union entity final
     {
-        inline static xcore::err Serialize(xecs::serializer::stream& TextFile, bool, std::byte* pData ) noexcept;
-
         constexpr static auto invalid_entity_v  = 0xffffffffffffffffu;
         constexpr static auto typedef_v         = xecs::component::type::data
         {
             .m_pName        = "Entity"
-        ,   .m_pSerilizeFn  = Serialize
         };
+
+        inline xcore::err Serialize( xecs::serializer::stream& TextFile, bool ) noexcept;
 
         // Array of infos for an entity
         using info_array = std::array< const xecs::component::type::info*, xecs::settings::max_components_per_entity_v >;

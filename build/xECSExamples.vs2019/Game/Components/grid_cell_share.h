@@ -1,19 +1,17 @@
 struct grid_cell
 {
-    static xcore::err Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pData) noexcept
-    {
-        auto& GridCell = *reinterpret_cast<grid_cell*>(pData);
-        TextFile.Field( "X", GridCell.m_X ).clear();
-        TextFile.Field( "Y", GridCell.m_Y ).clear();
-        return {};
-    }
-
     constexpr static auto typedef_v = xecs::component::type::share
     {
         .m_pName        = "GridCell"
     ,   .m_bBuildFilter = true
-    ,   .m_pSerilizeFn  = Serialize
     };
+
+    xcore::err Serialize(xecs::serializer::stream& TextFile, bool) noexcept
+    {
+        TextFile.Field( "X", m_X ).clear();
+        TextFile.Field( "Y", m_Y ).clear();
+        return {};
+    }
 
     std::int16_t m_X;
     std::int16_t m_Y;

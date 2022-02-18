@@ -1,30 +1,27 @@
 namespace xecs::component
 {
-    xcore::err ref_count::Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pComponent) noexcept
+    xcore::err ref_count::Serialize( xecs::serializer::stream& TextFile, bool ) noexcept
     { 
-        auto& RefCount = *reinterpret_cast<ref_count*>(pComponent);
-        return TextFile.Field("GlobalIndex", RefCount.m_Value);
+        return TextFile.Field("GlobalIndex", m_Value);
     }
 
     //----------------------------------------------------------------------------------------------------
 
-    xcore::err parent::Serialize( xecs::serializer::stream& TextFile, bool, std::byte* pComponent) noexcept
+    xcore::err parent::Serialize( xecs::serializer::stream& TextFile, bool ) noexcept
     {
-        auto& Parent = *reinterpret_cast<parent*>(pComponent);
-        return TextFile.Field("Parent", Parent.m_Value );
+        return TextFile.Field("Parent", m_Value );
     }
 
     //----------------------------------------------------------------------------------------------------
 
-    void parent::ReportReferences(std::vector<xecs::component::entity*>& List, std::byte* pComponent) noexcept
+    void parent::ReportReferences(std::vector<xecs::component::entity*>& List) noexcept
     {
-        auto& Parent = *reinterpret_cast<parent*>(pComponent);
-        List.push_back(&Parent.m_Value);
+        List.push_back(&m_Value);
     }
 
     //----------------------------------------------------------------------------------------------------
 
-    xcore::err children::FullSerialize( xecs::serializer::stream& TextFile, bool isRead, std::byte* pData, int& Count ) noexcept
+    xcore::err children::FullSerialize( xecs::serializer::stream& TextFile, bool isRead, children* pData, int& Count ) noexcept
     {
         xcore::err Error;
 
@@ -78,10 +75,9 @@ namespace xecs::component
 
     //----------------------------------------------------------------------------------------------------
 
-    void children::ReportReferences(std::vector<xecs::component::entity*>& List, std::byte* pComponent) noexcept
+    void children::ReportReferences(std::vector<xecs::component::entity*>& List) noexcept
     {
-        auto& Children = *reinterpret_cast<children*>(pComponent);
-        for( auto& E : Children.m_List ) List.push_back(&E);
+        for( auto& E : m_List ) List.push_back(&E);
     }
 
 }

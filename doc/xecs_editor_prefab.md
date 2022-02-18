@@ -26,7 +26,7 @@ The problems that we need to solve are:
 5. Update the prefab Variants (original prefab, other variants and the relevant Scene prefabs, and their variants).
 6. Update the all the Variant instances correctly.
 
-CASE 1: The simplest way possible to edit a prefab would be:
+### CASE 1: The simplest way possible to edit a prefab would be:
 
 1. Serialize the scene
 2. Create an instance of the prefab.
@@ -35,7 +35,7 @@ CASE 1: The simplest way possible to edit a prefab would be:
 5. Reload the entire scene with all the prefabs
 
 However doing so would be a bit slow. So there are a few things that we can do to improve things. 
-<br>CASE 2: Create a version would allow to no serialize the entire scene and to only deal with the relevant data. so lets revise the steps:
+### CASE 2: Create a version would allow to no serialize the entire scene and to only deal with the relevant data. so lets revise the steps:
 
 1. Create an instance of the prefab.
 2. Allow the user to modify anything it feel compel to do.
@@ -47,7 +47,7 @@ However doing so would be a bit slow. So there are a few things that we can do t
 8. Reload the temporary file with all the instances
 
 Now this still sounds overkill for many typical operations such changing an integer value in some component. Specially all the serialization work that seems that we are doing. 
-<br>CASE 3: So lets again review the steps:
+### CASE 3: So lets again review the steps:
 
 1. Allow the user to edit the prefab itself
 2. Any changes made in the prefab will automatically cascade to the regular instances. 
@@ -56,6 +56,9 @@ Now this still sounds overkill for many typical operations such changing an inte
 This last version is also a bit scary because changing a single integer one time may take a while before all the changes has cascade in the entire scene. 
 
 TODO: EXPLORE MORE CASES...
+
+
+
 
 ## Instance Component
 
