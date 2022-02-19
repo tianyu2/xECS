@@ -224,7 +224,7 @@ namespace xecs::game_mgr
         {
             using sorted_shares_t = xecs::component::type::details::sort_tuple_t<xecs::component::type::details::share_only_tuple_t< xcore::function::traits<T_FUNCTION>::args_tuple >>;
 
-            if constexpr( xecs::tools::tuple_only_const_types_v< xecs::component::type::details::share_only_tuple_t< xcore::function::traits<T_FUNCTION>::args_tuple > > )
+            if constexpr( xecs::tools::tuple_only_const_types_v< xecs::component::type::details::share_only_tuple_t< typename xcore::function::traits<T_FUNCTION>::args_tuple > > )
             {
                 using data_t = xecs::component::type::details::data_only_tuple_t < xcore::function::traits<T_FUNCTION>::args_tuple >;
 

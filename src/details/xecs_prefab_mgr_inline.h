@@ -165,16 +165,20 @@ namespace xecs::prefab
             //
             if( InstanceArchetype.hasShareComponents() )
             {
-                auto& Family = PrefabArchetype.hasShareComponents() ? InstanceArchetype.getOrCreatePoolFamily(*PrefabDetails.m_pPool->m_pMyFamily) : InstanceArchetype.getOrCreatePoolFamily({}, {});
+                auto& Family = &PrefabArchetype == &InstanceArchetype ? *PrefabDetails.m_pPool->m_pMyFamily 
+                                                                      : PrefabArchetype.hasShareComponents() ? InstanceArchetype.getOrCreatePoolFamily(*PrefabDetails.m_pPool->m_pMyFamily) 
+                                                                                                             : InstanceArchetype.getOrCreatePoolFamily({}, {});
 
                 // Can we choose the fast path here?
                 //  - We don't have a function or if we have a function but not share components then not changes in share components will happen which means we can speed up things.
-                if constexpr( std::is_same_v< T_CALLBACK, xecs::tools::empty_lambda > || std::tuple_size_v<xecs::component::type::details::share_only_tuple_t<fn_traits::args_tuple>> == 0 )
+                if constexpr( std::is_same_v< T_CALLBACK, xecs::tools::empty_lambda > || false == xecs::tools::function_has_share_component_args_v<T_CALLBACK> )
                 {
                     InstanceArchetype.CreateEntities(Family, Count, Entity, std::forward<T_CALLBACK&&>(Callback) );
                 }
                 else
                 {
+                    static_assert(std::tuple_size_v<xecs::component::type::details::share_only_tuple_t<fn_traits::args_tuple>> > 0);
+
                     // TODO: We could try to see if we can improve the performance of this
                     for( int i=0; i<Count; ++i )
                     {
@@ -194,7 +198,11 @@ namespace xecs::prefab
             else
             {
                 assert( std::tuple_size_v<xecs::component::type::details::share_only_tuple_t<fn_traits::args_tuple>> == 0 );
-                InstanceArchetype.CreateEntities( Count, Entity, std::forward<T_CALLBACK&&>(Callback) );
+                if constexpr (std::is_same_v< T_CALLBACK, xecs::tools::empty_lambda > || std::tuple_size_v<xecs::component::type::details::share_only_tuple_t<fn_traits::args_tuple>> == 0) InstanceArchetype.CreateEntities( Count, Entity, std::forward<T_CALLBACK&&>(Callback) );
+                else 
+                {
+                    xassert( false && "You are trying to chage a share component using a function but the entity has not share components" );
+                }
             }
 
             // Entity-Prefab-Instance-Done

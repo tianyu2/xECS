@@ -164,7 +164,7 @@ namespace xecs::tools
     < typename... T_COMPONENTS
     > concept
     only_const_types_v
-    = ( xcore::types::is_const_v<T_COMPONENTS> && ... );
+    = sizeof...(T_COMPONENTS) > 0 && ( xcore::types::is_const_v<T_COMPONENTS> && ... );
 
     //------------------------------------------------------------------------------
 

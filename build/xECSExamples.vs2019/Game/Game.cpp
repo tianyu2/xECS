@@ -76,6 +76,8 @@ struct my_game final : live::game
 
             Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
         });
+
+        int b = 0;
     }
 
     //-----------------------------------------------------------------------------

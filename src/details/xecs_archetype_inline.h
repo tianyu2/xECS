@@ -1320,7 +1320,8 @@ instance::_MoveInEntity
                                  , T_CALLBACK&&              Function
                                  ) noexcept
     {
-        xassert(m_nShareComponents == 0);
+        // TODO: May be revise this?... We should be able to read share components even if we don't allow to write them...
+        static_assert( xecs::tools::function_has_share_component_args_v<T_CALLBACK> == false, "This function is only used for prefabs right now and prefabs are not allowed to modify share components on creation");
 
         auto& ArchetypeMgr = m_Mgr.m_GameMgr.m_ArchetypeMgr;
         auto& CompMgr      = m_Mgr.m_GameMgr.m_ComponentMgr;
@@ -1328,8 +1329,6 @@ instance::_MoveInEntity
 
         PoolFamily.AppendEntities( Count, m_Mgr, [&](xecs::pool::instance& Pool, xecs::pool::index Index, int nAlloc ) noexcept
         {
-            ArchetypeMgr.AddToStructuralPendingList(Pool);
-
             for (int i = 0; i < nAlloc; ++i)
             {
                 xecs::pool::index NewIndex{ Index.m_Value + i };
@@ -1338,6 +1337,9 @@ instance::_MoveInEntity
 
                 // Copy the entity raw
                 Pool.CopyEntity( NewIndex, EntityInfo.m_PoolIndex, *EntityInfo.m_pPool );
+
+                // Set the new entity data
+                Pool.getComponent<xecs::component::entity>(Index) = NewEntity;
 
                 if constexpr (false == std::is_same_v<xecs::tools::empty_lambda, T_CALLBACK >)
                 {

@@ -612,8 +612,8 @@ namespace xecs::pool
             else                memcpy(m_pComponent[i] + Info.m_Size * ToNewIndex.m_Value, FromPool.m_pComponent[i] + Info.m_Size * FromIndex.m_Value, Info.m_Size );
         }
         */
-        int         iPoolFrom     = 0;
-        int         iPoolTo       = 0;
+        int         iPoolFrom     = 1;
+        int         iPoolTo       = 1;
         const int   PoolFromCount = static_cast<int>(FromPool.m_ComponentInfos.size());
         const int   PoolToCount   = static_cast<int>(m_ComponentInfos.size());
         while (true)
