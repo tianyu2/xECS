@@ -578,15 +578,73 @@ instance::AddOrRemoveComponents
     //---------------------------------------------------------------------------
 
     template
+    < typename T_FUNCTION
+    > requires
+    ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+    ) xecs::prefab::guid instance::CreatePrefab( xecs::tools::bits         ComponentBits
+                                               , T_FUNCTION&&              Function
+                                               ) noexcept
+    {
+        xecs::prefab::guid PrefabGuid;
+
+        PrefabGuid.m_Instance.Reset();
+        PrefabGuid.m_Instance.m_Value |= 1; // always set 1 for resources
+
+        ComponentBits.AddFromComponents<xecs::component::entity, xecs::prefab::tag, xecs::prefab::root>();
+
+        xassert( false == ComponentBits.getBit(xecs::component::type::info_v<xecs::component::parent>.m_BitID) );
+
+        // Create the Prefab
+        auto PrefabEntity = [&]<typename...T_ARGS>(std::tuple<T_ARGS...>*) noexcept
+        {
+            return m_ArchetypeMgr.getOrCreateArchetype(ComponentBits)
+                .CreateEntity([&](xecs::prefab::root& Root, T_ARGS&... Args) noexcept
+                    {
+                        Root.m_Guid = PrefabGuid;
+                        if constexpr (false == std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda>) Function(Args...);
+                    });
+        }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
+
+        // Register the prefab
+        m_PrefabMgr.m_PrefabList.insert({ PrefabGuid.m_Instance.m_Value, PrefabEntity });
+
+        return PrefabGuid;
+    }
+
+    //---------------------------------------------------------------------------
+
+    template
+    < typename...T_COMPONENTS
+    , typename T_FUNCTION
+    > requires
+    ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+    ) xecs::prefab::guid instance::CreatePrefab( T_FUNCTION&& Function ) noexcept
+    {
+        xecs::tools::bits ComponentBits;
+        ComponentBits.AddFromComponents<T_COMPONENTS...>();
+        return CreatePrefab(ComponentBits, std::forward<T_FUNCTION&&>(Function) );
+    }
+
+    //---------------------------------------------------------------------------
+
+    template
     < typename T_ADD_TUPLE
     , typename T_SUB_TUPLE
     , typename T_FUNCTION
     > requires
     ( xecs::tools::assert_standard_function_v<T_FUNCTION>
     ) void
-    instance::CreatePrefabInstance( int Count, xecs::component::entity PrefabEntity, T_FUNCTION&& Function, bool bRemoveRoot ) noexcept
+    instance::CreatePrefabInstance( int Count, xecs::prefab::guid PrefabGuid, T_FUNCTION&& Function, bool bRemoveRoot ) noexcept
     {
-        m_PrefabMgr.CreatePrefabInstance<T_ADD_TUPLE, T_SUB_TUPLE>( Count, PrefabEntity, std::forward<T_FUNCTION&&>(Function), bRemoveRoot, false );
+        if (auto It = m_PrefabMgr.m_PrefabList.find(PrefabGuid.m_Instance.m_Value); It != m_PrefabMgr.m_PrefabList.end())
+        {
+            m_PrefabMgr.CreatePrefabInstance<T_ADD_TUPLE, T_SUB_TUPLE>( Count, It->second, std::forward<T_FUNCTION&&>(Function), bRemoveRoot, false );
+        }
+        else
+        {
+            //Unable to find the prefab
+            xassert(false);
+        }
     }
 
     //---------------------------------------------------------------------------
@@ -597,12 +655,44 @@ instance::AddOrRemoveComponents
     , typename T_FUNCTION 
     > requires
     ( xecs::tools::assert_standard_function_v<T_FUNCTION> )
-    [[nodiscard]] void             
-    instance::CreatePrefabVariant( int                      Count
-                                 , xecs::component::entity  PrefabEntity
+    [[nodiscard]] xecs::prefab::guid
+    instance::CreatePrefabVariant(xecs::prefab::guid        PrefabGuid
                                  , T_FUNCTION&&             Function
                                  ) noexcept
     {
-        m_PrefabMgr.CreatePrefabInstance<T_ADD_TUPLE, T_SUB_TUPLE>( Count, PrefabEntity, std::forward<T_FUNCTION&&>(Function), false, true );
+        xecs::prefab::guid PrefabVariantGuid;
+
+        if( auto It = m_PrefabMgr.m_PrefabList.find(PrefabGuid.m_Instance.m_Value); It != m_PrefabMgr.m_PrefabList.end() )
+        {
+            xecs::component::entity PrefabVarientEntity;
+
+            [&] <typename...T_ARGS>(std::tuple<T_ARGS...>*) noexcept
+            {
+                m_PrefabMgr.CreatePrefabInstance<T_ADD_TUPLE, T_SUB_TUPLE>
+                ( 1
+                , It->second
+                , [&]( const xecs::component::entity& Entity, T_ARGS&... Args ) noexcept
+                {
+                    PrefabVarientEntity = Entity;
+                    if constexpr (false == std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda>) Function(Args...);
+                }
+                , false
+                , true
+                );
+            }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
+            
+            PrefabVariantGuid.m_Instance.Reset();
+            PrefabVariantGuid.m_Instance.m_Value |= 1; // always set 1 for resources
+
+            // Register the prefab
+            m_PrefabMgr.m_PrefabList.insert({ PrefabVariantGuid.m_Instance.m_Value, PrefabVarientEntity });
+        }
+        else
+        {
+            // Unable to find the prefab
+            xassert(false);
+        }
+        
+        return PrefabVariantGuid;
     }
 }

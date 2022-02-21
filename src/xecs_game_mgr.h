@@ -112,13 +112,27 @@ namespace xecs::game_mgr
         archetype::instance&                getOrCreateArchetype    ( void 
                                                                     ) noexcept;
         template
-        < typename T_ADD_TUPLE = std::tuple<>
-        , typename T_SUB_TUPLE = std::tuple<>
+        < typename...T_COMPONENTS
         , typename T_FUNCTION   = xecs::tools::empty_lambda
         > requires
         ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+        ) xecs::prefab::guid                CreatePrefab            ( T_FUNCTION&&              Function        = xecs::tools::empty_lambda{}
+                                                                    ) noexcept;
+        template
+        < typename T_FUNCTION   = xecs::tools::empty_lambda
+        > requires
+        ( xecs::tools::assert_standard_function_v<T_FUNCTION>
+        ) xecs::prefab::guid                CreatePrefab            ( xecs::tools::bits         ComponentBits
+                                                                    , T_FUNCTION&&              Function        = xecs::tools::empty_lambda{}
+                                                                    ) noexcept;
+        template
+        < typename T_ADD_TUPLE = std::tuple<>
+        , typename T_SUB_TUPLE = std::tuple<>
+        , typename T_FUNCTION  = xecs::tools::empty_lambda
+        > requires
+        ( xecs::tools::assert_standard_function_v<T_FUNCTION>
         ) void                              CreatePrefabInstance    ( int                       Count
-                                                                    , xecs::component::entity   PrefabEntity
+                                                                    , xecs::prefab::guid        PrefabGuid
                                                                     , T_FUNCTION&&              Function        = xecs::tools::empty_lambda{}
                                                                     , bool                      bRemoveRoot     = true
                                                                     ) noexcept;
@@ -128,8 +142,8 @@ namespace xecs::game_mgr
         , typename T_FUNCTION  = xecs::tools::empty_lambda
         > requires
         ( xecs::tools::assert_standard_function_v<T_FUNCTION>
-        ) xforceinline [[nodiscard]] void   CreatePrefabVariant     ( int                       Count
-                                                                    , xecs::component::entity   PrefabEntity
+        ) xforceinline [[nodiscard]] xecs::prefab::guid
+                                            CreatePrefabVariant     ( xecs::prefab::guid        PrefabGuid
                                                                     , T_FUNCTION&&              Function = xecs::tools::empty_lambda{}
                                                                     ) noexcept;
         inline

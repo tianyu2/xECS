@@ -32,8 +32,7 @@ struct my_game final : live::game
         //
         // Create a prefab
         //
-        auto PrefabEntity = m_GameMgr->getOrCreateArchetype< position, velocity, timer, grid_cell, xecs::prefab::tag>()
-        .CreateEntity([&](position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell) noexcept
+        auto PrefabGuid = m_GameMgr->CreatePrefab<position, velocity, timer, grid_cell>([&](position& Position, velocity& Velocity, timer& Timer, grid_cell& Cell) noexcept
         {
             Position.m_Value = xcore::vector2
             { static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
@@ -52,17 +51,15 @@ struct my_game final : live::game
         //
         // Create a Variant
         //
-        xecs::component::entity PrefabVariant;
-        m_GameMgr->CreatePrefabVariant( 1, PrefabEntity, [&]( const xecs::component::entity& Enttiy, timer& Timer ) noexcept
+        auto PrefabVarientGuid = m_GameMgr->CreatePrefabVariant( PrefabGuid, [&]( timer& Timer ) noexcept
         {
-            PrefabVariant = Enttiy;
             Timer.m_Value = std::rand() / static_cast<float>(RAND_MAX) * 8;
         });
 
         //
         // Create a prefab instance
         //
-        m_GameMgr->CreatePrefabInstance( 2000, PrefabVariant, [&]( position& Position, velocity & Velocity, timer& Timer, grid_cell& Cell) noexcept
+        m_GameMgr->CreatePrefabInstance( 2000, PrefabVarientGuid, [&]( position& Position, velocity & Velocity, timer& Timer, grid_cell& Cell) noexcept
         {
             Position.m_Value = xcore::vector2{ static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getWidth())
                                              , static_cast<float>(std::rand() % renderer::s_pLiveRenderer->getHeight())

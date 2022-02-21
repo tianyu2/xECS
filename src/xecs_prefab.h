@@ -15,6 +15,17 @@ namespace xecs::prefab
         };
     };
 
+    struct root
+    {
+        constexpr static auto typedef_v = xecs::component::type::data
+        {
+            .m_pName = "RootPrefabComponent"
+        };
+
+        guid                                                        m_Guid;         // GUID of the prefab
+        std::unordered_map<std::uint64_t, xecs::component::entity>  m_Remap;        // Hash map used to remap the references
+    };
+
     //-------------------------------------------------------------------------------
 /*
     struct instance

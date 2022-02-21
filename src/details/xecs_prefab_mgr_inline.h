@@ -145,7 +145,11 @@ namespace xecs::prefab
 
         xassert( InstanceBits.getBit(xecs::component::type::info_v<xecs::prefab::tag>.m_BitID) );
 
-        if( false == isVariant ) InstanceBits.clearBit( xecs::component::type::info_v<xecs::prefab::tag>.m_BitID );
+        if( false == isVariant ) 
+        {
+            InstanceBits.clearBit( xecs::component::type::info_v<xecs::prefab::tag>.m_BitID );
+            InstanceBits.clearBit( xecs::component::type::info_v<xecs::prefab::root>.m_BitID );
+        }
         InstanceBits.AddFromComponents( xcore::types::null_tuple_v<T_ADD_TUPLE> );
         InstanceBits.ClearFromComponents( xcore::types::null_tuple_v<T_SUB_TUPLE> );
 
