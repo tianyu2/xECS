@@ -1314,11 +1314,12 @@ instance::_MoveInEntity
     ( xecs::tools::assert_standard_function_v<T_CALLBACK>
         && xecs::tools::assert_function_return_v<T_CALLBACK, void>
     ) __inline
-    void instance::CreateEntities( xecs::pool::family&       PoolFamily
-                                 , int                       Count
-                                 , xecs::component::entity   FromEntity
-                                 , T_CALLBACK&&              Function
-                                 ) noexcept
+    xecs::component::entity instance::CreateEntities
+    ( xecs::pool::family&       PoolFamily
+     , int                      Count
+     , xecs::component::entity  FromEntity
+     , T_CALLBACK&&             Function
+     ) noexcept
     {
         // TODO: May be revise this?... We should be able to read share components even if we don't allow to write them...
         static_assert( xecs::tools::function_has_share_component_args_v<T_CALLBACK> == false, "This function is only used for prefabs right now and prefabs are not allowed to modify share components on creation");
@@ -1327,13 +1328,14 @@ instance::_MoveInEntity
         auto& CompMgr      = m_Mgr.m_GameMgr.m_ComponentMgr;
         auto& EntityInfo   = CompMgr.getEntityDetails(FromEntity);
 
+        xecs::component::entity NewEntity;
         PoolFamily.AppendEntities( Count, m_Mgr, [&](xecs::pool::instance& Pool, xecs::pool::index Index, int nAlloc ) noexcept
         {
             for (int i = 0; i < nAlloc; ++i)
             {
                 xecs::pool::index NewIndex{ Index.m_Value + i };
 
-                auto NewEntity = CompMgr.AllocNewEntity( NewIndex, *this, Pool );
+                NewEntity = CompMgr.AllocNewEntity( NewIndex, *this, Pool );
 
                 // Copy the entity raw
                 Pool.CopyEntity( NewIndex, EntityInfo.m_PoolIndex, *EntityInfo.m_pPool );
@@ -1354,8 +1356,9 @@ instance::_MoveInEntity
                 }
             }
         });
-    }
 
+        return NewEntity;
+    }
 
     //-------------------------------------------------------------------------------------
 
@@ -1365,13 +1368,13 @@ instance::_MoveInEntity
     ( xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
         && xecs::tools::assert_function_return_v<T_CALLBACK, void>
     ) __inline
-    void instance::CreateEntities( int                       Count
-                                 , xecs::component::entity   FromEntity
-                                 , T_CALLBACK&&              Function
-                                 ) noexcept
+    xecs::component::entity instance::CreateEntities
+    ( int                       Count
+    , xecs::component::entity   FromEntity
+    , T_CALLBACK&&              Function
+    ) noexcept
     {
         xassert(m_nShareComponents == 0);
-        CreateEntities( getOrCreatePoolFamily({}, {}), Count, FromEntity, std::forward<T_CALLBACK&&>(Function) );
+        return CreateEntities( getOrCreatePoolFamily({}, {}), Count, FromEntity, std::forward<T_CALLBACK&&>(Function) );
     }
-
 }

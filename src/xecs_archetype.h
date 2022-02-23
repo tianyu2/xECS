@@ -120,7 +120,7 @@ namespace xecs::archetype
         ( xecs::tools::assert_standard_setter_function_v<T_CALLBACK>
             && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
-        void                    CreateEntities          ( int                       Count
+        xecs::component::entity CreateEntities          ( int                       Count
                                                         , xecs::component::entity   FromEntity
                                                         , T_CALLBACK&&              Function = xecs::tools::empty_lambda{}
                                                         ) noexcept;
@@ -131,7 +131,7 @@ namespace xecs::archetype
         ( xecs::tools::assert_standard_function_v<T_CALLBACK>
             && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
-        void                    CreateEntities          ( xecs::pool::family&       PoolFamily
+        xecs::component::entity CreateEntities          ( xecs::pool::family&       PoolFamily
                                                         , int                       Count
                                                         , xecs::component::entity   FromEntity
                                                         , T_CALLBACK&&              Function = xecs::tools::empty_lambda{}

@@ -666,14 +666,19 @@ instance::AddOrRemoveComponents
         {
             xecs::component::entity PrefabVarientEntity;
 
+            PrefabVariantGuid.m_Instance.Reset();
+            PrefabVariantGuid.m_Instance.m_Value |= 1; // always set 1 for resources
+
             [&] <typename...T_ARGS>(std::tuple<T_ARGS...>*) noexcept
             {
-                m_PrefabMgr.CreatePrefabInstance<T_ADD_TUPLE, T_SUB_TUPLE>
+                PrefabVarientEntity = m_PrefabMgr.CreatePrefabInstance<T_ADD_TUPLE, T_SUB_TUPLE>
                 ( 1
                 , It->second
-                , [&]( const xecs::component::entity& Entity, T_ARGS&... Args ) noexcept
+                , [&]( xecs::prefab::root& Root, T_ARGS&... Args ) noexcept
                 {
-                    PrefabVarientEntity = Entity;
+                    Root.m_Guid             = PrefabVariantGuid;
+                    Root.m_ParentPrefabGuid = PrefabGuid;
+
                     if constexpr (false == std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda>) Function(Args...);
                 }
                 , false
@@ -681,9 +686,6 @@ instance::AddOrRemoveComponents
                 );
             }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
             
-            PrefabVariantGuid.m_Instance.Reset();
-            PrefabVariantGuid.m_Instance.m_Value |= 1; // always set 1 for resources
-
             // Register the prefab
             m_PrefabMgr.m_PrefabList.insert({ PrefabVariantGuid.m_Instance.m_Value, PrefabVarientEntity });
         }

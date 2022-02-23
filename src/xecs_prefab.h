@@ -22,8 +22,9 @@ namespace xecs::prefab
             .m_pName = "RootPrefabComponent"
         };
 
-        guid                                                        m_Guid;         // GUID of the prefab
-        std::unordered_map<std::uint64_t, xecs::component::entity>  m_Remap;        // Hash map used to remap the references
+        guid                                                        m_ParentPrefabGuid; // GUID of the parent prefab is this is null the is a regular prefab other wise is a variant 
+        guid                                                        m_Guid;             // GUID of the prefab
+        std::unordered_map<std::uint64_t, xecs::component::entity>  m_Remap;            // Hash map used to remap the references
     };
 
     //-------------------------------------------------------------------------------

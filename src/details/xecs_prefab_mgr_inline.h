@@ -133,7 +133,7 @@ namespace xecs::prefab
       && xecs::tools::assert_standard_function_v<T_CALLBACK>
       && xecs::tools::assert_function_return_v<T_CALLBACK, void>
     ) __inline
-    void mgr::CreatePrefabInstance( int Count, xecs::component::entity Entity, T_CALLBACK&& Callback, bool bRemoveRoot, bool isVariant ) noexcept
+    xecs::component::entity mgr::CreatePrefabInstance( int Count, xecs::component::entity Entity, T_CALLBACK&& Callback, bool bRemoveRoot, bool isVariant ) noexcept
     {
         //
         // Get the right set of bits
@@ -159,6 +159,8 @@ namespace xecs::prefab
         using fn_traits = xcore::function::traits<T_CALLBACK>;
         if( false == InstanceBits.getBit(xecs::component::type::info_v<xecs::component::children>.m_BitID) )
         {
+            xecs::component::entity InstanceEntity;
+
             //
             // Get the instance archetype
             //
@@ -169,7 +171,7 @@ namespace xecs::prefab
             //
             if( InstanceArchetype.hasShareComponents() )
             {
-                auto& Family = &PrefabArchetype == &InstanceArchetype ? *PrefabDetails.m_pPool->m_pMyFamily 
+                auto& Family = &PrefabArchetype == &InstanceArchetype ? *PrefabDetails.m_pPool->m_pMyFamily
                                                                       : PrefabArchetype.hasShareComponents() ? InstanceArchetype.getOrCreatePoolFamily(*PrefabDetails.m_pPool->m_pMyFamily) 
                                                                                                              : InstanceArchetype.getOrCreatePoolFamily({}, {});
 
@@ -177,7 +179,7 @@ namespace xecs::prefab
                 //  - We don't have a function or if we have a function but not share components then not changes in share components will happen which means we can speed up things.
                 if constexpr( std::is_same_v< T_CALLBACK, xecs::tools::empty_lambda > || false == xecs::tools::function_has_share_component_args_v<T_CALLBACK> )
                 {
-                    InstanceArchetype.CreateEntities(Family, Count, Entity, std::forward<T_CALLBACK&&>(Callback) );
+                    InstanceEntity = InstanceArchetype.CreateEntities(Family, Count, Entity, std::forward<T_CALLBACK&&>(Callback) );
                 }
                 else
                 {
@@ -186,8 +188,6 @@ namespace xecs::prefab
                     // TODO: We could try to see if we can improve the performance of this
                     for( int i=0; i<Count; ++i )
                     {
-                        xecs::component::entity InstanceEntity;
-
                         // We will first place the new entity in the default family
                         InstanceArchetype.CreateEntities( Family, 1, Entity, [&]( const xecs::component::entity& Entity ) constexpr noexcept 
                         {
@@ -210,18 +210,18 @@ namespace xecs::prefab
             }
 
             // Entity-Prefab-Instance-Done
-            return;
+            return InstanceEntity;
         }
 
         //
         // If we are dealing with a Scene-Prefab...
         //
         auto pInstanceArchetype = bRemoveRoot ? nullptr : &m_GameMgr.m_ArchetypeMgr.getOrCreateArchetype(InstanceBits);
+        xecs::component::entity EntityInstance;
 
         std::vector<xecs::component::entity*> References;       // Minimize allocation by factoring it out here
         for( int i=0; i<Count; ++i )
         {
-            xecs::component::entity                                         EntityInstance;
             std::unordered_map< std::uint64_t, xecs::component::entity >    EntityRemap;
 
             //
@@ -365,6 +365,8 @@ namespace xecs::prefab
                 }
             }
         }
+
+        return EntityInstance;
     }
 
     //--------------------------------------------------------------------------------------------------------------

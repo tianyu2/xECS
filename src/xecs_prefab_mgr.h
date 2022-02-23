@@ -26,7 +26,7 @@ namespace xecs::prefab
           && xecs::tools::assert_standard_function_v<T_CALLBACK>
           && xecs::tools::assert_function_return_v<T_CALLBACK, void>
         ) __inline
-        void CreatePrefabInstance( int Count, xecs::component::entity PrefabEntity, T_CALLBACK&& Callback, bool bRemoveRoot = true, bool isVariant = false ) noexcept;
+        xecs::component::entity CreatePrefabInstance( int Count, xecs::component::entity PrefabEntity, T_CALLBACK&& Callback, bool bRemoveRoot = true, bool isVariant = false ) noexcept;
 
         __inline
         xecs::component::entity CreatePrefabInstance( xecs::component::entity PrefabEntity, std::unordered_map< std::uint64_t, xecs::component::entity >& Remap, xecs::component::entity ParentEntity, bool isVariant ) noexcept;
