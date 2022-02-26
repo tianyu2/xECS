@@ -19,12 +19,15 @@ namespace xecs::prefab
     {
         constexpr static auto typedef_v = xecs::component::type::data
         {
-            .m_pName = "RootPrefabComponent"
+            .m_pName            = "RootPrefabComponent"
+        ,   .m_ReferenceMode    = xecs::component::type::reference_mode::NO_REFERENCES
         };
+
+        inline xcore::err Serialize(xecs::serializer::stream&, bool) noexcept;
 
         guid                                                        m_ParentPrefabGuid; // GUID of the parent prefab is this is null the is a regular prefab other wise is a variant 
         guid                                                        m_Guid;             // GUID of the prefab
-        std::unordered_map<std::uint64_t, xecs::component::entity>  m_Remap;            // Hash map used to remap the references
+        std::unordered_map<std::uint64_t, xecs::component::entity>  m_Remap{};          // Hash map used to remap the references
     };
 
     //-------------------------------------------------------------------------------

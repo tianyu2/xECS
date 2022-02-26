@@ -8,12 +8,12 @@ namespace xecs::component
         {
             xassert(LastKnownSceneRanged >= 0);
 
-            m_MaxSceneRange = std::max(runtime_range_count_v, LastKnownSceneRanged) + editor_scene_range_count_overflow_v;
+            m_MaxSceneRange = std::max(xecs::component::ranges::runtime_range_count_v, LastKnownSceneRanged) + xecs::component::ranges::editor_scene_range_count_overflow_v;
             m_pGlobalInfo = reinterpret_cast<entity::global_info*>(VirtualAlloc
             (nullptr
                 , m_MaxSceneRange
-                * sub_ranges_count_per_range_v
-                * static_cast<std::size_t>(sub_range_byte_count_v)
+                * xecs::component::ranges::sub_ranges_count_per_range_v
+                * static_cast<std::size_t>(xecs::component::ranges::sub_range_byte_count_v)
                 , MEM_RESERVE
                 , PAGE_NOACCESS
             ));
@@ -55,28 +55,28 @@ namespace xecs::component
             m_LastRuntimeSubrange++;
 
             // We run out of runtime entities.... that must be over 100 million!!!
-            xassert( m_LastRuntimeSubrange < runtime_range_count_v * sub_ranges_count_per_range_v );
+            xassert( m_LastRuntimeSubrange < xecs::component::ranges::runtime_range_count_v * xecs::component::ranges::sub_ranges_count_per_range_v );
 
             // Allocate a new sub range
             {
-                void* pNewPtr = reinterpret_cast<std::byte*>(m_pGlobalInfo) + (m_LastRuntimeSubrange * sub_range_byte_count_v);
+                void* pNewPtr = reinterpret_cast<std::byte*>(m_pGlobalInfo) + (m_LastRuntimeSubrange * xecs::component::ranges::sub_range_byte_count_v);
                 auto p = VirtualAlloc
                 ( pNewPtr
-                , static_cast<std::size_t>( sub_range_byte_count_v )
+                , static_cast<std::size_t>(xecs::component::ranges::sub_range_byte_count_v )
                 , MEM_COMMIT
                 , PAGE_READWRITE
                 );
                 xassert(p == pNewPtr);
 
-                const auto IndexOffset = m_LastRuntimeSubrange * sub_range_entity_count_v;
-                for( int i=0; i<sub_range_entity_count_v; ++i )
+                const auto IndexOffset = m_LastRuntimeSubrange * xecs::component::ranges::sub_range_entity_count_v;
+                for( int i=0; i< xecs::component::ranges::sub_range_entity_count_v; ++i )
                 {
                     auto& E = reinterpret_cast<entity::global_info*>(pNewPtr)[i];
                     E.m_PoolIndex.m_Value       = 1 + i + IndexOffset;
                     E.m_Validation.m_Value      = 0;
                 }
 
-                reinterpret_cast<entity::global_info*>(pNewPtr)[sub_range_entity_count_v-1].m_PoolIndex.m_Value = -1;
+                reinterpret_cast<entity::global_info*>(pNewPtr)[xecs::component::ranges::sub_range_entity_count_v-1].m_PoolIndex.m_Value = -1;
                 m_EmptyHead = IndexOffset;
             }
         }

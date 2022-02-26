@@ -75,6 +75,7 @@
 #include "details/xecs_query_inline.h"
 #include "details/xecs_event_inline.h"
 #include "details/xecs_event_mgr_inline.h"
+#include "details/xecs_prefab_inline.h"
 #include "details/xecs_prefab_mgr_inline.h"
 #include "details/xecs_serializer_inline.h"
 

@@ -1,10 +1,13 @@
 namespace xecs::component
 {
-    constexpr auto sub_ranges_count_per_range_v         = 512;
-    constexpr auto runtime_range_count_v                = 1024;
-    constexpr auto editor_scene_range_count_overflow_v  = 10024;     // You can grow by 10 Million entities
-    constexpr auto sub_range_entity_count_v             = 256;
-    constexpr auto sub_range_byte_count_v               = xecs::settings::virtual_page_size_v; // == sub_range_entity_count_v * sizeof(entity::global_info)
+    namespace ranges
+    {
+        constexpr auto sub_ranges_count_per_range_v         = 512;
+        constexpr auto runtime_range_count_v                = 1024;
+        constexpr auto editor_scene_range_count_overflow_v  = 10024;     // You can grow by 10 Million entities
+        constexpr auto sub_range_entity_count_v             = 256;
+        constexpr auto sub_range_byte_count_v               = xecs::settings::virtual_page_size_v; // == sub_range_entity_count_v * sizeof(entity::global_info)
+    }
 
     namespace details
     {

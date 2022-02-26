@@ -131,7 +131,7 @@ namespace xecs::component::type::details
 
     //---------------------------------------------------------------------------------
     template< typename T_COMPONENT >
-    constexpr auto serialize_v = []() consteval noexcept -> type::full_serialize_fn*
+    constexpr auto serialize_function_v = []() consteval noexcept -> type::full_serialize_fn*
     {
         if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG) return nullptr;
         else
@@ -170,7 +170,7 @@ namespace xecs::component::type::details
         {
             if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::AUTO)
             {
-                if constexpr ( serialize_v<T_COMPONENT> != nullptr ) return serialize_mode::BY_SERIALIZER;
+                if constexpr ( serialize_function_v<T_COMPONENT> != nullptr ) return serialize_mode::BY_SERIALIZER;
                 else if constexpr (getPropertyTable<T_COMPONENT>()) return serialize_mode::BY_PROPERTIES;
                 else return serialize_mode::DONT_SERIALIZE;
             }
@@ -178,7 +178,7 @@ namespace xecs::component::type::details
             {
                 if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES)
                 {
-                    static_assert( serialize_v<T_COMPONENT> == nullptr );
+                    static_assert( serialize_function_v<T_COMPONENT> == nullptr );
                 }
                 else if constexpr (T_COMPONENT::typedef_v.m_SerializeMode == serialize_mode::BY_PROPERTIES)
                 {
@@ -331,7 +331,7 @@ namespace xecs::component::type::details
                                             return { xcore::crc<64>{}.FromBytes( {p,sizeof(T_COMPONENT)}, Guid.m_Value ).m_Value };
                                         };
                                   }()
-        ,   .m_pSerilizeFn          = serialize_v<T_COMPONENT>
+        ,   .m_pSerilizeFn          = serialize_function_v<T_COMPONENT>
         ,   .m_pReportReferencesFn  = references_v<T_COMPONENT>
         ,   .m_pPropertyTable       = getPropertyTable<T_COMPONENT>()
         ,   .m_SerializeMode        = serialize_mode_v<T_COMPONENT> 

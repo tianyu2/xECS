@@ -151,6 +151,7 @@
     <ClInclude Include="..\..\..\src\details\xecs_event_mgr_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_game_mgr_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_pool_inline.h" />
+    <ClInclude Include="..\..\..\src\details\xecs_prefab_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_prefab_mgr_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_query_inline.h" />
     <ClInclude Include="..\..\..\src\details\xecs_query_iterator_inline.h" />

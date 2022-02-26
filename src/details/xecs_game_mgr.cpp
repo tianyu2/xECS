@@ -185,11 +185,10 @@ namespace xecs::game_mgr
     , bool        isBinary
     ) noexcept
     {
-#if 0
         std::array<xecs::component::entity,             xecs::settings::max_share_components_per_entity_v> ShareEntities{};
         std::array<xecs::component::type::share::key,   xecs::settings::max_share_components_per_entity_v> ShareKeys    {};
 
-        xcore::textfile::stream     TextFile;
+        xecs::serializer::stream    TextFile;
         xcore::err                  Error;
 
         //
@@ -233,7 +232,7 @@ namespace xecs::game_mgr
         }();
 
         if (TextFile.Record(Error, "GameMgr"
-            , [&](std::size_t i, xcore::err& Error) noexcept
+            , [&](xcore::err& Error) noexcept
             {
                 Error = TextFile.Field("nArchetypes", ArchetypeCount);
             }
@@ -242,6 +241,31 @@ namespace xecs::game_mgr
         // If we are writing set the count back to the true count
         // this would allow us to filter later
         if( isRead == false ) ArchetypeCount = static_cast<int>(m_ArchetypeMgr.m_lArchetype.size());
+
+
+        //
+        // Global info
+        //
+        if (TextFile.Record(Error, "GlobalInfo", [&](xcore::err& Error) noexcept
+        {
+            int LastSubrangeRuntime = m_ComponentMgr.m_GlobalEntityInfos.m_LastRuntimeSubrange;
+            Error = TextFile.Field("LastSubRange", LastSubrangeRuntime);
+
+            if( isRead )
+            {
+                if( m_ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo == nullptr )
+                {
+                    m_ComponentMgr.m_GlobalEntityInfos.Initialize(LastSubrangeRuntime);
+                }
+
+                // TODO: This could be optimize
+                while (m_ComponentMgr.m_GlobalEntityInfos.m_LastRuntimeSubrange < LastSubrangeRuntime)
+                {
+                    m_ComponentMgr.m_GlobalEntityInfos.AppendNewSubrange();
+                }
+            }
+
+        })) return Error;
 
         //
         // Write Global Guids
@@ -258,21 +282,23 @@ namespace xecs::game_mgr
                     //
                     // Determine the max index we want to write
                     //
-                    auto Span = std::span{ m_ComponentMgr.m_lEntities.get(), xecs::settings::max_entities_v };
+                    auto Span = std::span{ m_ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo, xecs::component::ranges::sub_range_entity_count_v * static_cast<std::size_t>(m_ComponentMgr.m_GlobalEntityInfos.m_LastRuntimeSubrange <= 0 ? 0 : 1 + m_ComponentMgr.m_GlobalEntityInfos.m_LastRuntimeSubrange ) };
                     for (auto It = Span.rbegin(); It != Span.rend(); ++It)
                     {
                         auto& E = *It;
                         if (E.m_Validation.m_Value)
                         {
-                            C = 1 + static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_lEntities.get()));
+                            C = 1 + static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo ));
                             break;
                         }
                     }
+
+                    int b=0;
                 }
             }
-        ,   [&]( std::size_t i, xcore::err& Error )
+        ,   [&]( std::size_t i, xcore::err& Error ) noexcept
             {
-                Error = TextFile.Field("Validation", m_ComponentMgr.m_lEntities[i].m_Validation.m_Value );
+                Error = TextFile.Field("Validation", m_ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo[i].m_Validation.m_Value );
             }
         )) return Error;
 
@@ -336,7 +362,7 @@ namespace xecs::game_mgr
             // Save the basic archetype info
             //
             if( TextFile.Record( Error, "Archetype"
-                ,   [&]( std::size_t, xcore::err& Error ) noexcept
+                ,   [&]( xcore::err& Error ) noexcept
                     {
                             (Error = TextFile.Field("Guid",         ArchetypeGuid.m_Value))
                         ||  (Error = TextFile.Field("nFamilies",    nFamilies))
@@ -426,7 +452,7 @@ namespace xecs::game_mgr
                 xecs::pool::family::guid    FamilyGuid = isRead ? xecs::pool::family::guid{} : pF->m_Guid;
 
                 if( TextFile.Record( Error, "Family"
-                ,   [&]( std::size_t, xcore::err& Error ) noexcept
+                ,   [&]( xcore::err& Error ) noexcept
                     {
                           (Error = TextFile.Field("Guid",       FamilyGuid.m_Value ))
                         ||(Error = TextFile.Field("nPools",     nPools))
@@ -488,7 +514,7 @@ namespace xecs::game_mgr
                     int     nEntitiesInPool = isRead ? 0 : pP->Size();
 
                     if( TextFile.Record( Error, "PoolInfo"
-                    ,   [&]( std::size_t i, xcore::err& Error ) noexcept
+                    ,   [&]( xcore::err& Error ) noexcept
                         {
                             Error = TextFile.Field("nEntities", nEntitiesInPool);
                         }
@@ -633,7 +659,7 @@ namespace xecs::game_mgr
                                 for( int i=0; i<nEntitiesInPool; i++ )
                                 {
                                     auto& Entity = reinterpret_cast<xecs::component::entity*>(pP->m_pComponent[0])[i];
-                                    auto& Global = m_ComponentMgr.m_lEntities[Entity.m_GlobalIndex];
+                                    auto& Global = m_ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo[Entity.m_GlobalInfoIndex];
 
                                     assert( Global.m_Validation == Entity.m_Validation );
                                     Global.m_PoolIndex  = xecs::pool::index{i};
@@ -763,15 +789,15 @@ namespace xecs::game_mgr
         //
         if( isRead )
         {
-            m_ComponentMgr.m_EmptyHead = -1;
-            auto Span = std::span{ m_ComponentMgr.m_lEntities.get(), xecs::settings::max_entities_v };
+            m_ComponentMgr.m_GlobalEntityInfos.m_EmptyHead = -1;
+            auto Span = std::span{ m_ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo, static_cast<std::size_t>(m_ComponentMgr.m_GlobalEntityInfos.m_LastRuntimeSubrange) };
             for( auto It = Span.rbegin(); It != Span.rend(); ++It )
             {
                 auto& E = *It;
                 if( E.m_pPool == nullptr )
                 {
-                    E.m_PoolIndex.m_Value = m_ComponentMgr.m_EmptyHead;
-                    m_ComponentMgr.m_EmptyHead = static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_lEntities.get()));
+                    E.m_PoolIndex.m_Value = m_ComponentMgr.m_GlobalEntityInfos.m_EmptyHead;
+                    m_ComponentMgr.m_GlobalEntityInfos.m_EmptyHead = static_cast<int>(static_cast<std::size_t>(&E - m_ComponentMgr.m_GlobalEntityInfos.m_pGlobalInfo));
                 }
             }
 
@@ -782,8 +808,6 @@ namespace xecs::game_mgr
         }
 
         return Error;
-#endif
-        return {};
     }
 
     //---------------------------------------------------------------------------
