@@ -1,13 +1,21 @@
-# xECS -Lesson 08, Properties
+# xECS -Lesson 09, Prefabs and Scenes
 Go to the [main branch](https://github.com/LIONant-depot/xECS/tree/master) for the introduction.
 
+:warning Under construction (Not done yet)
+
 We cover.
-* How to add the xcore::properties to xECS for saving and loading. This mixes together with the normal serialization,
-  which allows to serialize with either the properties or the serialize functions as seem in Lesson 07. 
-  Typical use: First use properties for development since they are easier, Step 2: add serialization functions
-  to components to speed up loads/saves.
-* Still uses the [CR.h](https://github.com/fungos/cr) but now the project is built from the main solution
-  
+* How to create Prefabs
+* How to create Prefabs Variants 
+* Instanciating Prefabs
+* Serializing Prefabs and Prefab Instances
+* Introducing the concept of the Editor
+* Serialization of editor side entities
+* Introduction of Scenes
+* Creating Scenes
+* Introducing the concept of global entities into scenes
+* Serializing Scenes and remapping the entity ids
+* Loading multiple scenes at the same time
+
 ## To build
 1. Go to the build directory 
 2. Click the GetDependencies.bat batch file
