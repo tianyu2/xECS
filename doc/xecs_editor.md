@@ -39,7 +39,7 @@ Since we have different DLLs we will have entities in all of them. However the [
 ~~~cpp
 struct link_back
 {
-    xecs::component::entity EditorEntity;
+    xecs::component::entity   m_EditorEntity;
 };
 ~~~
 
