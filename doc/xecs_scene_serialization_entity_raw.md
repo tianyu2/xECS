@@ -18,10 +18,10 @@ This section indicates which component types the file would will need to read an
 //   Guid:B746E8DB5F35D46F   Type:Share  Name:GridCell
 //   Guid:49F9A4F507C9056B   Type:Tag    Name:ExclusiveShareAsData
 [ ArchetypeTypes : 5 ]
-{ TypeGuid:G         SerializationMode:c }
-//-----------------  -------------------
-                 #0           1         
-  #895F4D644EFB4528           0         
+{ TypeGuid:G         TypeName:s       SerializationMode:c }
+//-----------------  ---------------  -------------------
+                 #0   "Entity"                1         
+  #895F4D644EFB4528   "ShareFilter"           0         
   ...
 ~~~
 

@@ -43,7 +43,15 @@ namespace xecs::archetype
         std::span<const xecs::component::type::info* const>   
                                 getDataComponentInfos   ( void
                                                         ) const noexcept { return { m_InfoData.data(), static_cast<std::size_t>(m_nDataComponents) }; }
-
+        constexpr __inline
+        int                     getShareComponentCount  ( void
+                                                        ) const noexcept { return m_nShareComponents; }
+        constexpr __inline
+        int                     getDataComponentCount   ( void
+                                                        ) const noexcept { return m_nDataComponents; }
+        __inline
+        int                     getTagComponentCount    ( void
+                                                        ) const noexcept { return xecs::tools::bits{}.setupAnd(m_ComponentBits, xecs::component::mgr::s_TagsBits).CountComponents(); }
         constexpr __inline
         guid                     getGuid                ( void 
                                                         ) const noexcept;

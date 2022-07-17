@@ -93,7 +93,7 @@ namespace xecs::component::type::details
             static_assert(std::is_same< typename fn_traits::return_type, xcore::err >::value, "The return type should be --> xcore::err ");
             static_assert(xcore::function::details::traits_compare_args<fn_traits, xcore::function::traits<void(*)(xecs::serializer::stream&, bool, T_COMPONENT*, int& Count)>, static_cast<int>(fn_traits::arg_count_v) - 1>::value, "Arguments types don't match they should be (xecs::serializer::stream& TextFile, bool isRead, T_COMPONENT_ARRAY*, int& Count )");
 
-            constexpr static xcore::err FullGenericSerialize(xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponentArray, int& Count) noexcept
+            __inline constexpr static xcore::err FullGenericSerialize(xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponentArray, int& Count) noexcept
             {
                 // TODO: Skip records that are not meant to be loaded
                 return T_COMPONENT::FullSerialize(TextFile, isRead, reinterpret_cast<T_COMPONENT*>(pComponentArray), Count);
@@ -111,7 +111,7 @@ namespace xecs::component::type::details
             static_assert( std::is_same< typename fn_traits::return_type, xcore::err >::value, "The return type should be --> xcore::err ");
             static_assert( xcore::function::details::traits_compare_args<fn_traits, xcore::function::traits<void(*)(xecs::serializer::stream&, bool)>, static_cast<int>(fn_traits::arg_count_v) - 1>::value, "Arguments types don't match they should be (xecs::serializer::stream& TextFile, bool isRead )");
 
-            constexpr static xcore::err FullGenericSerialize(xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponentArray, int& Count) noexcept
+            __inline constexpr static xcore::err FullGenericSerialize(xecs::serializer::stream& TextFile, bool isRead, std::byte* pComponentArray, int& Count) noexcept
             {
                 xcore::err Error;
 
@@ -137,6 +137,30 @@ namespace xecs::component::type::details
 
                 return Error;
             };
+        };
+
+        template< typename T_COMPONENT, typename = void >  struct has_share_compute_key : std::false_type 
+        {
+            __inline constexpr static xecs::component::type::share::key Function(const std::byte* pComponent) noexcept
+            {
+                constexpr auto Guid = guid_v<T_COMPONENT>;
+                return { xcore::crc<64>{}.FromBytes({pComponent,sizeof(T_COMPONENT)}, Guid.m_Value).m_Value };
+            }
+        };
+
+        template< typename T_COMPONENT >                   struct has_share_compute_key< T_COMPONENT, std::void_t<decltype(&T_COMPONENT::ComputeShareKey)> > : std::true_type
+        {
+            using fn_traits = xcore::function::traits<decltype(&T_COMPONENT::ComputeShareKey)>;
+
+            static_assert( std::is_same_v<fn_traits::class_type, T_COMPONENT>, "The ComputeShareKey function should be a member function" );
+            static_assert( fn_traits::arg_count_v == 0, "ComputeShareKey Function should have not arguments");
+            static_assert( std::is_same< typename fn_traits::return_type, xecs::component::type::share::key >::value, "The return of the ComputeShareKey Function should be --> xecs::component::type::share::key ");
+
+            __inline constexpr static xecs::component::type::share::key Function( const std::byte* pComponent ) noexcept
+            {
+                constexpr auto Guid = guid_v<T_COMPONENT>;
+                return { reinterpret_cast<T_COMPONENT&>(*pComponent).ComputeShareKey().m_Value + Guid.m_Value };
+            }
         };
     }
 
@@ -293,55 +317,42 @@ namespace xecs::component::type::details
         static_assert( xecs::component::type::is_valid_v<T_COMPONENT> );
         return type::info
         {
-            .m_Guid             = guid_v<T_COMPONENT>
-        ,   .m_BitID            = info::invalid_bit_id_v
-        ,   .m_Size             = xcore::types::static_cast_safe<std::uint16_t>(sizeof(T_COMPONENT))
-        ,   .m_TypeID           = T_COMPONENT::typedef_v.id_v
-        ,   .m_bGlobalScoped    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bGlobalScoped; else return false; }()
-        ,   .m_bBuildShareFilter= []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bBuildFilter; else return false; }()
-        ,   .m_bExclusiveTag    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG)   return T_COMPONENT::typedef_v.exclusive_v;     else return false; }()
-        ,   .m_pConstructFn     = std::is_trivially_constructible_v<T_COMPONENT>
-                                    ? nullptr
-                                    : []( std::byte* p ) noexcept
-                                    {
-                                        new(p) T_COMPONENT;
-                                    }
-        ,   .m_pDestructFn      = std::is_trivially_destructible_v<T_COMPONENT>
-                                    ? nullptr
-                                    : []( std::byte* p ) noexcept
-                                    {
-                                        std::destroy_at(reinterpret_cast<T_COMPONENT*>(p));
-                                    }
-        ,   .m_pMoveFn          = std::is_trivially_move_assignable_v<T_COMPONENT>
-                                    ? nullptr
-                                    : []( std::byte* p1, std::byte* p2 ) noexcept
-                                    {
-                                        *reinterpret_cast<T_COMPONENT*>(p1) = std::move(*reinterpret_cast<T_COMPONENT*>(p2));
-                                    }
-        ,   .m_pCopyFn          = std::is_trivially_copy_assignable_v<T_COMPONENT>
-                                    ? nullptr
-                                    : []( std::byte* p1, const std::byte* p2 ) noexcept
-                                    {
-                                        *reinterpret_cast<T_COMPONENT*>(p1) = *reinterpret_cast<const T_COMPONENT*>(p2);
-                                    }
-        ,   .m_pComputeKeyFn    = []() consteval noexcept ->type::share::compute_key_fn*
-                                  {
-                                        if constexpr (T_COMPONENT::typedef_v.id_v != type::id::SHARE) return nullptr;
-                                        else if constexpr(T_COMPONENT::typedef_v.m_ComputeKeyFn)
+            .m_Guid                 = guid_v<T_COMPONENT>
+        ,   .m_BitID                = info::invalid_bit_id_v
+        ,   .m_Size                 = xcore::types::static_cast_safe<std::uint16_t>(sizeof(T_COMPONENT))
+        ,   .m_TypeID               = T_COMPONENT::typedef_v.id_v
+        ,   .m_bGlobalScoped        = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bGlobalScoped; else return false; }()
+        ,   .m_bBuildShareFilter    = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::SHARE) return T_COMPONENT::typedef_v.m_bBuildFilter;  else return false; }()
+        ,   .m_bExclusiveTag        = []{ if constexpr (T_COMPONENT::typedef_v.id_v == type::id::TAG)   return T_COMPONENT::typedef_v.exclusive_v;     else return false; }()
+        ,   .m_pConstructFn         = std::is_trivially_constructible_v<T_COMPONENT>
+                                        ? nullptr
+                                        : []( std::byte* p ) noexcept
                                         {
-                                            return [](const std::byte* p) constexpr noexcept -> type::share::key
-                                            {
-                                                constexpr auto Guid = guid_v<T_COMPONENT>;
-                                                return { T_COMPONENT::typedef_v.m_ComputeKeyFn(p).m_Value
-                                                            + Guid.m_Value };
-                                            };
+                                            new(p) T_COMPONENT;
                                         }
-                                        else return [](const std::byte* p) constexpr noexcept -> type::share::key
+        ,   .m_pDestructFn          = std::is_trivially_destructible_v<T_COMPONENT>
+                                        ? nullptr
+                                        : []( std::byte* p ) noexcept
                                         {
-                                            constexpr auto Guid = guid_v<T_COMPONENT>;
-                                            return { xcore::crc<64>{}.FromBytes( {p,sizeof(T_COMPONENT)}, Guid.m_Value ).m_Value };
-                                        };
-                                  }()
+                                            std::destroy_at(reinterpret_cast<T_COMPONENT*>(p));
+                                        }
+        ,   .m_pMoveFn              = std::is_trivially_move_assignable_v<T_COMPONENT>
+                                        ? nullptr
+                                        : []( std::byte* p1, std::byte* p2 ) noexcept
+                                        {
+                                            *reinterpret_cast<T_COMPONENT*>(p1) = std::move(*reinterpret_cast<T_COMPONENT*>(p2));
+                                        }
+        ,   .m_pCopyFn              = std::is_trivially_copy_assignable_v<T_COMPONENT>
+                                        ? nullptr
+                                        : []( std::byte* p1, const std::byte* p2 ) noexcept
+                                        {
+                                            *reinterpret_cast<T_COMPONENT*>(p1) = *reinterpret_cast<const T_COMPONENT*>(p2);
+                                        }
+        ,   .m_pComputeKeyFn        = []() consteval noexcept ->type::share::compute_key_fn*
+                                      {
+                                            if constexpr (T_COMPONENT::typedef_v.id_v != type::id::SHARE) return nullptr;
+                                            else return &details::has_share_compute_key<T_COMPONENT>::Function;
+                                      }()
         ,   .m_pSerilizeFn          = serialize_function_v<T_COMPONENT>
         ,   .m_pReportReferencesFn  = references_v<T_COMPONENT>
         ,   .m_pPropertyTable       = getPropertyTable<T_COMPONENT>()

@@ -80,7 +80,6 @@ namespace xecs::component::type
         bool                    m_bGlobalScoped      { true };                           // TODO: To be deleted! Global Scoped vs Archetype Scoped. If you want a per-family (Such every family has a bbox)? This is a TODO for the future.
         //bool                  m_bDeleteOnZeroRef   { true };                           // TODO: Potentially add this feature.
         bool                    m_bBuildFilter       { false };                          // Tells xECS to automatically create a reference to all its references "a filter". So if we want to find all entities that have a share of a particular value we can do it quickly.
-        compute_key_fn*         m_ComputeKeyFn       { nullptr };
         serialize_mode          m_SerializeMode      { serialize_mode::AUTO };
         reference_mode          m_ReferenceMode      { reference_mode::AUTO };
     };

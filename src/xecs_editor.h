@@ -42,4 +42,11 @@ namespace xecs::editor
         xecs::prefab::guid              m_PrefabInstance;
         std::vector<component>          m_lComponents;
     };
+
+    //-------------------------------------------------------------------------------
+
+    struct link
+    {
+        xecs::component::entity         m_lEntity;
+    };
 }

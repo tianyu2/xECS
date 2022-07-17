@@ -28,9 +28,25 @@ namespace xecs::scene
         guid                    m_Guid;
         xcore::cstring          m_Name;
         type                    m_Type;
-        std::vector<range>      m_lRanges;
+        std::vector<range>      m_lGlobalRanges;
 
-        std::unordered_map<std::uint64_t, std::uint64_t> m_EntityList;
+        std::unordered_map<std::uint64_t, std::uint64_t> m_LoadRemappedList;
+    };
+
+    struct component
+    {
+        constexpr static auto typedef_v = xecs::component::type::share
+        { .m_pName          = "Scene" 
+        , .m_bBuildFilter   = true
+        , .m_ReferenceMode  = xecs::component::type::reference_mode::NO_REFERENCES
+        };
+
+        __inline constexpr xecs::component::type::share::key ComputeShareKey( void ) noexcept
+        {
+            return {m_SceneGuid.m_Value};
+        }
+    
+        guid m_SceneGuid;
     };
 
     struct mgr

@@ -1,3 +1,7 @@
+#include <windows.h>
+#include <Lmcons.h>
+#include <time.h>
+
 namespace xecs::game_mgr
 {
     //---------------------------------------------------------------------------
@@ -1375,6 +1379,242 @@ namespace xecs::game_mgr
 
 
     //----------------------------------------------------------------------------------------------
+    // Serializes only raw entities
+    xcore::err SerializeArchetype( instance& GameMgr, xcore::textfile::stream& TextFile, xecs::archetype::guid Guid, std::vector<std::tuple<int,xecs::component::entity>>& Entities )
+    {
+        xcore::err Error;
+
+        if( false == TextFile.isReading() )
+        {
+            auto& Archetype = *GameMgr.findArchetype(Guid);
+            
+            //
+            // Find how many families and Entities we are going to serialize
+            //
+            const auto [nFamilies, TotalEntitiesInArchetype] = [&]
+            {
+                int nFamilies                   = 0;
+                int TotalEntitiesInArchetype    = 0;
+
+                // Save only families which have entites
+                for (auto pF = Archetype.getFamilyHead(); pF; pF = pF->m_Next.get())
+                {
+                    //
+                    // Collect the number of entities
+                    //
+                    const auto nEntities = [&]
+                    {
+                        int nEntities = 0;
+                        for (auto pP = &pF->m_DefaultPool; pP; pP = pP->m_Next.get())
+                        {
+                            nEntities += pP->Size();
+                        }
+
+                        return nEntities;
+                    }();
+
+                    //
+                    // If we have entities in this family then added to the list
+                    //
+                    if( nEntities != 0 )
+                    {
+                        nFamilies++;
+                        TotalEntitiesInArchetype += nEntities;
+                    }
+                }
+
+                return std::tuple{ nFamilies, TotalEntitiesInArchetype };
+            }();
+            
+            //
+            // Check if we have any entities in this archetype, if we don't just skip saving anything...
+            //
+            if(TotalEntitiesInArchetype == 0) return Error;
+
+            //
+            // Serialize the archetype
+            //
+            xecs::component::entity::info_array Infos{};
+            std::size_t                         InfoCount       = Archetype.getComponentBits().ToInfoArray(Infos);
+            const auto                          nDataTypes      = Archetype.getDataComponentCount();
+            const auto                          nShareTypes     = Archetype.getShareComponentCount();
+            auto                                SerializedModes = std::array<std::int8_t, xecs::settings::max_components_per_entity_v>{};
+
+            if( TextFile.Record( Error, "Archetype"
+            ,   [&]( std::size_t& C, xcore::err& ) noexcept
+                {
+                    C = InfoCount;
+                }
+            ,   [&]( std::size_t i, xcore::err& Err ) noexcept
+                {
+                    auto&               E    = *Infos[i];
+                    std::uint64_t       Guid = E.m_Guid.m_Value;
+                    xcore::string::view Name = { (char*)E.m_pName, (std::size_t)xcore::string::Length(E.m_pName).m_Value };
+
+                         if( E.m_SerializeMode == xecs::component::type::serialize_mode::BY_PROPERTIES ) SerializedModes[i] = details::serialized_mode::MODE_PROPERTY;
+                    else if (E.m_SerializeMode == xecs::component::type::serialize_mode::BY_SERIALIZER ) SerializedModes[i] = details::serialized_mode::MODE_SERIALIZER;
+                    else                                                                                 SerializedModes[i] = details::serialized_mode::MODE_NONE;
+
+                       ( Err = TextFile.Field("TypeGuid", Guid ))
+                    || ( Err = TextFile.Field("TypeName", Name ))
+                    || ( Err = TextFile.Field("SerializationMode", SerializedModes[i] ));
+                }
+            )) return Error;
+/*
+            //
+            // Serialize all the families
+            //
+            for( auto pF = Archetype.getFamilyHead(); pF; pF = pF->m_Next.get() )
+            {
+                //
+                // Collect the number of entities
+                //
+                const auto nEntities = [&]
+                {
+                    int nEntities = 0;
+                    for (auto pP = &pF->m_DefaultPool; pP; pP = pP->m_Next.get())
+                    {
+                        nEntities += pP->Size();
+                    }
+
+                    return nEntities;
+                }();
+
+                // If we have no entities to save then lets skip saving the this family
+                if( nEntities == 0 ) continue;
+
+                //
+                // FamilyInfo
+                //
+                if( nShareTypes )
+                {
+                    if( TextFile.Record( Error, "Family"
+                    ,   [&]( std::size_t& C, xcore::err& ) noexcept
+                        {
+                            C = nShareTypes;
+                        }
+                    ,   [&]( std::size_t i, xcore::err& Err ) noexcept
+                        {
+                            auto&           E           = *Infos[nDataTypes + i];
+                            std::uint64_t   Guid        = E.m_Guid.m_Value;
+                            std::uint64_t   ShareEntity = pF->m_ShareDetails[i].m_Entity.m_Value;
+
+                               (Err = TextFile.Field("TypeGuid",    Guid))
+                            || (Err = TextFile.Field("ShareEntity", ShareEntity ));
+                        }
+                    )) return Error;
+                }
+                
+
+                //
+                // Serialize Components
+                //
+                for( auto iType=0, end = (int)nDataTypes; iType != end; iType++ )
+                {
+                    auto& PropInfo = *Infos[iType];
+                    if( SerializedModes[iType] == details::serialized_mode::MODE_SERIALIZER )
+                    {
+                        int Count = pP->Size();
+                        Error = pP->m_ComponentInfos[iType]->m_pSerilizeFn( TextFile, isRead, pP->m_pComponent[iType], Count );
+                        if(Error) return Error;
+                    }
+                    else if( SerializedModes[iType] == details::serialized_mode::MODE_PROPERTY )
+                    {
+                        int         Count    = pP->Size();
+                        std::byte*  pData    = pP->m_pComponent[iType];
+                        auto        TypeSize = PropInfo.m_Size;
+                        auto&       Table    = *PropInfo.m_pPropertyTable;
+
+                        std::vector<property::entry> PropertyList;
+                        for( int i=0; i<Count; ++i )
+                        {
+                            // Collect all the properties for a single component
+                            PropertyList.clear();
+                            property::SerializeEnum( Table, pData + TypeSize * i, [&]( std::string_view PropertyName, property::data&& Data, const property::table&, std::size_t, property::flags::type Flags )
+                            {
+                                // If we are dealing with a scope that is not an array someone may have change the SerializeEnum to a DisplayEnum they only show up there.
+                                assert( Flags.m_isScope == false || PropertyName.back() == ']' );
+                                if( Flags.m_isDontSave || Flags.m_isScope ) return;
+                                PropertyList.push_back( property::entry { PropertyName, Data } );
+                            });
+
+                            // Serialize the properties for the give component
+                            TextFile.Record
+                            (   Error
+                                , "Props"
+                                , [&](std::size_t& C, xcore::err&) noexcept
+                                {
+                                    assert(isRead == false);
+                                    C = PropertyList.size();
+                                }
+                                , [&]( std::size_t c, xcore::err& Error ) noexcept
+                                {
+                                    auto&       Entry       = PropertyList[c];
+
+                                    Error = SerializeComponentWithProperties( isRead, TextFile, Entry.first, Entry.second );
+                                }
+                            );
+                        }
+                    }
+                    else
+                    {
+                        assert( SerializedModes[iType] == details::serialized_mode::MODE_NONE );
+                        continue;
+                    }
+                }
+            }
+                */
+        }
+        else
+        {
+            std::array<std::int8_t, xecs::settings::max_components_per_entity_v>    SerializedModes{};
+            xecs::component::entity::info_array                                     Infos{};
+            std::size_t                                                             InfoCount = 0;
+
+            if( std::size_t j = 0; TextFile.Record( Error, "Archetype"
+            ,   [&]( std::size_t& C, xcore::err& ) noexcept
+                {
+                    InfoCount = C;
+                }
+            ,   [&]( std::size_t i, xcore::err& Err ) noexcept
+                {
+                    xecs::component::type::guid Guid;
+                    xcore::cstring              Name;
+                    std::int8_t                 SerializedMode;
+
+                       ( Err = TextFile.Field("TypeGuid", Guid.m_Value ))
+                    || ( Err = TextFile.Field("TypeName", Name ))
+                    || ( Err = TextFile.Field("SerializationMode", SerializedMode ));
+
+                    if (Err) return;
+
+                    Infos[j] = GameMgr.m_ComponentMgr.findComponentTypeInfo(Guid);
+                    if( Infos[j] ) 
+                    {
+                        j++;
+                    }
+                    else
+                    {
+                        XLOG_CHANNEL_WARNING(GameMgr.m_LogChannel, "Fail to find component %s so it will be removed from entities.", Name.c_str() );
+                    }
+
+                    SerializedModes[j] = SerializedMode;
+                    InfoCount = j;
+                }
+            ))
+            {
+                if( Error.getCode().getState<xcore::textfile::error_state>() != xcore::textfile::error_state::UNEXPECTED_RECORD )
+                    return Error;
+            }
+
+            auto& Archetype = GameMgr.getOrCreateArchetype({ Infos.data(), InfoCount });
+        }
+
+
+        return {};
+    }
+
+    //----------------------------------------------------------------------------------------------
 
     xcore::err instance::SerializeGameStateV2
     ( const char* pFileName
@@ -1384,7 +1624,7 @@ namespace xecs::game_mgr
     {
         xcore::textfile::stream     TextFile;
         xcore::err                  Error;
-#if 0
+
         //
         // Have the file system know the mapping of the property types
         //
@@ -1409,25 +1649,54 @@ namespace xecs::game_mgr
         // Version
         //
         if (TextFile.Record(Error, "Version"
-            , [&](std::size_t i, xcore::err& Err ) noexcept
+            , [&]( xcore::err& Err ) noexcept
             {
                 static constexpr xcore::string::constant<char> context_v{ "editor::xECS" };
                 xcore::cstring Format;
                 int            Major;
                 int            Minor;
+                int            Small;
+                xcore::cstring AppCompilationDate;
+                xcore::cstring CreationDate;
+                xcore::cstring User;
                 
                 if( false == isRead ) 
                 {
                     Format = xcore::string::Fmt( context_v.data() );
                     Major  = 1;
                     Minor  = 0;
+
+                    {
+                        std::time_t result = std::time(nullptr);
+                        std::tm TM;
+                        localtime_s(&TM, &result);
+                        std::array<char, 100> mbstr;
+                        strftime(mbstr.data(), mbstr.size(), "%A %c", &TM );
+                        xcore::string::Copy(CreationDate, mbstr);
+                    }
+
+                    xcore::string::Copy( AppCompilationDate, __DATE__ " " __TIMESTAMP__ );
+
+                    #ifdef UNICODE
+                        WCHAR username[UNLEN + 1];
+                        DWORD username_len = UNLEN + 1;
+                        GetUserNameW(username, &username_len);
+                        User = xcore::string::To<char>(username);
+                    #else
+                        char username[UNLEN + 1];
+                        DWORD username_len = UNLEN + 1;
+                        GetUserName(username, &username_len);
+                        xcore::string::Copy(User, username);
+                    #endif
+
                 }
 
                 // Read/Write
 
-                   (Err = TextFile.Field("Context", Format ))
-                || (Err = TextFile.Field("Major",   Major  ))
-                || (Err = TextFile.Field("Minor",   Minor  ));
+                   (Err = TextFile.Field("Type",                Format ))
+                || (Err = TextFile.Field("Version",             Major, Minor, Small ))
+                || (Err = TextFile.Field("CreationDate",        CreationDate))
+                || (Err = TextFile.Field("AppCompilationDate",  AppCompilationDate));
 
                 // Check version
                 if( !Err )
@@ -1439,6 +1708,7 @@ namespace xecs::game_mgr
                 }
             }
         )) return Error;
+#if 0
 
         //
         // Read/Write Global Entity Validations

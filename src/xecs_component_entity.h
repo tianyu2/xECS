@@ -41,9 +41,9 @@ namespace xecs::component
             global_info(const global_info&) = delete;
             global_info()                   = default;
 
-            xecs::pool::instance*   m_pPool{};
-            xecs::pool::index       m_PoolIndex{};
-            validation              m_Validation{};
+            xecs::pool::instance*   m_pPool         {};         // 64bits
+            xecs::pool::index       m_PoolIndex     {};         // 32bits
+            validation              m_Validation    {};         // 32bits
         };
         static_assert(sizeof(global_info) == (8 * 2), "We are assuming here 64 bit pointers.");
 

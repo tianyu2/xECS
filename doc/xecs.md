@@ -7,12 +7,10 @@ Cross platform **Event Component And Systems**, is a type of *Entity Component a
 
 ALL THESE DOCUMENTATION IS VERY MUCH A WIP
 
+* [App Context](xecs_app_context.md) - How xecs is used under different apps
 * [Components](xecs_component.md) - Component stuff
 * [Prefabs](xecs_prefab.md) - Prefabs topic
 * [Scene](xecs_scene.md) - Scene topics
-* [Editor](xecs_editor.md) - Editor stuff
-
-
 
 
 ---
