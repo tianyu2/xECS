@@ -8,7 +8,7 @@ namespace xecs::archetype
         constexpr auto function_arguments_r_refs_v = []<typename...T>(std::tuple<T...>*) constexpr
         {
             return (std::is_reference_v<T> && ...);
-        }( xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple> );
+        }( xcore::types::null_tuple_v<typename xcore::function::traits<T_FUNCTION>::args_tuple> );
 
         //-------------------------------------------------------------------------------------------------
 
@@ -89,8 +89,8 @@ namespace xecs::archetype
                 static_assert(((std::is_reference_v<T>) && ...));
                 Function(reinterpret_cast<T>(*CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>])
                     ...);
-                ((CachePointers[xcore::types::tuple_t2i_v<T, func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
-            }(xcore::types::null_tuple_v<func_traits::args_tuple>);
+                ((CachePointers[xcore::types::tuple_t2i_v<T, typename func_traits::args_tuple>] += sizeof(std::remove_reference_t<T>)), ...);
+            }(xcore::types::null_tuple_v<typename func_traits::args_tuple>);
         }
 
         //-------------------------------------------------------------------------------------------------
@@ -1350,7 +1350,7 @@ instance::_MoveInEntity
                     auto  CachedPointers = xecs::archetype::details::GetDataComponentPointerArray
                     ( Pool
                     , NewIndex
-                    , xcore::types::null_tuple_v<func_traits::args_tuple>
+                    , xcore::types::null_tuple_v<typename func_traits::args_tuple>
                     );
                     xecs::archetype::details::CallFunction(Function, CachedPointers);
                 }

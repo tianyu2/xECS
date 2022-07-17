@@ -440,7 +440,7 @@ namespace xecs::game_mgr
             auto Pointers = xecs::archetype::details::GetDataComponentPointerArray
             ( *EntityDetails.m_pPool
             , EntityDetails.m_PoolIndex
-            , xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple> 
+            , xcore::types::null_tuple_v<typename xcore::function::traits<T_FUNCTION>::args_tuple> 
             );
             xecs::archetype::details::CallFunction( std::forward<T_FUNCTION>(Function), Pointers );
         }
@@ -669,22 +669,22 @@ instance::AddOrRemoveComponents
             PrefabVariantGuid.m_Instance.Reset();
             PrefabVariantGuid.m_Instance.m_Value |= 1; // always set 1 for resources
 
-            [&] <typename...T_ARGS>(std::tuple<T_ARGS...>*) noexcept
+            [&] <typename...T_ARGS>( std::tuple<T_ARGS...>* ) noexcept
             {
                 PrefabVarientEntity = m_PrefabMgr.CreatePrefabInstance<T_ADD_TUPLE, T_SUB_TUPLE>
                 ( 1
                 , It->second
-                , [&]( xecs::prefab::root& Root, T_ARGS&... Args ) noexcept
+                , [&]( xecs::prefab::root& Root, T_ARGS&&... Components ) noexcept
                 {
                     Root.m_Guid             = PrefabVariantGuid;
                     Root.m_ParentPrefabGuid = PrefabGuid;
 
-                    if constexpr (false == std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda>) Function(Args...);
+                    if constexpr ( false == std::is_same_v<T_FUNCTION, xecs::tools::empty_lambda> ) Function( std::forward<T_ARGS&&>(Components)... );
                 }
                 , false
                 , true
                 );
-            }(xcore::types::null_tuple_v<xcore::function::traits<T_FUNCTION>::args_tuple>);
+            }( xcore::types::null_tuple_v<typename xcore::function::traits<T_FUNCTION>::args_tuple> );
             
             // Register the prefab
             m_PrefabMgr.m_PrefabList.insert({ PrefabVariantGuid.m_Instance.m_Value, PrefabVarientEntity });
