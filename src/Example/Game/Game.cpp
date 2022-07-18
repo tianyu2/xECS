@@ -90,6 +90,7 @@ struct my_game final : live::game
         ,   timer
         ,   bullet
         ,   grid_cell
+        , Player
         >();
 
         //

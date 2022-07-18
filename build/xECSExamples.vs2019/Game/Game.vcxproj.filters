@@ -369,6 +369,9 @@
     <ClInclude Include="..\..\..\src\Example\Game\Settings\xcore_user_settings.h">
       <Filter>_Dependencies\Settings</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\Example\Game\Components\Player.h">
+      <Filter>Components</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\dependencies\xcore\src\xcore.cpp">

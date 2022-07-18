@@ -163,6 +163,7 @@
     <ClInclude Include="..\..\..\src\Example\cr.h" />
     <ClInclude Include="..\..\..\src\Example\Game\Components\bullet_data.h" />
     <ClInclude Include="..\..\..\src\Example\Game\Components\grid_cell_share.h" />
+    <ClInclude Include="..\..\..\src\Example\Game\Components\Player.h" />
     <ClInclude Include="..\..\..\src\Example\Game\Components\position_data.h" />
     <ClInclude Include="..\..\..\src\Example\Game\Components\timer_data.h" />
     <ClInclude Include="..\..\..\src\Example\Game\Components\velocity_data.h" />
